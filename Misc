@@ -1,142 +1,209 @@
-You need to remove the call to `CreateTempPythonScript` in the `RunPythonScript` method. Here’s the corrected version:
-
-
-private bool RunPythonScript(string pptxFilePath, string outputExcel, Action<int, string> progressCallback)
+/// <summary>
+/// Extract all header fields using pattern matching only - no position dependencies
+/// </summary>
+private void ExtractData(List<TextBoxInfo> textBoxes, Dictionary<string, string> data)
 {
-    try
+    // Initialize all fields
+    data["WI_Number"] = "";
+    data["WI_Title"] = "";
+    data["Revision"] = "";
+    data["BOM_ASSY_DWG_NO"] = "";
+    data["Operation_No"] = "";
+    data["Product_Line"] = "";
+    data["Subject"] = "";
+    data["RevisionType"] = "";
+
+    var candidates = new Dictionary<string, List<(string text, int priority)>>
     {
-        progressCallback?.Invoke(45, "Looking for Python...");
-        string pythonExe = FindPythonExecutable();
-        
-        if (string.IsNullOrEmpty(pythonExe))
+        ["WI_Number"] = new List<(string, int)>(),
+        ["Revision"] = new List<(string, int)>(),
+        ["BOM_ASSY_DWG_NO"] = new List<(string, int)>(),
+        ["Operation_No"] = new List<(string, int)>(),
+        ["Product_Line"] = new List<(string, int)>(),
+        ["WI_Title"] = new List<(string, int)>(),
+        ["Subject"] = new List<(string, int)>()
+    };
+
+    foreach (var box in textBoxes)
+    {
+        string text = box.Text.Trim();
+        string upper = text.ToUpper();
+
+        // Skip empty or label text
+        if (string.IsNullOrWhiteSpace(text) || IsLabel(upper)) continue;
+
+        // WI Number - pattern: WI-123 or W.I. 123 (HIGHEST PRIORITY)
+        var wiMatch = System.Text.RegularExpressions.Regex.Match(text,
+            @"W\.?\s*I\.?\s*-?\s*\d{2,}",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (wiMatch.Success)
         {
-            progressCallback?.Invoke(50, "Python not found - skipping table extraction");
-            return false;
+            string wiNum = wiMatch.Value.Replace(" ", "").Replace(".", "").ToUpper();
+            if (!wiNum.Contains("-"))
+                wiNum = wiNum.Replace("WI", "WI-");
+            data["WI_Number"] = wiNum; // Set immediately, don't wait
+            continue;
         }
 
-        string scriptPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "extract_tables.py");
-        
-        if (!File.Exists(scriptPath))
+        // Revision Type - FM-ME pattern (detect early)
+        if (upper.Contains("FM-ME") || upper.Contains("FM ME") || upper.Contains("FMME"))
         {
-            progressCallback?.Invoke(50, $"Python script not found at: {scriptPath}");
-            return false;
+            var revMatch = System.Text.RegularExpressions.Regex.Match(text,
+                @"FM-?[\s]?ME-?\d+.*?rev\.?\s*(\d+)",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (revMatch.Success && revMatch.Groups.Count > 1)
+            {
+                data["RevisionType"] = revMatch.Groups[1].Value;
+            }
+            continue; // Skip this text box for other fields
         }
 
-        // Create temp folder with single file
-        string tempFolder = Path.Combine(Path.GetTempPath(), "TempWI_" + Guid.NewGuid());
-        Directory.CreateDirectory(tempFolder);
-
-        string tempFilePath = Path.Combine(tempFolder, Path.GetFileName(pptxFilePath));
-        File.Copy(pptxFilePath, tempFilePath, true);
-
-        progressCallback?.Invoke(50, "Running Python table extraction...");
-
-        // Run Python directly with arguments
-        ProcessStartInfo start = new ProcessStartInfo
+        // Revision - ONLY single or double digit number, nothing else
+        if (System.Text.RegularExpressions.Regex.IsMatch(text, @"^\d{1,2}$"))
         {
-            FileName = pythonExe,
-            Arguments = $"\"{scriptPath}\" \"{tempFolder}\" \"{outputExcel}\"",
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true,
-            WorkingDirectory = Path.GetDirectoryName(scriptPath)
-        };
+            candidates["Revision"].Add((text, 10));
+            continue; // Don't use this for anything else
+        }
 
-        using (Process process = Process.Start(start))
+        // BOM/ASSY DWG NO - has specific patterns with dashes and mixed case
+        // Examples: 12345-001, ABC-123, 1234567-R01
+        if (System.Text.RegularExpressions.Regex.IsMatch(text, @"^\d{4,}-[A-Z0-9]+$",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase))
         {
-            // Read output asynchronously to prevent deadlock
-            var outputBuilder = new System.Text.StringBuilder();
-            var errorBuilder = new System.Text.StringBuilder();
-            
-            process.OutputDataReceived += (sender, e) => 
-            {
-                if (e.Data != null)
-                {
-                    outputBuilder.AppendLine(e.Data);
-                    // Show progress in UI
-                    if (e.Data.Contains("Processing:") || e.Data.Contains("Extracted"))
-                    {
-                        progressCallback?.Invoke(55, e.Data);
-                    }
-                }
-            };
-            
-            process.ErrorDataReceived += (sender, e) => 
-            {
-                if (e.Data != null)
-                {
-                    errorBuilder.AppendLine(e.Data);
-                }
-            };
+            // Strong pattern: numbers-letters/numbers (like 12345-001 or 12345-R01)
+            candidates["BOM_ASSY_DWG_NO"].Add((text, 20));
+            continue;
+        }
+        else if (System.Text.RegularExpressions.Regex.IsMatch(text, @"^[A-Z]{2,}-\d+$",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+        {
+            // Pattern: letters-numbers (like ABC-123)
+            candidates["BOM_ASSY_DWG_NO"].Add((text, 15));
+            continue;
+        }
+        else if (System.Text.RegularExpressions.Regex.IsMatch(text, @"^\d{5,}$"))
+        {
+            // Just a long number (5+ digits), likely BOM
+            candidates["BOM_ASSY_DWG_NO"].Add((text, 10));
+            continue;
+        }
 
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
+        // Operation Number - short codes, often just numbers or simple alphanumeric
+        // Examples: 10, 20, 30, OP10, 100
+        if (System.Text.RegularExpressions.Regex.IsMatch(text, @"^(OP)?\d{2,4}$",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+        {
+            // Pattern: OP10, 10, 100, etc.
+            candidates["Operation_No"].Add((text, 15));
+            continue;
+        }
+        else if (text.Length >= 2 && text.Length <= 6 &&
+                 System.Text.RegularExpressions.Regex.IsMatch(text, @"^[A-Z0-9]+$",
+                 System.Text.RegularExpressions.RegexOptions.IgnoreCase) &&
+                 !text.Contains("-"))
+        {
+            // Short alphanumeric without dashes
+            candidates["Operation_No"].Add((text, 5));
+        }
 
-            // Wait up to 5 minutes for Python script
-            bool completed = process.WaitForExit(300000); // 5 minutes timeout
+        // Product Line - typically short codes (2-4 characters), often letters
+        // Examples: CT, IBA, MX, etc.
+        if (text.Length >= 2 && text.Length <= 4 &&
+            System.Text.RegularExpressions.Regex.IsMatch(text, @"^[A-Z]+$",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+        {
+            // Pure letters, short
+            candidates["Product_Line"].Add((text, 15));
+        }
+        else if (text.Length >= 2 && text.Length <= 8 &&
+                 System.Text.RegularExpressions.Regex.IsMatch(text, @"^[A-Z][A-Z0-9]*$",
+                 System.Text.RegularExpressions.RegexOptions.IgnoreCase) &&
+                 !text.Contains("-") && !upper.Contains("PAGE"))
+        {
+            // Starts with letter, alphanumeric
+            candidates["Product_Line"].Add((text, 5));
+        }
 
-            if (!completed)
-            {
-                progressCallback?.Invoke(60, "Python script timed out - killing process");
-                try { process.Kill(); } catch { }
-                
-                // Cleanup
-                try
-                {
-                    File.Delete(tempFilePath);
-                    Directory.Delete(tempFolder);
-                }
-                catch { }
-                
-                return false;
-            }
+        // Subject - medium length descriptive text (10-60 chars)
+        // Usually describes the operation or process
+        if (text.Length >= 10 && text.Length <= 60 &&
+            !upper.Contains("COMPANY") &&
+            !upper.Contains("PAGE") &&
+            !upper.Contains("FM-ME") &&
+            !System.Text.RegularExpressions.Regex.IsMatch(text, @"^\d+\s+OF\s+\d+$",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+        {
+            // Give higher priority to text with spaces (more likely descriptive)
+            int priority = text.Contains(" ") ? 15 : 8;
+            candidates["Subject"].Add((text, priority));
+        }
 
-            // Cleanup temp files
-            try
-            {
-                File.Delete(tempFilePath);
-                Directory.Delete(tempFolder);
-            }
-            catch { }
-
-            string output = outputBuilder.ToString();
-            string errors = errorBuilder.ToString();
-
-            if (process.ExitCode != 0)
-            {
-                progressCallback?.Invoke(60, $"Python exit code: {process.ExitCode}");
-                if (!string.IsNullOrEmpty(errors))
-                    progressCallback?.Invoke(60, $"Python error: {errors.Substring(0, Math.Min(200, errors.Length))}");
-                return false;
-            }
-
-            bool success = File.Exists(outputExcel);
-            if (success)
-            {
-                progressCallback?.Invoke(70, "Table extraction complete");
-            }
-            else
-            {
-                progressCallback?.Invoke(70, "No output file created");
-                if (!string.IsNullOrEmpty(output))
-                    progressCallback?.Invoke(70, $"Output: {output.Substring(0, Math.Min(200, output.Length))}");
-            }
-            
-            return success;
+        // WI Title - longer descriptive text (15-150 chars)
+        // Usually a full description of the work instruction
+        if (text.Length >= 15 && text.Length <= 150 &&
+            !upper.Contains("COMPANY") &&
+            !upper.Contains("FM-ME") &&
+            !upper.Contains("PROPRIETARY") &&
+            !upper.Contains("CONFIDENTIAL"))
+        {
+            // Give higher priority to longer text with multiple words
+            int wordCount = text.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).Length;
+            int priority = wordCount >= 3 ? 15 : 8;
+            candidates["WI_Title"].Add((text, priority));
         }
     }
-    catch (Exception ex)
+
+    // Select best candidates based on priority
+    data["Revision"] = candidates["Revision"]
+        .OrderByDescending(x => x.priority)
+        .FirstOrDefault().text ?? "";
+
+    data["BOM_ASSY_DWG_NO"] = candidates["BOM_ASSY_DWG_NO"]
+        .OrderByDescending(x => x.priority)
+        .FirstOrDefault().text ?? "";
+
+    data["Operation_No"] = candidates["Operation_No"]
+        .Where(x => x.text != data["Revision"] && x.text != data["BOM_ASSY_DWG_NO"])
+        .OrderByDescending(x => x.priority)
+        .FirstOrDefault().text ?? "";
+
+    data["Product_Line"] = candidates["Product_Line"]
+        .Where(x => x.text != data["Operation_No"] && 
+                    x.text != data["BOM_ASSY_DWG_NO"] && 
+                    x.text != data["Revision"])
+        .OrderByDescending(x => x.priority)
+        .FirstOrDefault().text ?? "";
+
+    // For Subject and Title, pick different values
+    var subjectCandidate = candidates["Subject"]
+        .OrderByDescending(x => x.priority)
+        .ThenBy(x => x.text.Length)
+        .FirstOrDefault().text ?? "";
+
+    var titleCandidate = candidates["WI_Title"]
+        .Where(x => x.text != subjectCandidate)
+        .OrderByDescending(x => x.priority)
+        .ThenByDescending(x => x.text.Length)
+        .FirstOrDefault().text ?? "";
+
+    // Assign based on length - shorter goes to Subject, longer to Title
+    if (!string.IsNullOrEmpty(subjectCandidate) && !string.IsNullOrEmpty(titleCandidate))
     {
-        progressCallback?.Invoke(50, $"Error running Python: {ex.Message}");
-        return false;
+        if (subjectCandidate.Length > titleCandidate.Length)
+        {
+            // Swap them
+            data["WI_Title"] = subjectCandidate;
+            data["Subject"] = titleCandidate;
+        }
+        else
+        {
+            data["Subject"] = subjectCandidate;
+            data["WI_Title"] = titleCandidate;
+        }
+    }
+    else
+    {
+        data["Subject"] = subjectCandidate;
+        data["WI_Title"] = titleCandidate;
     }
 }
-
-
-The key changes:
-
-1. **Removed** the line: `string tempScript = CreateTempPythonScript(tempFolder, outputExcel, scriptPath);`
-1. **Changed** the Arguments line to pass the folder and output paths directly to the Python script: `Arguments = $"\"{scriptPath}\" \"{tempFolder}\" \"{outputExcel}\""`
-
-This now passes the temp folder path and output Excel path as command-line arguments directly to your Python script, which will read them via `sys.argv`.​​​​​​​​​​​​​​​​
