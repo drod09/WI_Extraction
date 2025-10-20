@@ -1,29 +1,265 @@
-// Add a new GroupBox for extraction
-this.groupBox4 = new System.Windows.Forms.GroupBox();
-this.groupBox4.Controls.Add(this.btnExtract);
-this.groupBox4.Controls.Add(this.progressBar);
-this.groupBox4.Controls.Add(this.lblStatus);
-this.groupBox4.Location = new System.Drawing.Point(20, 310);
-this.groupBox4.Name = "groupBox4";
-this.groupBox4.Size = new System.Drawing.Size(840, 85);
-this.groupBox4.TabIndex = 20;
-this.groupBox4.TabStop = false;
-this.groupBox4.Text = "Extraction";
+namespace WorkInstructionExtractor
+{
+partial class Form1
+{
+private System.ComponentModel.IContainer components = null;
 
-------
-// btnExtract
-this.btnExtract.Location = new System.Drawing.Point(20, 25);  // Relative to groupBox4
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing && (components != null))
+        {
+            components.Dispose();
+        }
+        base.Dispose(disposing);
+    }
 
-// progressBar
-this.progressBar.Location = new System.Drawing.Point(240, 30);  // Relative to groupBox4
+    #region Windows Form Designer generated code
 
-// lblStatus
-this.lblStatus.Location = new System.Drawing.Point(660, 35);  // Relative to groupBox4
+    private void InitializeComponent()
+    {
+        this.txtPowerPointPath = new System.Windows.Forms.TextBox();
+        this.txtOutputFolder = new System.Windows.Forms.TextBox();
+        this.btnSelectFile = new System.Windows.Forms.Button();
+        this.btnSelectOutputFolder = new System.Windows.Forms.Button();
+        this.btnExtract = new System.Windows.Forms.Button();
+        this.progressBar = new System.Windows.Forms.ProgressBar();
+        this.txtLog = new System.Windows.Forms.RichTextBox();
+        this.lblStatus = new System.Windows.Forms.Label();
+        this.btnConfigureMapping = new System.Windows.Forms.Button();
+        this.btnManageTemplates = new System.Windows.Forms.Button();
+        this.label1 = new System.Windows.Forms.Label();
+        this.label3 = new System.Windows.Forms.Label();
+        this.groupBox1 = new System.Windows.Forms.GroupBox();
+        this.groupBox2 = new System.Windows.Forms.GroupBox();
+        this.groupBox3 = new System.Windows.Forms.GroupBox();
+        this.groupBox4 = new System.Windows.Forms.GroupBox();
+        this.label4 = new System.Windows.Forms.Label();
+        this.groupBox1.SuspendLayout();
+        this.groupBox2.SuspendLayout();
+        this.groupBox3.SuspendLayout();
+        this.groupBox4.SuspendLayout();
+        this.SuspendLayout();
+        // 
+        // txtPowerPointPath
+        // 
+        this.txtPowerPointPath.Location = new System.Drawing.Point(150, 30);
+        this.txtPowerPointPath.Name = "txtPowerPointPath";
+        this.txtPowerPointPath.ReadOnly = true;
+        this.txtPowerPointPath.Size = new System.Drawing.Size(550, 22);
+        this.txtPowerPointPath.TabIndex = 0;
+        // 
+        // txtOutputFolder
+        // 
+        this.txtOutputFolder.Location = new System.Drawing.Point(150, 65);
+        this.txtOutputFolder.Name = "txtOutputFolder";
+        this.txtOutputFolder.ReadOnly = true;
+        this.txtOutputFolder.Size = new System.Drawing.Size(550, 22);
+        this.txtOutputFolder.TabIndex = 2;
+        // 
+        // btnSelectFile
+        // 
+        this.btnSelectFile.Location = new System.Drawing.Point(720, 28);
+        this.btnSelectFile.Name = "btnSelectFile";
+        this.btnSelectFile.Size = new System.Drawing.Size(100, 26);
+        this.btnSelectFile.TabIndex = 3;
+        this.btnSelectFile.Text = "Browse...";
+        this.btnSelectFile.UseVisualStyleBackColor = true;
+        this.btnSelectFile.Click += new System.EventHandler(this.btnSelectFile_Click);
+        // 
+        // btnSelectOutputFolder
+        // 
+        this.btnSelectOutputFolder.Location = new System.Drawing.Point(720, 63);
+        this.btnSelectOutputFolder.Name = "btnSelectOutputFolder";
+        this.btnSelectOutputFolder.Size = new System.Drawing.Size(100, 26);
+        this.btnSelectOutputFolder.TabIndex = 5;
+        this.btnSelectOutputFolder.Text = "Browse...";
+        this.btnSelectOutputFolder.UseVisualStyleBackColor = true;
+        this.btnSelectOutputFolder.Click += new System.EventHandler(this.btnSelectOutputFolder_Click);
+        // 
+        // btnExtract
+        // 
+        this.btnExtract.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(120)))), ((int)(((byte)(215)))));
+        this.btnExtract.FlatAppearance.BorderSize = 0;
+        this.btnExtract.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+        this.btnExtract.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
+        this.btnExtract.ForeColor = System.Drawing.Color.White;
+        this.btnExtract.Location = new System.Drawing.Point(20, 25);
+        this.btnExtract.Name = "btnExtract";
+        this.btnExtract.Size = new System.Drawing.Size(200, 40);
+        this.btnExtract.TabIndex = 6;
+        this.btnExtract.Text = "Extract PowerPoint";
+        this.btnExtract.UseVisualStyleBackColor = false;
+        this.btnExtract.Click += new System.EventHandler(this.btnExtract_Click);
+        // 
+        // progressBar
+        // 
+        this.progressBar.Location = new System.Drawing.Point(240, 30);
+        this.progressBar.Name = "progressBar";
+        this.progressBar.Size = new System.Drawing.Size(400, 30);
+        this.progressBar.TabIndex = 7;
+        // 
+        // txtLog
+        // 
+        this.txtLog.BackColor = System.Drawing.Color.White;
+        this.txtLog.Dock = System.Windows.Forms.DockStyle.Fill;
+        this.txtLog.Font = new System.Drawing.Font("Consolas", 9F);
+        this.txtLog.Location = new System.Drawing.Point(3, 18);
+        this.txtLog.Name = "txtLog";
+        this.txtLog.ReadOnly = true;
+        this.txtLog.Size = new System.Drawing.Size(834, 189);
+        this.txtLog.TabIndex = 8;
+        this.txtLog.Text = "";
+        // 
+        // lblStatus
+        // 
+        this.lblStatus.Font = new System.Drawing.Font("Segoe UI", 9F);
+        this.lblStatus.Location = new System.Drawing.Point(660, 35);
+        this.lblStatus.Name = "lblStatus";
+        this.lblStatus.Size = new System.Drawing.Size(180, 20);
+        this.lblStatus.TabIndex = 10;
+        this.lblStatus.Text = "Ready";
+        // 
+        // btnConfigureMapping
+        // 
+        this.btnConfigureMapping.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+        this.btnConfigureMapping.Location = new System.Drawing.Point(20, 30);
+        this.btnConfigureMapping.Name = "btnConfigureMapping";
+        this.btnConfigureMapping.Size = new System.Drawing.Size(200, 35);
+        this.btnConfigureMapping.TabIndex = 11;
+        this.btnConfigureMapping.Text = "Configure Field Mapping...";
+        this.btnConfigureMapping.UseVisualStyleBackColor = true;
+        this.btnConfigureMapping.Click += new System.EventHandler(this.BtnConfigureMapping_Click);
+        // 
+        // btnManageTemplates
+        // 
+        this.btnManageTemplates.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+        this.btnManageTemplates.Location = new System.Drawing.Point(240, 30);
+        this.btnManageTemplates.Name = "btnManageTemplates";
+        this.btnManageTemplates.Size = new System.Drawing.Size(150, 35);
+        this.btnManageTemplates.TabIndex = 12;
+        this.btnManageTemplates.Text = "Manage Templates";
+        this.btnManageTemplates.UseVisualStyleBackColor = true;
+        this.btnManageTemplates.Click += new System.EventHandler(this.BtnManageMappings_Click);
+        // 
+        // label1
+        // 
+        this.label1.AutoSize = true;
+        this.label1.Location = new System.Drawing.Point(20, 33);
+        this.label1.Name = "label1";
+        this.label1.Size = new System.Drawing.Size(102, 16);
+        this.label1.TabIndex = 13;
+        this.label1.Text = "PowerPoint File:";
+        // 
+        // label3
+        // 
+        this.label3.AutoSize = true;
+        this.label3.Location = new System.Drawing.Point(20, 68);
+        this.label3.Name = "label3";
+        this.label3.Size = new System.Drawing.Size(93, 16);
+        this.label3.TabIndex = 15;
+        this.label3.Text = "Output Folder:";
+        // 
+        // groupBox1
+        // 
+        this.groupBox1.Controls.Add(this.label1);
+        this.groupBox1.Controls.Add(this.label3);
+        this.groupBox1.Controls.Add(this.txtPowerPointPath);
+        this.groupBox1.Controls.Add(this.txtOutputFolder);
+        this.groupBox1.Controls.Add(this.btnSelectFile);
+        this.groupBox1.Controls.Add(this.btnSelectOutputFolder);
+        this.groupBox1.Location = new System.Drawing.Point(20, 80);
+        this.groupBox1.Name = "groupBox1";
+        this.groupBox1.Size = new System.Drawing.Size(840, 110);
+        this.groupBox1.TabIndex = 16;
+        this.groupBox1.TabStop = false;
+        this.groupBox1.Text = "Input Files";
+        // 
+        // groupBox2
+        // 
+        this.groupBox2.Controls.Add(this.btnConfigureMapping);
+        this.groupBox2.Controls.Add(this.btnManageTemplates);
+        this.groupBox2.Location = new System.Drawing.Point(20, 210);
+        this.groupBox2.Name = "groupBox2";
+        this.groupBox2.Size = new System.Drawing.Size(840, 85);
+        this.groupBox2.TabIndex = 17;
+        this.groupBox2.TabStop = false;
+        this.groupBox2.Text = "Field Mapping Options";
+        // 
+        // groupBox3
+        // 
+        this.groupBox3.Controls.Add(this.txtLog);
+        this.groupBox3.Location = new System.Drawing.Point(20, 410);
+        this.groupBox3.Name = "groupBox3";
+        this.groupBox3.Size = new System.Drawing.Size(840, 210);
+        this.groupBox3.TabIndex = 18;
+        this.groupBox3.TabStop = false;
+        this.groupBox3.Text = "Activity Log";
+        // 
+        // groupBox4
+        // 
+        this.groupBox4.Controls.Add(this.btnExtract);
+        this.groupBox4.Controls.Add(this.progressBar);
+        this.groupBox4.Controls.Add(this.lblStatus);
+        this.groupBox4.Location = new System.Drawing.Point(20, 310);
+        this.groupBox4.Name = "groupBox4";
+        this.groupBox4.Size = new System.Drawing.Size(840, 85);
+        this.groupBox4.TabIndex = 20;
+        this.groupBox4.TabStop = false;
+        this.groupBox4.Text = "Extraction";
+        // 
+        // label4
+        // 
+        this.label4.Font = new System.Drawing.Font("Segoe UI", 16F, System.Drawing.FontStyle.Bold);
+        this.label4.Location = new System.Drawing.Point(20, 20);
+        this.label4.Name = "label4";
+        this.label4.Size = new System.Drawing.Size(840, 40);
+        this.label4.TabIndex = 19;
+        this.label4.Text = "Work Instruction Extractor";
+        this.label4.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+        // 
+        // Form1
+        // 
+        this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
+        this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+        this.ClientSize = new System.Drawing.Size(880, 640);
+        this.Controls.Add(this.label4);
+        this.Controls.Add(this.groupBox1);
+        this.Controls.Add(this.groupBox2);
+        this.Controls.Add(this.groupBox4);
+        this.Controls.Add(this.groupBox3);
+        this.MinimumSize = new System.Drawing.Size(800, 600);
+        this.Name = "Form1";
+        this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
+        this.Text = "Work Instruction Extractor";
+        this.Load += new System.EventHandler(this.Form1_Load);
+        this.groupBox1.ResumeLayout(false);
+        this.groupBox1.PerformLayout();
+        this.groupBox2.ResumeLayout(false);
+        this.groupBox3.ResumeLayout(false);
+        this.groupBox4.ResumeLayout(false);
+        this.ResumeLayout(false);
 
------
-this.Controls.Add(this.groupBox4);  // Add the group instead of individual controls
+    }
 
+    #endregion
 
+    private System.Windows.Forms.TextBox txtPowerPointPath;
+    private System.Windows.Forms.TextBox txtOutputFolder;
+    private System.Windows.Forms.Button btnSelectFile;
+    private System.Windows.Forms.Button btnSelectOutputFolder;
+    private System.Windows.Forms.Button btnExtract;
+    private System.Windows.Forms.ProgressBar progressBar;
+    private System.Windows.Forms.RichTextBox txtLog;
+    private System.Windows.Forms.Label lblStatus;
+    private System.Windows.Forms.Button btnConfigureMapping;
+    private System.Windows.Forms.Button btnManageTemplates;
+    private System.Windows.Forms.Label label1;
+    private System.Windows.Forms.Label label3;
+    private System.Windows.Forms.GroupBox groupBox1;
+    private System.Windows.Forms.GroupBox groupBox2;
+    private System.Windows.Forms.GroupBox groupBox3;
+    private System.Windows.Forms.GroupBox groupBox4;
+    private System.Windows.Forms.Label label4;
+}
 
-
-
+}
