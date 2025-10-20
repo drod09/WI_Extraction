@@ -1,362 +1,86 @@
-Good call! Position-based extraction is actually more reliable when you know the template formats. Let me create a cleaner approach that detects the revision type first, then uses position-based extraction:
+Ah, I see the issue! The `ExtractSlideSubject` method is separate from the header extraction logic. We need to update it to use the same position-based detection for Rev 15-16 vs Rev 17-19. Let me fix that:
 
 ```csharp
-/// <summary>
-/// Extract all header fields using position-based extraction with revision detection
-/// </summary>
-private void ExtractData(List<TextBoxInfo> textBoxes, Dictionary<string, string> data)
+private string ExtractSlideSubject(Slide slide)
 {
-    // Initialize all fields
-    data["WI_Number"] = "";
-    data["WI_Title"] = "";
-    data["Revision"] = "";
-    data["BOM_ASSY_DWG_NO"] = "";
-    data["Operation_No"] = "";
-    data["Product_Line"] = "";
-    data["Subject"] = "";
-    data["RevisionType"] = "";
-
-    // First, detect the revision type from FM-ME text
-    string revisionType = DetectRevisionType(textBoxes);
-    data["RevisionType"] = revisionType;
-
-    Console.WriteLine($"Detected Revision Type: {revisionType}");
-
-    // Extract based on revision type
-    if (revisionType == "15" || revisionType == "16")
+    try
     {
-        ExtractRev15_16(textBoxes, data);
+        // First, collect all text boxes from the slide
+        var textBoxes = new List<TextBoxInfo>();
+        CollectTextBoxes(slide.Shapes, textBoxes);
+
+        // Detect revision type from the first slide (if we have it cached, use it)
+        // For now, we'll detect it from each slide's master/layout
+        string revisionType = DetectRevisionTypeFromSlide(slide);
+
+        Console.WriteLine($"Slide {slide.SlideIndex}: Detected revision {revisionType}");
+
+        // Extract subject based on revision type using position
+        string subject = "";
+
+        if (revisionType == "15" || revisionType == "16")
+        {
+            // Rev 15/16: Subject position - Left 420-430, Top 520-525 (or similar)
+            // But for other slides, subject might be in title position
+            subject = ExtractSubjectRev15_16(textBoxes);
+        }
+        else if (revisionType == "17" || revisionType == "18" || revisionType == "19")
+        {
+            // Rev 17/19: Subject position - Left 315-640, Top 495-510
+            subject = ExtractSubjectRev17_19(textBoxes);
+        }
+        else
+        {
+            // Unknown revision - try standard title placeholder
+            subject = ExtractSubjectFallback(slide);
+        }
+
+        if (!string.IsNullOrWhiteSpace(subject))
+        {
+            Console.WriteLine($"  Found subject: {subject}");
+            return subject.ToUpper();
+        }
+
+        // If still not found, try the standard placeholder method
+        subject = ExtractSubjectFallback(slide);
+        
+        if (!string.IsNullOrWhiteSpace(subject))
+            return subject.ToUpper();
+
+        return "UNTITLED SLIDE";
     }
-    else if (revisionType == "17" || revisionType == "18" || revisionType == "19")
+    catch (Exception ex)
     {
-        ExtractRev17_19(textBoxes, data);
-    }
-    else
-    {
-        // Unknown revision - try pattern-based as fallback
-        Console.WriteLine("Unknown revision type - using pattern-based extraction");
-        ExtractWithPatterns(textBoxes, data);
+        Console.WriteLine($"Error extracting slide subject: {ex.Message}");
+        return "UNTITLED SLIDE";
     }
 }
 
-/// <summary>
-/// Detect revision type from FM-ME text box
-/// </summary>
-private string DetectRevisionType(List<TextBoxInfo> textBoxes)
+private string DetectRevisionTypeFromSlide(Slide slide)
 {
-    foreach (var box in textBoxes)
+    try
     {
-        string upper = box.Text.ToUpper();
-        if (upper.Contains("FM-ME") || upper.Contains("FM ME") || upper.Contains("FMME"))
-        {
-            var match = System.Text.RegularExpressions.Regex.Match(box.Text,
-                @"rev\.?\s*(\d+)",
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-            
-            if (match.Success && match.Groups.Count > 1)
-            {
-                return match.Groups[1].Value;
-            }
-        }
+        // Check master shapes for FM-ME text
+        var textBoxes = new List<TextBoxInfo>();
+        
+        try { CollectTextBoxes(slide.Master.Shapes, textBoxes); } catch { }
+        try { CollectTextBoxes(slide.Design.SlideMaster.Shapes, textBoxes); } catch { }
+        try { CollectTextBoxes(slide.CustomLayout.Shapes, textBoxes); } catch { }
+        
+        return DetectRevisionType(textBoxes);
     }
-    return "Unknown";
-}
-
-/// <summary>
-/// Extract fields for Rev 15-16 templates (Slide format 5:4, needs conversion to 4:3)
-/// Position ranges are approximate and may need adjustment
-/// </summary>
-private void ExtractRev15_16(List<TextBoxInfo> textBoxes, Dictionary<string, string> data)
-{
-    Console.WriteLine("Using Rev 15-16 extraction logic");
-
-    foreach (var box in textBoxes)
+    catch
     {
-        string text = box.Text.Trim();
-        string upper = text.ToUpper();
-
-        // Skip labels
-        if (IsLabel(upper) || string.IsNullOrWhiteSpace(text)) continue;
-
-        Console.WriteLine($"Rev15-16: Text='{text}', Left={box.Left:F1}, Top={box.Top:F1}");
-
-        // WI Number - pattern based (consistent across all revs)
-        if (string.IsNullOrEmpty(data["WI_Number"]))
-        {
-            var wiMatch = System.Text.RegularExpressions.Regex.Match(text,
-                @"W\.?\s*I\.?\s*-?\s*\d{2,}",
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-            if (wiMatch.Success)
-            {
-                string wiNum = wiMatch.Value.Replace(" ", "").Replace(".", "").ToUpper();
-                if (!wiNum.Contains("-"))
-                    wiNum = wiNum.Replace("WI", "WI-");
-                data["WI_Number"] = wiNum;
-                Console.WriteLine($"  -> WI_Number: {wiNum}");
-                continue;
-            }
-        }
-
-        // WI Title - Rev 15/16: Left 20-80, Top 515-525
-        if (string.IsNullOrEmpty(data["WI_Title"]))
-        {
-            if (box.Left > 20 && box.Left < 80 && box.Top > 510 && box.Top < 530 &&
-                text.Length > 10 && text.Length < 150)
-            {
-                data["WI_Title"] = text;
-                Console.WriteLine($"  -> WI_Title: {text}");
-                continue;
-            }
-        }
-
-        // Revision - Rev 15/16: Left 595-620, Top 555-565, 1-2 digits
-        if (string.IsNullOrEmpty(data["Revision"]))
-        {
-            if (box.Left > 590 && box.Left < 625 && box.Top > 550 && box.Top < 570 &&
-                System.Text.RegularExpressions.Regex.IsMatch(text, @"^\d{1,2}$"))
-            {
-                data["Revision"] = text;
-                Console.WriteLine($"  -> Revision: {text}");
-                continue;
-            }
-        }
-
-        // BOM/ASSY DWG NO - Rev 15/16: Left 300-315, Top 558-565
-        if (string.IsNullOrEmpty(data["BOM_ASSY_DWG_NO"]))
-        {
-            if (box.Left > 295 && box.Left < 320 && box.Top > 555 && box.Top < 568 &&
-                text.Length > 2 && text.Length < 50 &&
-                !text.StartsWith("WI", StringComparison.OrdinalIgnoreCase))
-            {
-                data["BOM_ASSY_DWG_NO"] = text;
-                Console.WriteLine($"  -> BOM_ASSY_DWG_NO: {text}");
-                continue;
-            }
-        }
-
-        // Operation No - Rev 15/16: Left 185-195, Top 555-565
-        if (string.IsNullOrEmpty(data["Operation_No"]))
-        {
-            if (box.Left > 180 && box.Left < 200 && box.Top > 550 && box.Top < 570 &&
-                text.Length > 1 && text.Length < 40)
-            {
-                data["Operation_No"] = text;
-                Console.WriteLine($"  -> Operation_No: {text}");
-                continue;
-            }
-        }
-
-        // Product Line - Rev 15/16: Left 460-515, Top 555-565
-        if (string.IsNullOrEmpty(data["Product_Line"]))
-        {
-            if (box.Left > 455 && box.Left < 520 && box.Top > 550 && box.Top < 570 &&
-                text.Length >= 2 && text.Length < 30 &&
-                !upper.Contains("PAGE"))
-            {
-                data["Product_Line"] = text;
-                Console.WriteLine($"  -> Product_Line: {text}");
-                continue;
-            }
-        }
-
-        // Subject - Rev 15/16: Left 420-430, Top 520-525
-        if (string.IsNullOrEmpty(data["Subject"]))
-        {
-            if (box.Left > 415 && box.Left < 435 && box.Top > 515 && box.Top < 530 &&
-                text.Length > 5 && text.Length < 80 &&
-                !upper.Contains("COMPANY") &&
-                text != data["WI_Title"])
-            {
-                data["Subject"] = text;
-                Console.WriteLine($"  -> Subject: {text}");
-                continue;
-            }
-        }
-    }
-
-    // Fallback: if Subject is still empty, try pattern-based
-    if (string.IsNullOrEmpty(data["Subject"]))
-    {
-        foreach (var box in textBoxes)
-        {
-            string text = box.Text.Trim();
-            string upper = text.ToUpper();
-            
-            if (text.Length > 5 && text.Length < 80 &&
-                !IsLabel(upper) &&
-                !upper.Contains("COMPANY") &&
-                !upper.Contains("PAGE") &&
-                text != data["WI_Title"] &&
-                text != data["WI_Number"] &&
-                text != data["BOM_ASSY_DWG_NO"])
-            {
-                data["Subject"] = text;
-                Console.WriteLine($"  -> Subject (fallback): {text}");
-                break;
-            }
-        }
+        return "Unknown";
     }
 }
 
-/// <summary>
-/// Extract fields for Rev 17-19 templates (Slide format 4:3)
-/// </summary>
-private void ExtractRev17_19(List<TextBoxInfo> textBoxes, Dictionary<string, string> data)
+private string ExtractSubjectRev15_16(List<TextBoxInfo> textBoxes)
 {
-    Console.WriteLine("Using Rev 17-19 extraction logic");
+    // For Rev 15/16, subject is typically in a specific position
+    // Check multiple possible positions
 
-    foreach (var box in textBoxes)
-    {
-        string text = box.Text.Trim();
-        string upper = text.ToUpper();
-
-        // Skip labels
-        if (IsLabel(upper) || string.IsNullOrWhiteSpace(text)) continue;
-
-        Console.WriteLine($"Rev17-19: Text='{text}', Left={box.Left:F1}, Top={box.Top:F1}");
-
-        // WI Number - pattern based (consistent across all revs)
-        if (string.IsNullOrEmpty(data["WI_Number"]))
-        {
-            var wiMatch = System.Text.RegularExpressions.Regex.Match(text,
-                @"W\.?\s*I\.?\s*-?\s*\d{2,}",
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-            if (wiMatch.Success)
-            {
-                string wiNum = wiMatch.Value.Replace(" ", "").Replace(".", "").ToUpper();
-                if (!wiNum.Contains("-"))
-                    wiNum = wiNum.Replace("WI", "WI-");
-                data["WI_Number"] = wiNum;
-                Console.WriteLine($"  -> WI_Number: {wiNum}");
-                continue;
-            }
-        }
-
-        // WI Title - Rev 17/19: Left 100-110, Top 455-470
-        if (string.IsNullOrEmpty(data["WI_Title"]))
-        {
-            if (box.Left > 95 && box.Left < 115 && box.Top > 450 && box.Top < 475 &&
-                text.Length > 10 && text.Length < 150)
-            {
-                data["WI_Title"] = text;
-                Console.WriteLine($"  -> WI_Title: {text}");
-                continue;
-            }
-        }
-
-        // Revision - Rev 17/19: Left 665-680, Top 460-470, 1-2 digits
-        if (string.IsNullOrEmpty(data["Revision"]))
-        {
-            if (box.Left > 660 && box.Left < 685 && box.Top > 455 && box.Top < 475 &&
-                System.Text.RegularExpressions.Regex.IsMatch(text, @"^\d{1,2}$"))
-            {
-                data["Revision"] = text;
-                Console.WriteLine($"  -> Revision: {text}");
-                continue;
-            }
-        }
-
-        // BOM/ASSY DWG NO - Rev 17/19: Left 0-20, Top 498-505
-        if (string.IsNullOrEmpty(data["BOM_ASSY_DWG_NO"]))
-        {
-            if (box.Left > -5 && box.Left < 25 && box.Top > 493 && box.Top < 510 &&
-                text.Length > 2 && text.Length < 50 &&
-                !text.StartsWith("WI", StringComparison.OrdinalIgnoreCase))
-            {
-                data["BOM_ASSY_DWG_NO"] = text;
-                Console.WriteLine($"  -> BOM_ASSY_DWG_NO: {text}");
-                continue;
-            }
-        }
-
-        // Operation No - Rev 17/19: Left 140-155, Top 498-505
-        if (string.IsNullOrEmpty(data["Operation_No"]))
-        {
-            if (box.Left > 135 && box.Left < 160 && box.Top > 493 && box.Top < 510 &&
-                text.Length > 1 && text.Length < 40)
-            {
-                data["Operation_No"] = text;
-                Console.WriteLine($"  -> Operation_No: {text}");
-                continue;
-            }
-        }
-
-        // Product Line - Rev 17/19: Left 210-230, Top 498-505
-        if (string.IsNullOrEmpty(data["Product_Line"]))
-        {
-            if (box.Left > 205 && box.Left < 235 && box.Top > 493 && box.Top < 510 &&
-                text.Length >= 2 && text.Length < 30 &&
-                !upper.Contains("PAGE"))
-            {
-                data["Product_Line"] = text;
-                Console.WriteLine($"  -> Product_Line: {text}");
-                continue;
-            }
-        }
-
-        // Subject - Rev 17/19: Left 315-640, Top 495-510
-        if (string.IsNullOrEmpty(data["Subject"]))
-        {
-            if (box.Left > 310 && box.Left < 645 && box.Top > 490 && box.Top < 515 &&
-                text.Length > 5 && text.Length < 80 &&
-                !upper.Contains("COMPANY") &&
-                text != data["WI_Title"])
-            {
-                data["Subject"] = text;
-                Console.WriteLine($"  -> Subject: {text}");
-                continue;
-            }
-        }
-    }
-
-    // Fallback: if Subject is still empty, try pattern-based
-    if (string.IsNullOrEmpty(data["Subject"]))
-    {
-        foreach (var box in textBoxes)
-        {
-            string text = box.Text.Trim();
-            string upper = text.ToUpper();
-            
-            if (text.Length > 5 && text.Length < 80 &&
-                !IsLabel(upper) &&
-                !upper.Contains("COMPANY") &&
-                !upper.Contains("PAGE") &&
-                text != data["WI_Title"] &&
-                text != data["WI_Number"] &&
-                text != data["BOM_ASSY_DWG_NO"])
-            {
-                data["Subject"] = text;
-                Console.WriteLine($"  -> Subject (fallback): {text}");
-                break;
-            }
-        }
-    }
-}
-
-/// <summary>
-/// Fallback pattern-based extraction for unknown revisions
-/// </summary>
-private void ExtractWithPatterns(List<TextBoxInfo> textBoxes, Dictionary<string, string> data)
-{
-    // WI Number
-    foreach (var box in textBoxes)
-    {
-        if (string.IsNullOrEmpty(data["WI_Number"]))
-        {
-            var wiMatch = System.Text.RegularExpressions.Regex.Match(box.Text,
-                @"W\.?\s*I\.?\s*-?\s*\d{2,}",
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-            if (wiMatch.Success)
-            {
-                string wiNum = wiMatch.Value.Replace(" ", "").Replace(".", "").ToUpper();
-                if (!wiNum.Contains("-"))
-                    wiNum = wiNum.Replace("WI", "WI-");
-                data["WI_Number"] = wiNum;
-            }
-        }
-    }
-
-    // Simple pattern-based extraction for other fields
+    // Position 1: Left 420-430, Top 520-525 (header area)
     foreach (var box in textBoxes)
     {
         string text = box.Text.Trim();
@@ -364,58 +88,170 @@ private void ExtractWithPatterns(List<TextBoxInfo> textBoxes, Dictionary<string,
 
         if (IsLabel(upper) || string.IsNullOrWhiteSpace(text)) continue;
 
-        // Revision
-        if (string.IsNullOrEmpty(data["Revision"]) &&
-            System.Text.RegularExpressions.Regex.IsMatch(text, @"^\d{1,2}$"))
+        Console.WriteLine($"  Rev15-16 Subject check: Text='{text}', Left={box.Left:F1}, Top={box.Top:F1}");
+
+        // Header position
+        if (box.Left > 415 && box.Left < 435 && box.Top > 515 && box.Top < 530 &&
+            text.Length > 3 && text.Length < 80)
         {
-            data["Revision"] = text;
+            return text;
+        }
+    }
+
+    // Position 2: Top of slide (for subsequent slides) - Left 50-500, Top 30-80
+    foreach (var box in textBoxes)
+    {
+        string text = box.Text.Trim();
+        string upper = text.ToUpper();
+
+        if (IsLabel(upper) || string.IsNullOrWhiteSpace(text)) continue;
+
+        // Top of slide position
+        if (box.Top > 25 && box.Top < 85 &&
+            box.Left > 45 && box.Left < 505 &&
+            text.Length > 3 && text.Length < 100)
+        {
+            return text;
+        }
+    }
+
+    // Position 3: Largest font at top
+    var topShapes = textBoxes
+        .Where(b => b.Top < 100 && b.Text.Trim().Length > 3 && b.Text.Trim().Length < 100)
+        .OrderByDescending(b => b.Height)
+        .ThenBy(b => b.Top)
+        .FirstOrDefault();
+
+    if (topShapes != null)
+        return topShapes.Text.Trim();
+
+    return "";
+}
+
+private string ExtractSubjectRev17_19(List<TextBoxInfo> textBoxes)
+{
+    // For Rev 17/19, subject is typically in a specific position
+    
+    // Position 1: Left 315-640, Top 495-510 (header area)
+    foreach (var box in textBoxes)
+    {
+        string text = box.Text.Trim();
+        string upper = text.ToUpper();
+
+        if (IsLabel(upper) || string.IsNullOrWhiteSpace(text)) continue;
+
+        Console.WriteLine($"  Rev17-19 Subject check: Text='{text}', Left={box.Left:F1}, Top={box.Top:F1}");
+
+        // Header position
+        if (box.Left > 310 && box.Left < 645 && box.Top > 490 && box.Top < 515 &&
+            text.Length > 3 && text.Length < 80)
+        {
+            return text;
+        }
+    }
+
+    // Position 2: Top of slide (for subsequent slides) - Left 50-650, Top 30-100
+    foreach (var box in textBoxes)
+    {
+        string text = box.Text.Trim();
+        string upper = text.ToUpper();
+
+        if (IsLabel(upper) || string.IsNullOrWhiteSpace(text)) continue;
+
+        // Top of slide position
+        if (box.Top > 25 && box.Top < 105 &&
+            box.Left > 45 && box.Left < 655 &&
+            text.Length > 3 && text.Length < 100)
+        {
+            return text;
+        }
+    }
+
+    // Position 3: Largest font at top
+    var topShapes = textBoxes
+        .Where(b => b.Top < 120 && b.Text.Trim().Length > 3 && b.Text.Trim().Length < 100)
+        .OrderByDescending(b => b.Height)
+        .ThenBy(b => b.Top)
+        .FirstOrDefault();
+
+    if (topShapes != null)
+        return topShapes.Text.Trim();
+
+    return "";
+}
+
+private string ExtractSubjectFallback(Slide slide)
+{
+    try
+    {
+        // Check for title placeholder
+        foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in slide.Shapes)
+        {
+            try
+            {
+                if (shape.Type == MsoShapeType.msoPlaceholder)
+                {
+                    var placeholder = shape.PlaceholderFormat;
+                    if (placeholder.Type == PpPlaceholderType.ppPlaceholderTitle ||
+                        placeholder.Type == PpPlaceholderType.ppPlaceholderCenterTitle)
+                    {
+                        if (shape.HasTextFrame == MsoTriState.msoTrue)
+                        {
+                            string titleText = shape.TextFrame.TextRange.Text.Trim();
+                            if (!string.IsNullOrWhiteSpace(titleText))
+                                return titleText;
+                        }
+                    }
+                }
+            }
+            catch { }
         }
 
-        // Title - longer text
-        if (string.IsNullOrEmpty(data["WI_Title"]) &&
-            text.Length > 15 && text.Length < 150)
+        // Find largest font at top of slide
+        var topShapes = new List<(string text, float top, float fontSize)>();
+        foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in slide.Shapes)
         {
-            data["WI_Title"] = text;
+            try
+            {
+                if (shape.HasTextFrame == MsoTriState.msoTrue && shape.Top < 100)
+                {
+                    string text = shape.TextFrame.TextRange.Text.Trim();
+                    if (!string.IsNullOrWhiteSpace(text) && text.Length < 100)
+                    {
+                        float fontSize = 12;
+                        try { fontSize = shape.TextFrame.TextRange.Font.Size; } catch { }
+                        topShapes.Add((text, shape.Top, fontSize));
+                    }
+                }
+            }
+            catch { }
         }
 
-        // Subject - medium text
-        if (string.IsNullOrEmpty(data["Subject"]) &&
-            text.Length > 5 && text.Length < 80 &&
-            text != data["WI_Title"])
+        if (topShapes.Count > 0)
         {
-            data["Subject"] = text;
+            var largestFont = topShapes.OrderByDescending(s => s.fontSize).ThenBy(s => s.top).First();
+            return largestFont.text;
         }
+
+        return "";
+    }
+    catch
+    {
+        return "";
     }
 }
 ```
 
-Now for the output file name, change this in the `ExtractWorkInstruction` method:
+The key changes:
 
-```csharp
-public ExtractionResult ExtractWorkInstruction(
-    string pptxPath,
-    string outputFolder,
-    Action<int, string> progressCallback = null)
-{
-    progressCallback?.Invoke(0, "Starting extraction...");
+1. **`ExtractSlideSubject` now detects revision type** for each slide and uses position-based extraction
+1. **Separate methods for Rev 15-16 vs 17-19** subject extraction with specific position ranges
+1. **Multiple position checks**:
 
-    // Create output folders
-    string baseImagesFolder = Path.Combine(outputFolder, "BaseImages");
-    string composedImagesFolder = Path.Combine(outputFolder, "ComposedImages");
-    Directory.CreateDirectory(baseImagesFolder);
-    Directory.CreateDirectory(composedImagesFolder);
+- First checks the header area position (where subject appears on slide 1)
+- Then checks top of slide (where subject typically appears on slides 2+)
+- Finally falls back to largest font at top
 
-    string headerExcel = Path.Combine(outputFolder, "HeaderData.xlsx");
-    string tablesExcel = Path.Combine(outputFolder, "TablesData.xlsx");
-    string finalExcel = Path.Combine(outputFolder, "ExtractedData.xlsx");  // CHANGED THIS LINE
+1. **Console logging** to help debug which positions are being detected
 
-    // ... rest of the method stays the same
-```
-
-Test this with your Rev 16 file and let me know:
-
-1. What the console output shows for the detected positions
-1. Which fields are still incorrect
-1. Whether the slide format is 5:4 or 4:3 (we may need to adjust coordinates)
-
-We can fine-tune the position ranges based on your actual files!​​​​​​​​​​​​​​​​
+The subject should now be consistent across Header Data, Table of Contents, and Text Content sheets. Test it and let me know if the positions need adjustment based on your actual slide layouts!​​​​​​​​​​​​​​​​
