@@ -1,4 +1,4 @@
-using System;
+using using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,7 +19,977 @@ static PowerPointExtractor()
 ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 }
 
-```
+    public ExtractionResult ExtractWorkInstruction(
+        string pptxPath,
+        string outputFolder,
+        Action<int, string> progressCallback = null)
+    {
+        progressCallback?.Invoke(0, "Starting extraction...");
+
+        // Create output folders
+        string baseImagesFolder = Path.Combine(outputFolder, "BaseImages");
+        string composedImagesFolder = Path.Combine(outputFolder, "ComposedImages");
+        Directory.CreateDirectory(baseImagesFolder);
+        Directory.CreateDirectory(composedImagesFolder);
+
+        string headerExcel = Path.Combine(outputFolder, "HeaderData.xlsx");
+        string tablesExcel = Path.Combine(outputFolder, "TablesData.xlsx");
+        string finalExcel = Path.Combine(outputFolder, "Extracted_Data.xlsx");
+
+        // Extract header data and images
+        progressCallback?.Invoke(10, "Extracting header data and images...");
+        var (headerData, tocData) = ExtractHeadersAndImages(pptxPath, headerExcel, 
+            baseImagesFolder, composedImagesFolder, progressCallback);
+
+        string wiNumber = headerData.FirstOrDefault()?["WI_Number"] ?? "";
+
+        // Run Python script to extract tables
+        progressCallback?.Invoke(40, "Extracting table data with Python...");
+        bool pythonSuccess = RunPythonScript(pptxPath, tablesExcel, progressCallback);
+
+        if (pythonSuccess)
+        {
+            progressCallback?.Invoke(80, "Merging data into final Excel file...");
+            MergeExcelFiles(headerExcel, tablesExcel, finalExcel);
+            
+            try
+            {
+                File.Delete(headerExcel);
+                File.Delete(tablesExcel);
+            }
+            catch { }
+        }
+        else
+        {
+            File.Move(headerExcel, finalExcel);
+            progressCallback?.Invoke(100, "⚠️ Table extraction failed. Only header data extracted.");
+        }
+
+        progressCallback?.Invoke(100, "Extraction complete!");
+
+        return new ExtractionResult
+        {
+            ExcelPath = finalExcel,
+            BaseImagesFolder = baseImagesFolder,
+            ComposedImagesFolder = composedImagesFolder,
+            WINumber = wiNumber
+        };
+    }
+
+    private (List<Dictionary<string, string>>, List<Dictionary<string, string>>) ExtractHeadersAndImages(
+        string filePath, string excelPath, string baseImagesFolder, string composedImagesFolder, 
+        Action<int, string> progressCallback)
+    {
+        var headerData = new List<Dictionary<string, string>>();
+        var imageData = new List<Dictionary<string, string>>();
+        var textData = new List<Dictionary<string, string>>();
+        var tocData = new List<Dictionary<string, string>>();
+
+        PowerPointApp pptApp = new PowerPointApp();
+        int docCounter = 1;
+
+        try
+        {
+            progressCallback?.Invoke(15, "Opening PowerPoint file...");
+
+            Presentation ppt = pptApp.Presentations.Open(filePath,
+                MsoTriState.msoFalse, MsoTriState.msoFalse, MsoTriState.msoFalse);
+
+            if (ppt.Slides.Count > 0)
+            {
+                progressCallback?.Invoke(20, "Extracting header data...");
+
+                Slide firstSlide = ppt.Slides[1];
+                var data = new Dictionary<string, string>
+                {
+                    ["DocumentID"] = docCounter.ToString(),
+                    ["SourceFileName"] = Path.GetFileName(filePath)
+                };
+
+                // Collect all text boxes from all sources
+                var allTextBoxes = new List<TextBoxInfo>();
+                CollectTextBoxes(firstSlide.Shapes, allTextBoxes);
+                try { CollectTextBoxes(firstSlide.Master.Shapes, allTextBoxes); } catch { }
+                try { CollectTextBoxes(firstSlide.Design.SlideMaster.Shapes, allTextBoxes); } catch { }
+                try { CollectTextBoxes(firstSlide.CustomLayout.Shapes, allTextBoxes); } catch { }
+
+                // Extract data using pattern matching
+                ExtractData(allTextBoxes, data);
+
+                data["TotalPages"] = ppt.Slides.Count.ToString();
+
+                progressCallback?.Invoke(25, "Extracting images...");
+                var images = ExtractImagesFromPresentation(ppt, docCounter, data["WI_Number"],
+                    Path.GetFileName(filePath), baseImagesFolder, composedImagesFolder);
+                imageData.AddRange(images);
+                data["TotalImages"] = images.Count.ToString();
+
+                progressCallback?.Invoke(30, "Extracting text content...");
+                var slideTexts = ExtractTextFromSlides(ppt, docCounter, data["WI_Number"],
+                    Path.GetFileName(filePath));
+                textData.AddRange(slideTexts);
+
+                progressCallback?.Invoke(33, "Building table of contents...");
+                var tocEntries = ExtractTableOfContents(ppt, docCounter, data["WI_Number"],
+                    Path.GetFileName(filePath));
+                tocData.AddRange(tocEntries);
+
+                // Extract subject from TOC if still empty
+                if (tocEntries.Count > 0 && string.IsNullOrEmpty(data.GetValueOrDefault("Subject")))
+                {
+                    data["Subject"] = tocEntries[0]["SlideSubject"];
+                }
+
+                headerData.Add(data);
+                progressCallback?.Invoke(35, $"Extracted: {data["WI_Number"]}");
+            }
+
+            ppt.Close();
+        }
+        finally
+        {
+            pptApp.Quit();
+        }
+
+        WriteToExcel(headerData, imageData, textData, tocData, excelPath);
+        return (headerData, tocData);
+    }
+
+    /// <summary>
+    /// Extract all header fields using pattern matching only - no position dependencies
+    /// </summary>
+    private void ExtractData(List<TextBoxInfo> textBoxes, Dictionary<string, string> data)
+    {
+        // Initialize all fields
+        data["WI_Number"] = "";
+        data["WI_Title"] = "";
+        data["Revision"] = "";
+        data["BOM_ASSY_DWG_NO"] = "";
+        data["Operation_No"] = "";
+        data["Product_Line"] = "";
+        data["Subject"] = "";
+        data["RevisionType"] = "";
+
+        var candidates = new Dictionary<string, List<string>>
+        {
+            ["WI_Number"] = new List<string>(),
+            ["Revision"] = new List<string>(),
+            ["BOM_ASSY_DWG_NO"] = new List<string>(),
+            ["Operation_No"] = new List<string>(),
+            ["Product_Line"] = new List<string>(),
+            ["WI_Title"] = new List<string>(),
+            ["Subject"] = new List<string>()
+        };
+
+        foreach (var box in textBoxes)
+        {
+            string text = box.Text.Trim();
+            string upper = text.ToUpper();
+
+            // Skip labels
+            if (IsLabel(upper)) continue;
+
+            // WI Number - pattern: WI-123 or W.I. 123
+            var wiMatch = System.Text.RegularExpressions.Regex.Match(text,
+                @"W\.?\s*I\.?\s*-?\s*\d{2,}",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (wiMatch.Success)
+            {
+                string wiNum = wiMatch.Value.Replace(" ", "").Replace(".", "").ToUpper();
+                if (!wiNum.Contains("-"))
+                    wiNum = wiNum.Replace("WI", "WI-");
+                candidates["WI_Number"].Add(wiNum);
+                continue;
+            }
+
+            // Revision - single or double digit number
+            if (System.Text.RegularExpressions.Regex.IsMatch(text, @"^\d{1,2}$"))
+            {
+                candidates["Revision"].Add(text);
+                continue;
+            }
+
+            // BOM/ASSY DWG NO - alphanumeric code with optional dash, not WI number
+            if (System.Text.RegularExpressions.Regex.IsMatch(text, @"^[A-Z0-9]{3,20}(-[A-Z0-9]+)?$",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase) &&
+                !upper.StartsWith("WI") && !upper.Contains("PAGE"))
+            {
+                candidates["BOM_ASSY_DWG_NO"].Add(text);
+                continue;
+            }
+
+            // Operation Number - short alphanumeric
+            if (text.Length >= 2 && text.Length <= 10 &&
+                System.Text.RegularExpressions.Regex.IsMatch(text, @"^[A-Z0-9\-]+$",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+            {
+                candidates["Operation_No"].Add(text);
+            }
+
+            // Product Line - short codes
+            if (text.Length >= 2 && text.Length <= 20 &&
+                System.Text.RegularExpressions.Regex.IsMatch(text, @"[A-Z0-9]"))
+            {
+                candidates["Product_Line"].Add(text);
+            }
+
+            // WI Title - longer descriptive text
+            if (text.Length > 10 && text.Length < 150 &&
+                !upper.Contains("COMPANY") && !upper.Contains("FM-ME"))
+            {
+                candidates["WI_Title"].Add(text);
+            }
+
+            // Subject - medium length descriptive text
+            if (text.Length > 5 && text.Length < 80 &&
+                !upper.Contains("COMPANY") && !upper.Contains("PAGE OF"))
+            {
+                candidates["Subject"].Add(text);
+            }
+
+            // Revision Type - FM-ME pattern
+            if (upper.Contains("FM-ME") || upper.Contains("FM ME"))
+            {
+                var revMatch = System.Text.RegularExpressions.Regex.Match(text,
+                    @"FM-?[\s]?ME-?\d+.*?rev\.?\s*(\d+)",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                if (revMatch.Success && revMatch.Groups.Count > 1)
+                {
+                    data["RevisionType"] = revMatch.Groups[1].Value;
+                }
+            }
+        }
+
+        // Select best candidates
+        data["WI_Number"] = candidates["WI_Number"].FirstOrDefault() ?? "";
+        data["Revision"] = candidates["Revision"].FirstOrDefault() ?? "";
+        
+        // BOM - exclude values already used
+        data["BOM_ASSY_DWG_NO"] = candidates["BOM_ASSY_DWG_NO"]
+            .FirstOrDefault(x => x != data["Revision"] && x != data["Operation_No"]) ?? "";
+        
+        // Operation - exclude values already used
+        data["Operation_No"] = candidates["Operation_No"]
+            .FirstOrDefault(x => x != data["Revision"] && x != data["BOM_ASSY_DWG_NO"] && x != data["Product_Line"]) ?? "";
+        
+        // Product Line - exclude values already used
+        data["Product_Line"] = candidates["Product_Line"]
+            .FirstOrDefault(x => x != data["Operation_No"] && x != data["BOM_ASSY_DWG_NO"]) ?? "";
+        
+        // Title - longest candidate
+        data["WI_Title"] = candidates["WI_Title"]
+            .OrderByDescending(x => x.Length)
+            .FirstOrDefault(x => x != data["Subject"]) ?? "";
+        
+        // Subject - different from title, medium length
+        data["Subject"] = candidates["Subject"]
+            .OrderByDescending(x => x.Length)
+            .FirstOrDefault(x => x != data["WI_Title"]) ?? "";
+    }
+
+    private bool IsLabel(string upperText)
+    {
+        var labels = new[] {
+            "WORK INSTRUCTION TITLE", "WORK INSTRUCTION", "DESCRIPTION", "DESCRIPTION:",
+            "W.I. NUMBER", "WI NUMBER", "BOM/ASSY DWG NO", "BOM DWG NO", "ASSY DWG NO",
+            "OPS (OPTIONAL)", "OPERATION NO", "OPERATION NO.", "PRODUCT LINE",
+            "SUBJECT", "SUBJECT:", "PAGE", "REV", "REV:", "REVISION", "REVISION:",
+            "TRAINING RECORD", "REVISION HISTORY", "NOTICE", "STATEMENT"
+        };
+
+        return labels.Any(label => upperText == label || upperText.Contains(label) && upperText.Length < 40) ||
+               (upperText.EndsWith(":") && upperText.Length < 25);
+    }
+
+    private List<Dictionary<string, string>> ExtractTextFromSlides(Presentation ppt, int docId, 
+        string wiNumber, string sourceFileName)
+    {
+        var textData = new List<Dictionary<string, string>>();
+
+        for (int slideIdx = 2; slideIdx <= ppt.Slides.Count; slideIdx++)
+        {
+            try
+            {
+                Slide slide = ppt.Slides[slideIdx];
+                string slideSubject = ExtractSlideSubject(slide);
+                int textBoxCounter = 1;
+
+                foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in slide.Shapes)
+                {
+                    if (shape.HasTable == MsoTriState.msoTrue) continue;
+
+                    string extractedText = ExtractTextFromShape(shape);
+                    if (!string.IsNullOrWhiteSpace(extractedText) &&
+                        !extractedText.Trim().Equals(slideSubject.Trim(), StringComparison.OrdinalIgnoreCase))
+                    {
+                        textData.Add(new Dictionary<string, string>
+                        {
+                            ["DocumentID"] = docId.ToString(),
+                            ["WI_Number"] = wiNumber,
+                            ["SourceFileName"] = sourceFileName,
+                            ["SlideNumber"] = slideIdx.ToString(),
+                            ["SlideSubject"] = slideSubject,
+                            ["TextBoxNumber"] = textBoxCounter.ToString(),
+                            ["TextContent"] = extractedText.Trim()
+                        });
+                        textBoxCounter++;
+                    }
+                }
+            }
+            catch { }
+        }
+
+        return textData;
+    }
+
+    private string ExtractSlideSubject(Slide slide)
+    {
+        try
+        {
+            // Check for title placeholder
+            foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in slide.Shapes)
+            {
+                try
+                {
+                    if (shape.Type == MsoShapeType.msoPlaceholder)
+                    {
+                        var placeholder = shape.PlaceholderFormat;
+                        if (placeholder.Type == PpPlaceholderType.ppPlaceholderTitle ||
+                            placeholder.Type == PpPlaceholderType.ppPlaceholderCenterTitle)
+                        {
+                            if (shape.HasTextFrame == MsoTriState.msoTrue)
+                            {
+                                string titleText = shape.TextFrame.TextRange.Text.Trim();
+                                if (!string.IsNullOrWhiteSpace(titleText))
+                                    return titleText.ToUpper();
+                            }
+                        }
+                    }
+                }
+                catch { }
+            }
+
+            // Find largest font at top of slide
+            var topShapes = new List<(string text, float top, float fontSize)>();
+            foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in slide.Shapes)
+            {
+                try
+                {
+                    if (shape.HasTextFrame == MsoTriState.msoTrue && shape.Top < 100)
+                    {
+                        string text = shape.TextFrame.TextRange.Text.Trim();
+                        if (!string.IsNullOrWhiteSpace(text) && text.Length < 100)
+                        {
+                            float fontSize = 12;
+                            try { fontSize = shape.TextFrame.TextRange.Font.Size; } catch { }
+                            topShapes.Add((text, shape.Top, fontSize));
+                        }
+                    }
+                }
+                catch { }
+            }
+
+            if (topShapes.Count > 0)
+            {
+                var largestFont = topShapes.OrderByDescending(s => s.fontSize).ThenBy(s => s.top).First();
+                return largestFont.text.ToUpper();
+            }
+
+            return "UNTITLED SLIDE";
+        }
+        catch
+        {
+            return "UNTITLED SLIDE";
+        }
+    }
+
+    private string ExtractTextFromShape(Microsoft.Office.Interop.PowerPoint.Shape shape)
+    {
+        var text = new System.Text.StringBuilder();
+        try
+        {
+            if (shape.Type == MsoShapeType.msoGroup)
+            {
+                foreach (Microsoft.Office.Interop.PowerPoint.Shape groupShape in shape.GroupItems)
+                {
+                    string groupText = ExtractTextFromShape(groupShape);
+                    if (!string.IsNullOrWhiteSpace(groupText))
+                        text.AppendLine(groupText);
+                }
+            }
+            else if (shape.HasTextFrame == MsoTriState.msoTrue)
+            {
+                try
+                {
+                    string shapeText = shape.TextFrame.TextRange.Text;
+                    if (!string.IsNullOrWhiteSpace(shapeText))
+                        text.AppendLine(shapeText.Trim());
+                }
+                catch { }
+            }
+        }
+        catch { }
+        return text.ToString().Trim();
+    }
+
+    private List<Dictionary<string, string>> ExtractTableOfContents(Presentation ppt, int docId, 
+        string wiNumber, string sourceFileName)
+    {
+        var tocData = new List<Dictionary<string, string>>();
+        string currentSubject = null;
+        int subjectStartSlide = 0;
+        int slideCount = 0;
+
+        for (int slideIdx = 1; slideIdx <= ppt.Slides.Count; slideIdx++)
+        {
+            try
+            {
+                Slide slide = ppt.Slides[slideIdx];
+                string slideSubject = ExtractSlideSubject(slide);
+
+                if (currentSubject == null)
+                {
+                    currentSubject = slideSubject;
+                    subjectStartSlide = slideIdx;
+                    slideCount = 1;
+                }
+                else if (slideSubject == currentSubject)
+                {
+                    slideCount++;
+                }
+                else
+                {
+                    tocData.Add(new Dictionary<string, string>
+                    {
+                        ["DocumentID"] = docId.ToString(),
+                        ["WI_Number"] = wiNumber,
+                        ["SourceFileName"] = sourceFileName,
+                        ["SlideNumber"] = subjectStartSlide.ToString(),
+                        ["SlideSubject"] = currentSubject,
+                        ["SlideTotal"] = slideCount.ToString()
+                    });
+
+                    currentSubject = slideSubject;
+                    subjectStartSlide = slideIdx;
+                    slideCount = 1;
+                }
+            }
+            catch { }
+        }
+
+        if (currentSubject != null)
+        {
+            tocData.Add(new Dictionary<string, string>
+            {
+                ["DocumentID"] = docId.ToString(),
+                ["WI_Number"] = wiNumber,
+                ["SourceFileName"] = sourceFileName,
+                ["SlideNumber"] = subjectStartSlide.ToString(),
+                ["SlideSubject"] = currentSubject,
+                ["SlideTotal"] = slideCount.ToString()
+            });
+        }
+
+        return tocData;
+    }
+
+    private List<Dictionary<string, string>> ExtractImagesFromPresentation(Presentation ppt, int docId,
+        string wiNumber, string sourceFileName, string baseImagesFolder, string composedImagesFolder)
+    {
+        var imageData = new List<Dictionary<string, string>>();
+        int imageCounter = 1;
+
+        string cleanWiNumber = wiNumber.StartsWith("WI-WI-") ? wiNumber.Substring(3) : wiNumber;
+        string docFolderName = !string.IsNullOrEmpty(cleanWiNumber) ? cleanWiNumber : $"Doc-{docId}";
+        docFolderName = string.Join("_", docFolderName.Split(Path.GetInvalidFileNameChars()));
+
+        string baseDocFolder = Path.Combine(baseImagesFolder, docFolderName);
+        string composedDocFolder = Path.Combine(composedImagesFolder, docFolderName);
+        Directory.CreateDirectory(baseDocFolder);
+        Directory.CreateDirectory(composedDocFolder);
+
+        for (int slideIdx = 1; slideIdx <= ppt.Slides.Count; slideIdx++)
+        {
+            Slide slide = ppt.Slides[slideIdx];
+            foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in slide.Shapes)
+            {
+                try
+                {
+                    if (shape.Type == MsoShapeType.msoPicture)
+                    {
+                        string imageFileName = $"{cleanWiNumber}_Slide{slideIdx:D2}_Img{imageCounter:D2}.png";
+                        string imagePath = Path.Combine(baseDocFolder, imageFileName);
+                        ExportShape(shape, imagePath);
+
+                        imageData.Add(new Dictionary<string, string>
+                        {
+                            ["DocumentID"] = docId.ToString(),
+                            ["WI_Number"] = cleanWiNumber,
+                            ["SourceFileName"] = sourceFileName,
+                            ["SlideNumber"] = slideIdx.ToString(),
+                            ["ImageNumber"] = imageCounter.ToString(),
+                            ["ImageType"] = "Base",
+                            ["ImageFileName"] = imageFileName,
+                            ["ImagePath"] = Path.Combine(docFolderName, imageFileName),
+                            ["IsGrouped"] = "No",
+                            ["Width"] = shape.Width.ToString("F2"),
+                            ["Height"] = shape.Height.ToString("F2")
+                        });
+                        imageCounter++;
+                    }
+                    else if (shape.Type == MsoShapeType.msoGroup && ContainsPictures(shape.GroupItems))
+                    {
+                        string composedFileName = $"{cleanWiNumber}_Slide{slideIdx:D2}_Composed{imageCounter:D2}.png";
+                        string composedPath = Path.Combine(composedDocFolder, composedFileName);
+                        ExportShape(shape, composedPath);
+
+                        imageData.Add(new Dictionary<string, string>
+                        {
+                            ["DocumentID"] = docId.ToString(),
+                            ["WI_Number"] = cleanWiNumber,
+                            ["SourceFileName"] = sourceFileName,
+                            ["SlideNumber"] = slideIdx.ToString(),
+                            ["ImageNumber"] = imageCounter.ToString(),
+                            ["ImageType"] = "Composed",
+                            ["ImageFileName"] = composedFileName,
+                            ["ImagePath"] = Path.Combine(docFolderName, composedFileName),
+                            ["IsGrouped"] = "Yes",
+                            ["Width"] = shape.Width.ToString("F2"),
+                            ["Height"] = shape.Height.ToString("F2")
+                        });
+
+                        ExtractImagesFromGroup(shape.GroupItems, docId, cleanWiNumber, sourceFileName,
+                            slideIdx, ref imageCounter, baseDocFolder, docFolderName, imageData);
+                        imageCounter++;
+                    }
+                }
+                catch { }
+            }
+        }
+
+        return imageData;
+    }
+
+    private void ExtractImagesFromGroup(Microsoft.Office.Interop.PowerPoint.GroupShapes groupShapes, 
+        int docId, string wiNumber, string sourceFileName, int slideIdx, ref int imageCounter,
+        string baseDocFolder, string docFolderName, List<Dictionary<string, string>> imageData)
+    {
+        foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in groupShapes)
+        {
+            try
+            {
+                if (shape.Type == MsoShapeType.msoPicture)
+                {
+                    string imageFileName = $"{wiNumber}_Slide{slideIdx:D2}_Img{imageCounter:D2}_FromGroup.png";
+                    string imagePath = Path.Combine(baseDocFolder, imageFileName);
+                    ExportShape(shape, imagePath);
+
+                    imageData.Add(new Dictionary<string, string>
+                    {
+                        ["DocumentID"] = docId.ToString(),
+                        ["WI_Number"] = wiNumber,
+                        ["SourceFileName"] = sourceFileName,
+                        ["SlideNumber"] = slideIdx.ToString(),
+                        ["ImageNumber"] = imageCounter.ToString(),
+                        ["ImageType"] = "Base",
+                        ["ImageFileName"] = imageFileName,
+                        ["ImagePath"] = Path.Combine(docFolderName, imageFileName),
+                        ["IsGrouped"] = "Yes (Extracted)",
+                        ["Width"] = shape.Width.ToString("F2"),
+                        ["Height"] = shape.Height.ToString("F2")
+                    });
+                    imageCounter++;
+                }
+                else if (shape.Type == MsoShapeType.msoGroup)
+                {
+                    ExtractImagesFromGroup(shape.GroupItems, docId, wiNumber, sourceFileName,
+                        slideIdx, ref imageCounter, baseDocFolder, docFolderName, imageData);
+                }
+            }
+            catch { }
+        }
+    }
+
+    private bool ContainsPictures(Microsoft.Office.Interop.PowerPoint.GroupShapes groupShapes)
+    {
+        foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in groupShapes)
+        {
+            if (shape.Type == MsoShapeType.msoPicture) return true;
+            if (shape.Type == MsoShapeType.msoGroup && ContainsPictures(shape.GroupItems)) return true;
+        }
+        return false;
+    }
+
+    private void ExportShape(Microsoft.Office.Interop.PowerPoint.Shape shape, string outputPath)
+    {
+        try
+        {
+            shape.Export(outputPath, PpShapeFormat.ppShapeFormatPNG);
+        }
+        catch
+        {
+            try
+            {
+                shape.Copy();
+                var img = System.Windows.Forms.Clipboard.GetImage();
+                if (img != null) img.Save(outputPath, ImageFormat.Png);
+            }
+            catch { }
+        }
+    }
+
+    private void CollectTextBoxes(Microsoft.Office.Interop.PowerPoint.Shapes shapes, List<TextBoxInfo> textBoxes)
+    {
+        foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in shapes)
+        {
+            try
+            {
+                if (shape.Type == MsoShapeType.msoGroup)
+                    CollectTextBoxesFromGroup(shape.GroupItems, textBoxes);
+                else if (shape.HasTextFrame == MsoTriState.msoTrue)
+                {
+                    string text = shape.TextFrame.TextRange.Text.Trim();
+                    if (!string.IsNullOrEmpty(text))
+                    {
+                        textBoxes.Add(new TextBoxInfo
+                        {
+                            Text = text,
+                            Left = shape.Left,
+                            Top = shape.Top,
+                            Width = shape.Width,
+                            Height = shape.Height
+                        });
+                    }
+                }
+            }
+            catch { }
+        }
+    }
+
+    private void CollectTextBoxesFromGroup(Microsoft.Office.Interop.PowerPoint.GroupShapes groupShapes, 
+        List<TextBoxInfo> textBoxes)
+    {
+        foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in groupShapes)
+        {
+            try
+            {
+                if (shape.Type == MsoShapeType.msoGroup)
+                    CollectTextBoxesFromGroup(shape.GroupItems, textBoxes);
+                else if (shape.HasTextFrame == MsoTriState.msoTrue)
+                {
+                    string text = shape.TextFrame.TextRange.Text.Trim();
+                    if (!string.IsNullOrEmpty(text))
+                    {
+                        textBoxes.Add(new TextBoxInfo
+                        {
+                            Text = text,
+                            Left = shape.Left,
+                            Top = shape.Top,
+                            Width = shape.Width,
+                            Height = shape.Height
+                        });
+                    }
+                }
+            }
+            catch { }
+        }
+    }
+
+    #region Python and Excel Operations
+
+    private bool RunPythonScript(string pptxFilePath, string outputExcel, Action<int, string> progressCallback)
+    {
+        try
+        {
+            string pythonExe = FindPythonExecutable();
+            if (string.IsNullOrEmpty(pythonExe)) return false;
+
+            string scriptPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "extract_tables.py");
+            if (!File.Exists(scriptPath)) return false;
+
+            string tempFolder = Path.Combine(Path.GetTempPath(), "TempWI_" + Guid.NewGuid());
+            Directory.CreateDirectory(tempFolder);
+
+            string tempFilePath = Path.Combine(tempFolder, Path.GetFileName(pptxFilePath));
+            File.Copy(pptxFilePath, tempFilePath, true);
+
+            string tempScript = CreateTempPythonScript(tempFolder, outputExcel, scriptPath);
+
+            ProcessStartInfo start = new ProcessStartInfo
+            {
+                FileName = pythonExe,
+                Arguments = $"\"{tempScript}\"",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            using (Process process = Process.Start(start))
+            {
+                process.WaitForExit();
+                try
+                {
+                    File.Delete(tempScript);
+                    File.Delete(tempFilePath);
+                    Directory.Delete(tempFolder);
+                }
+                catch { }
+                return process.ExitCode == 0 && File.Exists(outputExcel);
+            }
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private string FindPythonExecutable()
+    {
+        string[] paths = { "python", "python3",
+            @"C:\Python313\python.exe",
+            @"C:\Python311\python.exe",
+            @"C:\Python310\python.exe"
+        };
+
+        foreach (string path in paths)
+        {
+            try
+            {
+                ProcessStartInfo psi = new ProcessStartInfo
+                {
+                    FileName = path,
+                    Arguments = "--version",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    CreateNoWindow = true
+                };
+
+                using (Process process = Process.Start(psi))
+                {
+                    process.WaitForExit();
+                    if (process.ExitCode == 0) return path;
+                }
+            }
+            catch { continue; }
+        }
+        return null;
+    }
+
+    private string CreateTempPythonScript(string inputFolder, string outputExcel, string originalScript)
+    {
+        string scriptContent = File.ReadAllText(originalScript);
+        scriptContent = System.Text.RegularExpressions.Regex.Replace(
+            scriptContent, @"input_folder = r"".*?""", $"input_folder = r\"{inputFolder}\"");
+        scriptContent = System.Text.RegularExpressions.Regex.Replace(
+            scriptContent, @"output_excel = r"".*?""", $"output_excel = r\"{outputExcel}\"");
+
+        string tempScript = Path.Combine(Path.GetTempPath(), "temp_extract_tables.py");
+        File.WriteAllText(tempScript, scriptContent);
+        return tempScript;
+    }
+
+    private void MergeExcelFiles(string headerFile, string tablesFile, string outputFile)
+    {
+        using (var headerPackage = new ExcelPackage(new FileInfo(headerFile)))
+        using (var tablesPackage = new ExcelPackage(new FileInfo(tablesFile)))
+        using (var outputPackage = new ExcelPackage())
+        {
+            // Copy header sheets
+            foreach (var sheet in headerPackage.Workbook.Worksheets)
+                outputPackage.Workbook.Worksheets.Add(sheet.Name, sheet);
+
+            // Copy table sheets
+            foreach (var sheet in tablesPackage.Workbook.Worksheets)
+                outputPackage.Workbook.Worksheets.Add(sheet.Name, sheet);
+
+            outputPackage.SaveAs(new FileInfo(outputFile));
+        }
+    }
+
+    private void WriteToExcel(List<Dictionary<string, string>> headerData,
+        List<Dictionary<string, string>> imageData,
+        List<Dictionary<string, string>> textData,
+        List<Dictionary<string, string>> tocData,
+        string excelPath)
+    {
+        if (File.Exists(excelPath)) File.Delete(excelPath);
+
+        using (var package = new ExcelPackage())
+        {
+            // Header Data sheet
+            var ws = package.Workbook.Worksheets.Add("Header Data");
+            var headers = new[] { "Document ID", "Source File Name", "WI Number", "WI Title", 
+                "Revision", "BOM/ASSY DWG NO", "Operation No", "Product Line", "Subject", 
+                "Revision Type", "Total Pages", "Total Images" };
+
+            for (int i = 0; i < headers.Length; i++)
+                ws.Cells[1, i + 1].Value = headers[i];
+
+            FormatHeader(ws, headers.Length);
+
+            int row = 2;
+            foreach (var record in headerData)
+            {
+                ws.Cells[row, 1].Value = record.GetValueOrDefault("DocumentID");
+                ws.Cells[row, 2].Value = record.GetValueOrDefault("SourceFileName");
+                ws.Cells[row, 3].Value = record.GetValueOrDefault("WI_Number");
+                ws.Cells[row, 4].Value = record.GetValueOrDefault("WI_Title");
+                ws.Cells[row, 5].Value = record.GetValueOrDefault("Revision");
+                ws.Cells[row, 6].Value = record.GetValueOrDefault("BOM_ASSY_DWG_NO");
+                ws.Cells[row, 7].Value = record.GetValueOrDefault("Operation_No");
+                ws.Cells[row, 8].Value = record.GetValueOrDefault("Product_Line");
+                ws.Cells[row, 9].Value = record.GetValueOrDefault("Subject");
+                ws.Cells[row, 10].Value = record.GetValueOrDefault("RevisionType");
+                ws.Cells[row, 11].Value = record.GetValueOrDefault("TotalPages");
+                ws.Cells[row, 12].Value = record.GetValueOrDefault("TotalImages");
+                row++;
+            }
+            ws.Cells[ws.Dimension.Address].AutoFitColumns();
+
+            // Images sheet
+            if (imageData.Count > 0)
+            {
+                var imgWs = package.Workbook.Worksheets.Add("Images");
+                var imgHeaders = new[] { "Document ID", "WI Number", "Source File Name", 
+                    "Slide Number", "Image Number", "Image Type", "Image File Name", 
+                    "Image Path", "Is Grouped", "Width", "Height" };
+
+                for (int i = 0; i < imgHeaders.Length; i++)
+                    imgWs.Cells[1, i + 1].Value = imgHeaders[i];
+
+                FormatHeader(imgWs, imgHeaders.Length);
+
+                row = 2;
+                foreach (var img in imageData)
+                {
+                    imgWs.Cells[row, 1].Value = img.GetValueOrDefault("DocumentID");
+                    imgWs.Cells[row, 2].Value = img.GetValueOrDefault("WI_Number");
+                    imgWs.Cells[row, 3].Value = img.GetValueOrDefault("SourceFileName");
+                    imgWs.Cells[row, 4].Value = img.GetValueOrDefault("SlideNumber");
+                    imgWs.Cells[row, 5].Value = img.GetValueOrDefault("ImageNumber");
+                    imgWs.Cells[row, 6].Value = img.GetValueOrDefault("ImageType");
+                    imgWs.Cells[row, 7].Value = img.GetValueOrDefault("ImageFileName");
+                    imgWs.Cells[row, 8].Value = img.GetValueOrDefault("ImagePath");
+                    imgWs.Cells[row, 9].Value = img.GetValueOrDefault("IsGrouped");
+                    imgWs.Cells[row, 10].Value = img.GetValueOrDefault("Width");
+                    imgWs.Cells[row, 11].Value = img.GetValueOrDefault("Height");
+                    row++;
+                }
+                imgWs.Cells[imgWs.Dimension.Address].AutoFitColumns();
+            }
+
+            // Table of Contents sheet
+            if (tocData.Count > 0)
+            {
+                var tocWs = package.Workbook.Worksheets.Add("Table of Contents");
+                var tocHeaders = new[] { "Document ID", "WI Number", "Source File Name", 
+                    "Slide Number", "Slide Subject", "Slide Total" };
+
+                for (int i = 0; i < tocHeaders.Length; i++)
+                    tocWs.Cells[1, i + 1].Value = tocHeaders[i];
+
+                FormatHeader(tocWs, tocHeaders.Length);
+
+                row = 2;
+                foreach (var toc in tocData)
+                {
+                    tocWs.Cells[row, 1].Value = toc.GetValueOrDefault("DocumentID");
+                    tocWs.Cells[row, 2].Value = toc.GetValueOrDefault("WI_Number");
+                    tocWs.Cells[row, 3].Value = toc.GetValueOrDefault("SourceFileName");
+                    tocWs.Cells[row, 4].Value = toc.GetValueOrDefault("SlideNumber");
+                    tocWs.Cells[row, 5].Value = toc.GetValueOrDefault("SlideSubject");
+                    tocWs.Cells[row, 6].Value = toc.GetValueOrDefault("SlideTotal");
+                    row++;
+                }
+                tocWs.Cells[tocWs.Dimension.Address].AutoFitColumns();
+            }
+
+            // Text Content sheet
+            if (textData.Count > 0)
+            {
+                var textWs = package.Workbook.Worksheets.Add("Text Content");
+                var textHeaders = new[] { "Document ID", "WI Number", "Source File Name", 
+                    "Slide Number", "Slide Subject", "TextBox Number", "Text Content" };
+
+                for (int i = 0; i < textHeaders.Length; i++)
+                    textWs.Cells[1, i + 1].Value = textHeaders[i];
+
+                FormatHeader(textWs, textHeaders.Length);
+
+                row = 2;
+                foreach (var txt in textData)
+                {
+                    textWs.Cells[row, 1].Value = txt.GetValueOrDefault("DocumentID");
+                    textWs.Cells[row, 2].Value = txt.GetValueOrDefault("WI_Number");
+                    textWs.Cells[row, 3].Value = txt.GetValueOrDefault("SourceFileName");
+                    textWs.Cells[row, 4].Value = txt.GetValueOrDefault("SlideNumber");
+                    textWs.Cells[row, 5].Value = txt.GetValueOrDefault("SlideSubject");
+                    textWs.Cells[row, 6].Value = txt.GetValueOrDefault("TextBoxNumber");
+                    textWs.Cells[row, 7].Value = txt.GetValueOrDefault("TextContent");
+                    textWs.Cells[row, 7].Style.WrapText = true;
+                    row++;
+                }
+                textWs.Column(7).Width = 80;
+                textWs.Cells[textWs.Dimension.Address].AutoFitColumns();
+            }
+
+            package.SaveAs(new FileInfo(excelPath));
+        }
+    }
+
+    private void FormatHeader(OfficeOpenXml.ExcelWorksheet ws, int columnCount)
+    {
+        using (var range = ws.Cells[1, 1, 1, columnCount])
+        {
+            range.Style.Font.Bold = true;
+            range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+            range.Style.Fill.BackgroundColor.SetColor(Color.LightGray);
+            range.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+        }
+    }
+
+    #endregion
+}
+
+public class ExtractionResult
+{
+    public string ExcelPath { get; set; } = string.Empty;
+    public string BaseImagesFolder { get; set; } = string.Empty;
+    public string ComposedImagesFolder { get; set; } = string.Empty;
+    public string WINumber { get; set; } = string.Empty;
+}
+
+public class TextBoxInfo
+{
+    public string Text { get; set; } = string.Empty;
+    public float Left { get; set; }
+    public float Top { get; set; }
+    public float Width { get; set; }
+    public float Height { get; set; }
+}
+
+}
+using System.IO;
+using System.Collections.Generic;
+using System.Linq;
+using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Imaging;
+using PowerPointApp = Microsoft.Office.Interop.PowerPoint.Application;
+using Microsoft.Office.Interop.PowerPoint;
+using Microsoft.Office.Core;
+using OfficeOpenXml;
+
+namespace WorkInstructionExtractor
+{
+public class PowerPointExtractor
+{
+static PowerPointExtractor()
+{
+ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+}
+
     public ExtractionResult ExtractWorkInstruction(
         string pptxPath,
         string outputFolder,
@@ -751,4 +1721,3 @@ ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
             @"C:\Python313\python.exe",
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 @"Programs\Python\
-```
