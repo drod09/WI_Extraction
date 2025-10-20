@@ -1,26 +1,142 @@
-if __name__ == "__main__":
-    import sys
-    
-    # CONFIGURE THESE PATHS
-    if len(sys.argv) >= 3:
-        # Arguments provided from C#
-        input_folder = sys.argv[1]
-        output_excel = sys.argv[2]
-    else:
-        # Default paths for manual testing
-        input_folder = r"C:\Users\U309011\Desktop\New folder"
-        output_excel = r"C:\Users\U309011\Desktop\WorkInstructions_Extracted.xlsx"
-    
-    print("=" * 70)
-    print("WORK INSTRUCTION POWERPOINT TABLE EXTRACTOR")
-    print("=" * 70)
-    print(f"Input folder: {input_folder}")
-    print(f"Output Excel: {output_excel}")
-    print("=" * 70)
-    
-    # Run extraction
-    process_powerpoint_files(input_folder, output_excel)
-    
-    print("\n" + "=" * 70)
-    print("DONE! Open the Excel file to review extracted data.")
-    print("=" * 70)
+You need to remove the call to `CreateTempPythonScript` in the `RunPythonScript` method. Here’s the corrected version:
+
+
+private bool RunPythonScript(string pptxFilePath, string outputExcel, Action<int, string> progressCallback)
+{
+    try
+    {
+        progressCallback?.Invoke(45, "Looking for Python...");
+        string pythonExe = FindPythonExecutable();
+        
+        if (string.IsNullOrEmpty(pythonExe))
+        {
+            progressCallback?.Invoke(50, "Python not found - skipping table extraction");
+            return false;
+        }
+
+        string scriptPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "extract_tables.py");
+        
+        if (!File.Exists(scriptPath))
+        {
+            progressCallback?.Invoke(50, $"Python script not found at: {scriptPath}");
+            return false;
+        }
+
+        // Create temp folder with single file
+        string tempFolder = Path.Combine(Path.GetTempPath(), "TempWI_" + Guid.NewGuid());
+        Directory.CreateDirectory(tempFolder);
+
+        string tempFilePath = Path.Combine(tempFolder, Path.GetFileName(pptxFilePath));
+        File.Copy(pptxFilePath, tempFilePath, true);
+
+        progressCallback?.Invoke(50, "Running Python table extraction...");
+
+        // Run Python directly with arguments
+        ProcessStartInfo start = new ProcessStartInfo
+        {
+            FileName = pythonExe,
+            Arguments = $"\"{scriptPath}\" \"{tempFolder}\" \"{outputExcel}\"",
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+            WorkingDirectory = Path.GetDirectoryName(scriptPath)
+        };
+
+        using (Process process = Process.Start(start))
+        {
+            // Read output asynchronously to prevent deadlock
+            var outputBuilder = new System.Text.StringBuilder();
+            var errorBuilder = new System.Text.StringBuilder();
+            
+            process.OutputDataReceived += (sender, e) => 
+            {
+                if (e.Data != null)
+                {
+                    outputBuilder.AppendLine(e.Data);
+                    // Show progress in UI
+                    if (e.Data.Contains("Processing:") || e.Data.Contains("Extracted"))
+                    {
+                        progressCallback?.Invoke(55, e.Data);
+                    }
+                }
+            };
+            
+            process.ErrorDataReceived += (sender, e) => 
+            {
+                if (e.Data != null)
+                {
+                    errorBuilder.AppendLine(e.Data);
+                }
+            };
+
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+
+            // Wait up to 5 minutes for Python script
+            bool completed = process.WaitForExit(300000); // 5 minutes timeout
+
+            if (!completed)
+            {
+                progressCallback?.Invoke(60, "Python script timed out - killing process");
+                try { process.Kill(); } catch { }
+                
+                // Cleanup
+                try
+                {
+                    File.Delete(tempFilePath);
+                    Directory.Delete(tempFolder);
+                }
+                catch { }
+                
+                return false;
+            }
+
+            // Cleanup temp files
+            try
+            {
+                File.Delete(tempFilePath);
+                Directory.Delete(tempFolder);
+            }
+            catch { }
+
+            string output = outputBuilder.ToString();
+            string errors = errorBuilder.ToString();
+
+            if (process.ExitCode != 0)
+            {
+                progressCallback?.Invoke(60, $"Python exit code: {process.ExitCode}");
+                if (!string.IsNullOrEmpty(errors))
+                    progressCallback?.Invoke(60, $"Python error: {errors.Substring(0, Math.Min(200, errors.Length))}");
+                return false;
+            }
+
+            bool success = File.Exists(outputExcel);
+            if (success)
+            {
+                progressCallback?.Invoke(70, "Table extraction complete");
+            }
+            else
+            {
+                progressCallback?.Invoke(70, "No output file created");
+                if (!string.IsNullOrEmpty(output))
+                    progressCallback?.Invoke(70, $"Output: {output.Substring(0, Math.Min(200, output.Length))}");
+            }
+            
+            return success;
+        }
+    }
+    catch (Exception ex)
+    {
+        progressCallback?.Invoke(50, $"Error running Python: {ex.Message}");
+        return false;
+    }
+}
+
+
+The key changes:
+
+1. **Removed** the line: `string tempScript = CreateTempPythonScript(tempFolder, outputExcel, scriptPath);`
+1. **Changed** the Arguments line to pass the folder and output paths directly to the Python script: `Arguments = $"\"{scriptPath}\" \"{tempFolder}\" \"{outputExcel}\""`
+
+This now passes the temp folder path and output Excel path as command-line arguments directly to your Python script, which will read them via `sys.argv`.​​​​​​​​​​​​​​​​
