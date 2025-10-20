@@ -1,414 +1,251 @@
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-
 namespace WorkInstructionExtractor
 {
-    public partial class Form1 : Form
+    partial class Form1
     {
-        private BackgroundWorker backgroundWorker;
+        private System.ComponentModel.IContainer components = null;
 
-        public Form1()
+        protected override void Dispose(bool disposing)
         {
-            InitializeComponent();
-            InitializeBackgroundWorker();
+            if (disposing && (components != null))
+            {
+                components.Dispose();
+            }
+            base.Dispose(disposing);
         }
 
-        private void InitializeBackgroundWorker()
-        {
-            backgroundWorker = new BackgroundWorker
-            {
-                WorkerReportsProgress = true,
-                WorkerSupportsCancellation = true
-            };
+        #region Windows Form Designer generated code
 
-            backgroundWorker.DoWork += BackgroundWorker_DoWork;
-            backgroundWorker.ProgressChanged += BackgroundWorker_ProgressChanged;
-            backgroundWorker.RunWorkerCompleted += BackgroundWorker_RunWorkerCompleted;
+        private void InitializeComponent()
+        {
+            this.txtPowerPointPath = new System.Windows.Forms.TextBox();
+            this.txtOutputFolder = new System.Windows.Forms.TextBox();
+            this.btnSelectFile = new System.Windows.Forms.Button();
+            this.btnSelectOutputFolder = new System.Windows.Forms.Button();
+            this.btnExtract = new System.Windows.Forms.Button();
+            this.progressBar = new System.Windows.Forms.ProgressBar();
+            this.txtLog = new System.Windows.Forms.RichTextBox();
+            this.lblStatus = new System.Windows.Forms.Label();
+            this.btnConfigureMapping = new System.Windows.Forms.Button();
+            this.btnManageTemplates = new System.Windows.Forms.Button();
+            this.label1 = new System.Windows.Forms.Label();
+            this.label3 = new System.Windows.Forms.Label();
+            this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.groupBox3 = new System.Windows.Forms.GroupBox();
+            this.label4 = new System.Windows.Forms.Label();
+            this.groupBox1.SuspendLayout();
+            this.groupBox2.SuspendLayout();
+            this.groupBox3.SuspendLayout();
+            this.SuspendLayout();
+            // 
+            // txtPowerPointPath
+            // 
+            this.txtPowerPointPath.Location = new System.Drawing.Point(150, 30);
+            this.txtPowerPointPath.Name = "txtPowerPointPath";
+            this.txtPowerPointPath.ReadOnly = true;
+            this.txtPowerPointPath.Size = new System.Drawing.Size(550, 22);
+            this.txtPowerPointPath.TabIndex = 0;
+            // 
+            // txtOutputFolder
+            // 
+            this.txtOutputFolder.Location = new System.Drawing.Point(150, 65);
+            this.txtOutputFolder.Name = "txtOutputFolder";
+            this.txtOutputFolder.ReadOnly = true;
+            this.txtOutputFolder.Size = new System.Drawing.Size(550, 22);
+            this.txtOutputFolder.TabIndex = 2;
+            // 
+            // btnSelectFile
+            // 
+            this.btnSelectFile.Location = new System.Drawing.Point(720, 28);
+            this.btnSelectFile.Name = "btnSelectFile";
+            this.btnSelectFile.Size = new System.Drawing.Size(100, 26);
+            this.btnSelectFile.TabIndex = 3;
+            this.btnSelectFile.Text = "Browse...";
+            this.btnSelectFile.UseVisualStyleBackColor = true;
+            this.btnSelectFile.Click += new System.EventHandler(this.btnSelectFile_Click);
+            // 
+            // btnSelectOutputFolder
+            // 
+            this.btnSelectOutputFolder.Location = new System.Drawing.Point(720, 63);
+            this.btnSelectOutputFolder.Name = "btnSelectOutputFolder";
+            this.btnSelectOutputFolder.Size = new System.Drawing.Size(100, 26);
+            this.btnSelectOutputFolder.TabIndex = 5;
+            this.btnSelectOutputFolder.Text = "Browse...";
+            this.btnSelectOutputFolder.UseVisualStyleBackColor = true;
+            this.btnSelectOutputFolder.Click += new System.EventHandler(this.btnSelectOutputFolder_Click);
+            // 
+            // btnExtract
+            // 
+            this.btnExtract.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(120)))), ((int)(((byte)(215)))));
+            this.btnExtract.FlatAppearance.BorderSize = 0;
+            this.btnExtract.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnExtract.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
+            this.btnExtract.ForeColor = System.Drawing.Color.White;
+            this.btnExtract.Location = new System.Drawing.Point(20, 25);
+            this.btnExtract.Name = "btnExtract";
+            this.btnExtract.Size = new System.Drawing.Size(200, 40);
+            this.btnExtract.TabIndex = 6;
+            this.btnExtract.Text = "Extract PowerPoint";
+            this.btnExtract.UseVisualStyleBackColor = false;
+            this.btnExtract.Click += new System.EventHandler(this.btnExtract_Click);
+            // 
+            // progressBar
+            // 
+            this.progressBar.Location = new System.Drawing.Point(240, 30);
+            this.progressBar.Name = "progressBar";
+            this.progressBar.Size = new System.Drawing.Size(400, 30);
+            this.progressBar.TabIndex = 7;
+            // 
+            // txtLog
+            // 
+            this.txtLog.BackColor = System.Drawing.Color.White;
+            this.txtLog.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.txtLog.Font = new System.Drawing.Font("Consolas", 9F);
+            this.txtLog.Location = new System.Drawing.Point(3, 18);
+            this.txtLog.Name = "txtLog";
+            this.txtLog.ReadOnly = true;
+            this.txtLog.Size = new System.Drawing.Size(834, 189);
+            this.txtLog.TabIndex = 8;
+            this.txtLog.Text = "";
+            // 
+            // lblStatus
+            // 
+            this.lblStatus.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.lblStatus.Location = new System.Drawing.Point(660, 35);
+            this.lblStatus.Name = "lblStatus";
+            this.lblStatus.Size = new System.Drawing.Size(180, 20);
+            this.lblStatus.TabIndex = 10;
+            this.lblStatus.Text = "Ready";
+            // 
+            // btnConfigureMapping
+            // 
+            this.btnConfigureMapping.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnConfigureMapping.Location = new System.Drawing.Point(20, 30);
+            this.btnConfigureMapping.Name = "btnConfigureMapping";
+            this.btnConfigureMapping.Size = new System.Drawing.Size(200, 35);
+            this.btnConfigureMapping.TabIndex = 11;
+            this.btnConfigureMapping.Text = "Configure Field Mapping...";
+            this.btnConfigureMapping.UseVisualStyleBackColor = true;
+            this.btnConfigureMapping.Click += new System.EventHandler(this.BtnConfigureMapping_Click);
+            // 
+            // btnManageTemplates
+            // 
+            this.btnManageTemplates.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnManageTemplates.Location = new System.Drawing.Point(240, 30);
+            this.btnManageTemplates.Name = "btnManageTemplates";
+            this.btnManageTemplates.Size = new System.Drawing.Size(150, 35);
+            this.btnManageTemplates.TabIndex = 12;
+            this.btnManageTemplates.Text = "Manage Templates";
+            this.btnManageTemplates.UseVisualStyleBackColor = true;
+            this.btnManageTemplates.Click += new System.EventHandler(this.BtnManageMappings_Click);
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(20, 33);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(102, 16);
+            this.label1.TabIndex = 13;
+            this.label1.Text = "PowerPoint File:";
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(20, 68);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(93, 16);
+            this.label3.TabIndex = 15;
+            this.label3.Text = "Output Folder:";
+            // 
+            // groupBox1
+            // 
+            this.groupBox1.Controls.Add(this.label1);
+            this.groupBox1.Controls.Add(this.label3);
+            this.groupBox1.Controls.Add(this.txtPowerPointPath);
+            this.groupBox1.Controls.Add(this.txtOutputFolder);
+            this.groupBox1.Controls.Add(this.btnSelectFile);
+            this.groupBox1.Controls.Add(this.btnSelectOutputFolder);
+            this.groupBox1.Location = new System.Drawing.Point(20, 80);
+            this.groupBox1.Name = "groupBox1";
+            this.groupBox1.Size = new System.Drawing.Size(840, 110);
+            this.groupBox1.TabIndex = 16;
+            this.groupBox1.TabStop = false;
+            this.groupBox1.Text = "Input Files";
+            // 
+            // groupBox2
+            // 
+            this.groupBox2.Controls.Add(this.btnConfigureMapping);
+            this.groupBox2.Controls.Add(this.btnManageTemplates);
+            this.groupBox2.Location = new System.Drawing.Point(20, 210);
+            this.groupBox2.Name = "groupBox2";
+            this.groupBox2.Size = new System.Drawing.Size(840, 85);
+            this.groupBox2.TabIndex = 17;
+            this.groupBox2.TabStop = false;
+            this.groupBox2.Text = "Field Mapping Options";
+            // 
+            // groupBox3
+            // 
+            this.groupBox3.Controls.Add(this.txtLog);
+            this.groupBox3.Location = new System.Drawing.Point(20, 410);
+            this.groupBox3.Name = "groupBox3";
+            this.groupBox3.Size = new System.Drawing.Size(840, 210);
+            this.groupBox3.TabIndex = 18;
+            this.groupBox3.TabStop = false;
+            this.groupBox3.Text = "Activity Log";
+            // 
+            // label4
+            // 
+            this.label4.Font = new System.Drawing.Font("Segoe UI", 16F, System.Drawing.FontStyle.Bold);
+            this.label4.Location = new System.Drawing.Point(20, 20);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(840, 40);
+            this.label4.TabIndex = 19;
+            this.label4.Text = "Work Instruction Extractor";
+            this.label4.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            // 
+            // Form1
+            // 
+            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.ClientSize = new System.Drawing.Size(880, 640);
+            this.Controls.Add(this.label4);
+            this.Controls.Add(this.groupBox3);
+            this.Controls.Add(this.groupBox2);
+            this.Controls.Add(this.groupBox1);
+            this.Controls.Add(this.lblStatus);
+            this.Controls.Add(this.progressBar);
+            this.Controls.Add(this.btnExtract);
+            this.MinimumSize = new System.Drawing.Size(800, 600);
+            this.Name = "Form1";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
+            this.Text = "Work Instruction Extractor";
+            this.Load += new System.EventHandler(this.Form1_Load);
+            this.groupBox1.ResumeLayout(false);
+            this.groupBox1.PerformLayout();
+            this.groupBox2.ResumeLayout(false);
+            this.groupBox3.ResumeLayout(false);
+            this.ResumeLayout(false);
+
         }
 
-        private void btnSelectFile_Click(object sender, EventArgs e)
-        {
-            using (OpenFileDialog openFileDialog = new OpenFileDialog())
-            {
-                openFileDialog.Filter = "PowerPoint Files (*.pptx)|*.pptx|All Files (*.*)|*.*";
-                openFileDialog.Title = "Select PowerPoint Work Instruction";
+        #endregion
 
-                if (openFileDialog.ShowDialog() == DialogResult.OK)
-                {
-                    txtPowerPointPath.Text = openFileDialog.FileName;
-                    LogMessage($"Selected PowerPoint: {Path.GetFileName(openFileDialog.FileName)}");
-                }
-            }
-        }
-
-        private void btnSelectOutputFolder_Click(object sender, EventArgs e)
-        {
-            using (FolderBrowserDialog folderDialog = new FolderBrowserDialog())
-            {
-                folderDialog.Description = "Select Output Folder";
-
-                if (folderDialog.ShowDialog() == DialogResult.OK)
-                {
-                    txtOutputFolder.Text = folderDialog.SelectedPath;
-                    LogMessage($"Output folder: {folderDialog.SelectedPath}");
-                }
-            }
-        }
-
-        private void BtnConfigureMapping_Click(object sender, EventArgs e)
-        {
-            // Check if PowerPoint file is selected
-            if (string.IsNullOrWhiteSpace(txtPowerPointPath.Text))
-            {
-                MessageBox.Show("Please select a PowerPoint file first.", "No File Selected",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            if (!File.Exists(txtPowerPointPath.Text))
-            {
-                MessageBox.Show("The selected PowerPoint file does not exist.", "File Not Found",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            // Extract text boxes from the PowerPoint
-            LogMessage("Opening PowerPoint to detect fields...");
-
-            try
-            {
-                var textBoxes = ExtractTextBoxesFromPowerPoint(txtPowerPointPath.Text);
-
-                if (textBoxes.Count == 0)
-                {
-                    MessageBox.Show("No text boxes found in the PowerPoint file.", "No Fields Detected",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    return;
-                }
-
-                LogMessage($"Found {textBoxes.Count} text boxes");
-
-                // Convert to DetectedField objects
-                var detectedFields = textBoxes.Select(tb => new DetectedField
-                {
-                    Text = tb.Text,
-                    Left = tb.Left,
-                    Top = tb.Top,
-                    Width = tb.Width,
-                    Height = tb.Height
-                }).ToList();
-
-                // Check for existing mappings
-                string suggestedTemplate = FieldMappingManager.SuggestTemplate(textBoxes);
-                Dictionary<string, string> existingMappings = null;
-
-                if (!string.IsNullOrEmpty(suggestedTemplate))
-                {
-                    var result = MessageBox.Show(
-                        $"Detected template: {suggestedTemplate}\n\nWould you like to load existing mappings for this template?",
-                        "Load Existing Mappings",
-                        MessageBoxButtons.YesNoCancel,
-                        MessageBoxIcon.Question);
-
-                    if (result == DialogResult.Cancel)
-                        return;
-
-                    if (result == DialogResult.Yes)
-                    {
-                        existingMappings = FieldMappingManager.GetMappings(suggestedTemplate);
-                    }
-                }
-
-                // Show field mapping dialog
-                using (var mappingForm = new FieldMappingForm(detectedFields, existingMappings))
-                {
-                    if (mappingForm.ShowDialog() == DialogResult.OK)
-                    {
-                        // Save the mappings
-                        FieldMappingManager.SaveMapping(mappingForm.TemplateName, mappingForm.Mappings);
-
-                        LogMessage($"Field mapping saved as: {mappingForm.TemplateName}", Color.Green);
-                        MessageBox.Show($"Field mapping configuration saved successfully!\n\nTemplate: {mappingForm.TemplateName}\nMappings: {mappingForm.Mappings.Count}",
-                            "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error configuring field mapping: {ex.Message}", Color.Red);
-                MessageBox.Show($"An error occurred while configuring field mapping:\n\n{ex.Message}",
-                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void BtnManageMappings_Click(object sender, EventArgs e)
-        {
-            using (var manageForm = new ManageMappingsForm())
-            {
-                manageForm.ShowDialog();
-            }
-        }
-
-        private List<TextBoxInfo> ExtractTextBoxesFromPowerPoint(string pptxPath)
-        {
-            var textBoxes = new List<TextBoxInfo>();
-            Microsoft.Office.Interop.PowerPoint.Application pptApp = null;
-            Microsoft.Office.Interop.PowerPoint.Presentation ppt = null;
-
-            try
-            {
-                pptApp = new Microsoft.Office.Interop.PowerPoint.Application();
-                ppt = pptApp.Presentations.Open(pptxPath,
-                    Microsoft.Office.Core.MsoTriState.msoFalse,
-                    Microsoft.Office.Core.MsoTriState.msoFalse,
-                    Microsoft.Office.Core.MsoTriState.msoFalse);
-
-                if (ppt.Slides.Count > 0)
-                {
-                    var firstSlide = ppt.Slides[1];
-
-                    // Collect from slide
-                    CollectTextBoxesForMapping(firstSlide.Shapes, textBoxes);
-
-                    // Collect from master
-                    try { CollectTextBoxesForMapping(firstSlide.Master.Shapes, textBoxes); } catch { }
-                    try { CollectTextBoxesForMapping(firstSlide.Design.SlideMaster.Shapes, textBoxes); } catch { }
-                    try { CollectTextBoxesForMapping(firstSlide.CustomLayout.Shapes, textBoxes); } catch { }
-                }
-
-                ppt.Close();
-            }
-            finally
-            {
-                if (ppt != null)
-                {
-                    try { ppt.Close(); } catch { }
-                }
-                if (pptApp != null)
-                {
-                    try { pptApp.Quit(); } catch { }
-                }
-            }
-
-            return textBoxes;
-        }
-
-        private void CollectTextBoxesForMapping(Microsoft.Office.Interop.PowerPoint.Shapes shapes, List<TextBoxInfo> textBoxes)
-        {
-            foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in shapes)
-            {
-                try
-                {
-                    if (shape.Type == Microsoft.Office.Core.MsoShapeType.msoGroup)
-                    {
-                        CollectTextBoxesFromGroupForMapping(shape.GroupItems, textBoxes);
-                    }
-                    else if (shape.HasTextFrame == Microsoft.Office.Core.MsoTriState.msoTrue)
-                    {
-                        string text = shape.TextFrame.TextRange.Text.Trim();
-                        if (!string.IsNullOrEmpty(text))
-                        {
-                            textBoxes.Add(new TextBoxInfo
-                            {
-                                Text = text,
-                                Left = shape.Left,
-                                Top = shape.Top,
-                                Width = shape.Width,
-                                Height = shape.Height
-                            });
-                        }
-                    }
-                }
-                catch { }
-            }
-        }
-
-        private void CollectTextBoxesFromGroupForMapping(Microsoft.Office.Interop.PowerPoint.GroupShapes groupShapes, List<TextBoxInfo> textBoxes)
-        {
-            foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in groupShapes)
-            {
-                try
-                {
-                    if (shape.Type == Microsoft.Office.Core.MsoShapeType.msoGroup)
-                    {
-                        CollectTextBoxesFromGroupForMapping(shape.GroupItems, textBoxes);
-                    }
-                    else if (shape.HasTextFrame == Microsoft.Office.Core.MsoTriState.msoTrue)
-                    {
-                        string text = shape.TextFrame.TextRange.Text.Trim();
-                        if (!string.IsNullOrEmpty(text))
-                        {
-                            textBoxes.Add(new TextBoxInfo
-                            {
-                                Text = text,
-                                Left = shape.Left,
-                                Top = shape.Top,
-                                Width = shape.Width,
-                                Height = shape.Height
-                            });
-                        }
-                    }
-                }
-                catch { }
-            }
-        }
-
-        private void btnExtract_Click(object sender, EventArgs e)
-        {
-            // Validation
-            if (string.IsNullOrWhiteSpace(txtPowerPointPath.Text))
-            {
-                MessageBox.Show("Please select a PowerPoint file.", "Validation Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(txtOutputFolder.Text))
-            {
-                MessageBox.Show("Please select an output folder.", "Validation Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            // Disable UI during processing
-            SetUIEnabled(false);
-            txtLog.Clear();
-            progressBar.Value = 0;
-
-            // Start background processing
-            var workData = new ExtractionWorkData
-            {
-                PowerPointPath = txtPowerPointPath.Text,
-                OutputFolder = txtOutputFolder.Text
-            };
-
-            backgroundWorker.RunWorkerAsync(workData);
-        }
-
-        private void BackgroundWorker_DoWork(object sender, DoWorkEventArgs e)
-        {
-            var worker = sender as BackgroundWorker;
-            var data = e.Argument as ExtractionWorkData;
-
-            try
-            {
-                // Extract PowerPoint data
-                worker.ReportProgress(10, "Extracting data from PowerPoint...");
-
-                var extractor = new PowerPointExtractor();
-                var extractResult = extractor.ExtractWorkInstruction(
-                    data.PowerPointPath,
-                    data.OutputFolder,
-                    (progress, message) => worker.ReportProgress(progress, message)
-                );
-
-                worker.ReportProgress(100, $"Complete! Data extracted to: {extractResult.ExcelPath}");
-                e.Result = new ExtractionResultWrapper
-                {
-                    Success = true,
-                    ExcelPath = extractResult.ExcelPath
-                };
-            }
-            catch (Exception ex)
-            {
-                e.Result = new ExtractionResultWrapper
-                {
-                    Success = false,
-                    ErrorMessage = ex.Message
-                };
-            }
-        }
-
-        private void BackgroundWorker_ProgressChanged(object sender, ProgressChangedEventArgs e)
-        {
-            progressBar.Value = e.ProgressPercentage;
-            lblStatus.Text = e.UserState?.ToString() ?? "Processing...";
-            LogMessage(e.UserState?.ToString() ?? "");
-        }
-
-        private void BackgroundWorker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
-        {
-            SetUIEnabled(true);
-
-            var result = e.Result as ExtractionResultWrapper;
-
-            if (result != null && result.Success)
-            {
-                LogMessage("✓ Extraction completed successfully!", Color.Green);
-
-                var message = $"Data extracted successfully!\n\nExcel file: {result.ExcelPath}";
-
-                var openFiles = MessageBox.Show(
-                    message + "\n\nWould you like to open the output folder?",
-                    "Success",
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Information
-                );
-
-                if (openFiles == DialogResult.Yes)
-                {
-                    System.Diagnostics.Process.Start("explorer.exe", txtOutputFolder.Text);
-                }
-            }
-            else if (result != null && !result.Success)
-            {
-                LogMessage($"✗ Error: {result.ErrorMessage}", Color.Red);
-                MessageBox.Show($"An error occurred:\n\n{result.ErrorMessage}",
-                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void SetUIEnabled(bool enabled)
-        {
-            btnSelectFile.Enabled = enabled;
-            btnSelectOutputFolder.Enabled = enabled;
-            btnExtract.Enabled = enabled;
-            btnConfigureMapping.Enabled = enabled;
-            btnManageTemplates.Enabled = enabled;
-        }
-
-        private void LogMessage(string message, Color? color = null)
-        {
-            if (txtLog.InvokeRequired)
-            {
-                txtLog.Invoke(new Action(() => LogMessage(message, color)));
-                return;
-            }
-
-            txtLog.SelectionStart = txtLog.TextLength;
-            txtLog.SelectionLength = 0;
-            txtLog.SelectionColor = color ?? Color.Black;
-            txtLog.AppendText($"[{DateTime.Now:HH:mm:ss}] {message}\n");
-            txtLog.SelectionColor = txtLog.ForeColor;
-            txtLog.ScrollToCaret();
-        }
-
-        private void Form1_Load(object sender, EventArgs e)
-        {
-            LogMessage("Work Instruction Extractor ready.");
-        }
-    }
-
-    // Helper classes
-    public class ExtractionWorkData
-    {
-        public string PowerPointPath { get; set; }
-        public string OutputFolder { get; set; }
-    }
-
-    public class ExtractionResultWrapper
-    {
-        public bool Success { get; set; }
-        public string ExcelPath { get; set; }
-        public string ErrorMessage { get; set; }
+        private System.Windows.Forms.TextBox txtPowerPointPath;
+        private System.Windows.Forms.TextBox txtOutputFolder;
+        private System.Windows.Forms.Button btnSelectFile;
+        private System.Windows.Forms.Button btnSelectOutputFolder;
+        private System.Windows.Forms.Button btnExtract;
+        private System.Windows.Forms.ProgressBar progressBar;
+        private System.Windows.Forms.RichTextBox txtLog;
+        private System.Windows.Forms.Label lblStatus;
+        private System.Windows.Forms.Button btnConfigureMapping;
+        private System.Windows.Forms.Button btnManageTemplates;
+        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.GroupBox groupBox1;
+        private System.Windows.Forms.GroupBox groupBox2;
+        private System.Windows.Forms.GroupBox groupBox3;
+        private System.Windows.Forms.Label label4;
     }
 
 }
