@@ -5,51 +5,60 @@ from datetime import datetime
 
 # === USER SETTINGS ===
 excel_path = r"C:\Users\U309011\Desktop\WorkInstructions.xlsx"
-source_folder = r"\\netapp\sharedfiles\Document Control\Work Instructions"  # <-- change to your source
-destination_folder = r"C:\Users\U309011\Desktop\CurrentFolders"
-log_path = os.path.join(os.path.expanduser("~"), "Desktop", "Copy_Log.xlsx")
+source_root = r"C:\Users\U309011\Desktop\CurrentFolders"  # Where all your subfolders are
+destination_folder = r"C:\Users\U309011\Desktop\CurrentPP"
+log_path = os.path.join(os.path.expanduser("~"), "Desktop", "File_Copy_Log.xlsx")
 
-# === STEP 1: Read Excel file ===
+# === STEP 1: Read Excel ===
 df = pd.read_excel(excel_path)
 
-# Ensure the 'Number' column exists
-if "Number" not in df.columns:
-    raise ValueError("The Excel file must contain a column named 'Number'.")
+# First column contains the exact file names
+file_column = df.columns[0]
+file_names = df[file_column].dropna().astype(str).tolist()
 
-# === STEP 2: Get list of folder numbers ===
-folder_numbers = df["Number"].dropna().astype(str).str.zfill(4).tolist()
-
-# === STEP 3: Prepare destination folder ===
+# === STEP 2: Prepare destination ===
 os.makedirs(destination_folder, exist_ok=True)
 
-# === STEP 4: Copy folders and track results ===
+# === STEP 3: Build an index of all files (recursive scan) ===
+print("Indexing all available files... please wait.")
+available_files = {}
+for root, dirs, files in os.walk(source_root):
+    for f in files:
+        available_files[f] = os.path.join(root, f)
+
+print(f"Indexed {len(available_files)} files.\n")
+
+# === STEP 4: Copy requested files ===
 log_entries = []
 
-for num in folder_numbers:
-    src_path = os.path.join(source_folder, num)
-    dest_path = os.path.join(destination_folder, num)
+for file_name in file_names:
+    entry = {
+        "File Name": file_name,
+        "Source Path": "",
+        "Status": "",
+        "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    }
 
-    entry = {"Folder Number": num, "Status": "", "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+    if file_name in available_files:
+        src_path = available_files[file_name]
+        dest_path = os.path.join(destination_folder, file_name)
 
-    if os.path.exists(src_path):
         try:
-            shutil.copytree(src_path, dest_path)
+            shutil.copy2(src_path, dest_path)
+            entry["Source Path"] = src_path
             entry["Status"] = "Copied"
-            print(f"Copied folder: {num}")
-        except FileExistsError:
-            entry["Status"] = "Skipped (Already Exists)"
-            print(f"Skipped {num} (already exists)")
+            print(f"Copied: {file_name}")
         except Exception as e:
             entry["Status"] = f"Error: {e}"
-            print(f"Error copying {num}: {e}")
+            print(f"Error copying {file_name}: {e}")
     else:
-        entry["Status"] = "Missing (Source Not Found)"
-        print(f"Source folder not found: {num}")
+        entry["Status"] = "Missing (Not Found)"
+        print(f"Missing: {file_name}")
 
     log_entries.append(entry)
 
-# === STEP 5: Save results to Excel log ===
+# === STEP 5: Save log ===
 log_df = pd.DataFrame(log_entries)
 log_df.to_excel(log_path, index=False)
 
-print(f"\n✅ Copy complete. Log saved to: {log_path}")
+print(f"\n✅ File copy complete. Log saved to: {log_path}")
