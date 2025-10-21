@@ -1,1 +1,36 @@
-'GroupShapes' is an ambiguous reference between 'Microsoft.Office.Core.GroupShapes' and 'Microsoft.Office.Interop.PowerPoint.GroupShapes'
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.IO;
+using System.Linq;
+using System.Windows.Forms;
+using Microsoft.Office.Interop.PowerPoint;
+using Microsoft.Office.Core;
+using PowerPointApp = Microsoft.Office.Interop.PowerPoint.Application;
+using GroupShapes = Microsoft.Office.Interop.PowerPoint.GroupShapes;  // ADD THIS LINE
+
+------
+private void CollectText(GroupShapes groupShapes, List<string> texts)
+{
+    foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in groupShapes)
+    {
+        try
+        {
+            if (shape.Type == MsoShapeType.msoGroup)
+            {
+                CollectText(shape.GroupItems, texts);
+            }
+            else if (shape.HasTextFrame == MsoTriState.msoTrue)
+            {
+                string text = shape.TextFrame.TextRange.Text.Trim();
+                if (!string.IsNullOrEmpty(text))
+                {
+                    texts.Add(text);
+                }
+            }
+        }
+        catch { }
+    }
+}
+
+
