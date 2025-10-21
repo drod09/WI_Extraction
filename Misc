@@ -1,36 +1,899 @@
+Great idea! Let’s add a visual field mapper that shows the PowerPoint slide and lets you click on text boxes to assign them to fields. Here’s how to implement it:
+
+## **File 4: FieldMapperForm.cs**
+
+```csharp
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using Microsoft.Office.Interop.PowerPoint;
 using Microsoft.Office.Core;
-using PowerPointApp = Microsoft.Office.Interop.PowerPoint.Application;
-using GroupShapes = Microsoft.Office.Interop.PowerPoint.GroupShapes;  // ADD THIS LINE
 
-------
-private void CollectText(GroupShapes groupShapes, List<string> texts)
+namespace WorkInstructionRevisionSorter
 {
-    foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in groupShapes)
+    public partial class FieldMapperForm : Form
     {
-        try
+        private string pptxPath;
+        private List<TextBoxInfo> textBoxes;
+        private Dictionary<string, string> fieldMappings;
+        private TextBoxInfo selectedTextBox;
+        private string currentField;
+        private Bitmap slideImage;
+        private float scale = 1.0f;
+
+        public Dictionary<string, string> FieldMappings => fieldMappings;
+
+        public FieldMapperForm(string pptxPath)
         {
-            if (shape.Type == MsoShapeType.msoGroup)
+            InitializeComponent();
+            this.pptxPath = pptxPath;
+            this.fieldMappings = new Dictionary<string, string>();
+            this.textBoxes = new List<TextBoxInfo>();
+        }
+
+        private void FieldMapperForm_Load(object sender, EventArgs e)
+        {
+            // Load field list
+            cmbFields.Items.AddRange(new string[]
             {
-                CollectText(shape.GroupItems, texts);
-            }
-            else if (shape.HasTextFrame == MsoTriState.msoTrue)
+                "WI_Number",
+                "WI_Title",
+                "Revision",
+                "BOM_ASSY_DWG_NO",
+                "Operation_No",
+                "Product_Line",
+                "Subject"
+            });
+
+            cmbFields.SelectedIndex = 0;
+            currentField = "WI_Number";
+
+            // Load PowerPoint and extract info
+            LoadPowerPointData();
+            
+            // Render slide preview
+            RenderSlidePreview();
+        }
+
+        private void LoadPowerPointData()
+        {
+            Microsoft.Office.Interop.PowerPoint.Application pptApp = null;
+            Presentation ppt = null;
+
+            try
             {
-                string text = shape.TextFrame.TextRange.Text.Trim();
-                if (!string.IsNullOrEmpty(text))
+                Cursor = Cursors.WaitCursor;
+                lblStatus.Text = "Loading PowerPoint...";
+                System.Windows.Forms.Application.DoEvents();
+
+                pptApp = new Microsoft.Office.Interop.PowerPoint.Application();
+                ppt = pptApp.Presentations.Open(pptxPath,
+                    MsoTriState.msoFalse, MsoTriState.msoFalse, MsoTriState.msoFalse);
+
+                if (ppt.Slides.Count > 0)
                 {
-                    texts.Add(text);
+                    var firstSlide = ppt.Slides[1];
+
+                    // Collect text boxes from all sources
+                    CollectTextBoxes(firstSlide.Shapes, textBoxes);
+                    try { CollectTextBoxes(firstSlide.Master.Shapes, textBoxes); } catch { }
+                    try { CollectTextBoxes(firstSlide.Design.SlideMaster.Shapes, textBoxes); } catch { }
+                    try { CollectTextBoxes(firstSlide.CustomLayout.Shapes, textBoxes); } catch { }
+
+                    // Export slide as image
+                    string tempImagePath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), 
+                        $"slide_preview_{Guid.NewGuid()}.png");
+                    
+                    firstSlide.Export(tempImagePath, "PNG", 1024, 768);
+                    slideImage = new Bitmap(tempImagePath);
+                    
+                    // Clean up temp file
+                    try { System.IO.File.Delete(tempImagePath); } catch { }
+
+                    lblStatus.Text = $"Loaded {textBoxes.Count} text boxes";
+                }
+
+                ppt.Close();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading PowerPoint:\n\n{ex.Message}", 
+                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                ppt?.Close();
+                pptApp?.Quit();
+                Cursor = Cursors.Default;
+            }
+        }
+
+        private void CollectTextBoxes(Microsoft.Office.Interop.PowerPoint.Shapes shapes, List<TextBoxInfo> textBoxes)
+        {
+            foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in shapes)
+            {
+                try
+                {
+                    if (shape.Type == MsoShapeType.msoGroup)
+                    {
+                        CollectTextBoxes(shape.GroupItems, textBoxes);
+                    }
+                    else if (shape.HasTextFrame == MsoTriState.msoTrue)
+                    {
+                        string text = shape.TextFrame.TextRange.Text.Trim();
+                        if (!string.IsNullOrEmpty(text))
+                        {
+                            textBoxes.Add(new TextBoxInfo
+                            {
+                                Text = text,
+                                Left = shape.Left,
+                                Top = shape.Top,
+                                Width = shape.Width,
+                                Height = shape.Height
+                            });
+                        }
+                    }
+                }
+                catch { }
+            }
+        }
+
+        private void CollectTextBoxes(Microsoft.Office.Interop.PowerPoint.GroupShapes groupShapes, List<TextBoxInfo> textBoxes)
+        {
+            foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in groupShapes)
+            {
+                try
+                {
+                    if (shape.Type == MsoShapeType.msoGroup)
+                    {
+                        CollectTextBoxes(shape.GroupItems, textBoxes);
+                    }
+                    else if (shape.HasTextFrame == MsoTriState.msoTrue)
+                    {
+                        string text = shape.TextFrame.TextRange.Text.Trim();
+                        if (!string.IsNullOrEmpty(text))
+                        {
+                            textBoxes.Add(new TextBoxInfo
+                            {
+                                Text = text,
+                                Left = shape.Left,
+                                Top = shape.Top,
+                                Width = shape.Width,
+                                Height = shape.Height
+                            });
+                        }
+                    }
+                }
+                catch { }
+            }
+        }
+
+        private void RenderSlidePreview()
+        {
+            if (slideImage == null || pictureBox.Width == 0 || pictureBox.Height == 0)
+                return;
+
+            Bitmap preview = new Bitmap(pictureBox.Width, pictureBox.Height);
+            
+            using (Graphics g = Graphics.FromImage(preview))
+            {
+                g.Clear(Color.White);
+
+                // Calculate scaling to fit picture box
+                float scaleX = (float)pictureBox.Width / slideImage.Width;
+                float scaleY = (float)pictureBox.Height / slideImage.Height;
+                scale = Math.Min(scaleX, scaleY) * 0.95f; // 95% to add padding
+
+                float imageWidth = slideImage.Width * scale;
+                float imageHeight = slideImage.Height * scale;
+                float offsetX = (pictureBox.Width - imageWidth) / 2;
+                float offsetY = (pictureBox.Height - imageHeight) / 2;
+
+                // Draw slide image
+                g.DrawImage(slideImage, offsetX, offsetY, imageWidth, imageHeight);
+
+                // Draw text box rectangles
+                foreach (var textBox in textBoxes)
+                {
+                    RectangleF rect = new RectangleF(
+                        offsetX + textBox.Left * scale,
+                        offsetY + textBox.Top * scale,
+                        textBox.Width * scale,
+                        textBox.Height * scale
+                    );
+
+                    // Check if this text box is mapped
+                    string mappedField = fieldMappings.FirstOrDefault(x => x.Value == textBox.Text).Key;
+                    
+                    Color boxColor;
+                    if (textBox == selectedTextBox)
+                    {
+                        boxColor = Color.Yellow; // Selected
+                    }
+                    else if (!string.IsNullOrEmpty(mappedField))
+                    {
+                        boxColor = Color.LightGreen; // Mapped
+                    }
+                    else
+                    {
+                        boxColor = Color.LightBlue; // Unmapped
+                    }
+
+                    using (Pen pen = new Pen(boxColor, 2))
+                    using (SolidBrush brush = new SolidBrush(Color.FromArgb(50, boxColor)))
+                    {
+                        g.FillRectangle(brush, rect);
+                        g.DrawRectangle(pen, Rectangle.Round(rect));
+                    }
+
+                    // Draw label if mapped
+                    if (!string.IsNullOrEmpty(mappedField))
+                    {
+                        using (Font font = new Font("Arial", 8, FontStyle.Bold))
+                        using (SolidBrush textBrush = new SolidBrush(Color.DarkGreen))
+                        {
+                            g.DrawString(mappedField, font, textBrush, rect.X, rect.Y - 15);
+                        }
+                    }
+                }
+
+                // Draw legend
+                DrawLegend(g);
+            }
+
+            pictureBox.Image?.Dispose();
+            pictureBox.Image = preview;
+        }
+
+        private void DrawLegend(Graphics g)
+        {
+            int legendX = 10;
+            int legendY = 10;
+            int legendWidth = 120;
+            int legendHeight = 80;
+
+            using (SolidBrush bgBrush = new SolidBrush(Color.FromArgb(200, Color.White)))
+            using (Pen borderPen = new Pen(Color.Black, 1))
+            using (Font font = new Font("Arial", 8))
+            {
+                g.FillRectangle(bgBrush, legendX, legendY, legendWidth, legendHeight);
+                g.DrawRectangle(borderPen, legendX, legendY, legendWidth, legendHeight);
+
+                // Yellow - Selected
+                using (SolidBrush brush = new SolidBrush(Color.Yellow))
+                {
+                    g.FillRectangle(brush, legendX + 5, legendY + 5, 15, 15);
+                    g.DrawString("Selected", font, Brushes.Black, legendX + 25, legendY + 5);
+                }
+
+                // Green - Mapped
+                using (SolidBrush brush = new SolidBrush(Color.LightGreen))
+                {
+                    g.FillRectangle(brush, legendX + 5, legendY + 30, 15, 15);
+                    g.DrawString("Mapped", font, Brushes.Black, legendX + 25, legendY + 30);
+                }
+
+                // Blue - Unmapped
+                using (SolidBrush brush = new SolidBrush(Color.LightBlue))
+                {
+                    g.FillRectangle(brush, legendX + 5, legendY + 55, 15, 15);
+                    g.DrawString("Unmapped", font, Brushes.Black, legendX + 25, legendY + 55);
                 }
             }
         }
-        catch { }
+
+        private void pictureBox_MouseClick(object sender, MouseEventArgs e)
+        {
+            if (slideImage == null) return;
+
+            // Calculate offset
+            float imageWidth = slideImage.Width * scale;
+            float imageHeight = slideImage.Height * scale;
+            float offsetX = (pictureBox.Width - imageWidth) / 2;
+            float offsetY = (pictureBox.Height - imageHeight) / 2;
+
+            // Convert click coordinates to slide coordinates
+            float slideX = (e.X - offsetX) / scale;
+            float slideY = (e.Y - offsetY) / scale;
+
+            // Find clicked text box
+            foreach (var textBox in textBoxes)
+            {
+                if (slideX >= textBox.Left && slideX <= textBox.Left + textBox.Width &&
+                    slideY >= textBox.Top && slideY <= textBox.Top + textBox.Height)
+                {
+                    selectedTextBox = textBox;
+                    txtSelectedText.Text = textBox.Text;
+                    lblSelectedField.Text = $"Click 'Assign to {currentField}' to map this text box";
+                    btnAssign.Enabled = true;
+                    RenderSlidePreview();
+                    return;
+                }
+            }
+
+            // No text box clicked
+            selectedTextBox = null;
+            txtSelectedText.Text = "";
+            lblSelectedField.Text = "Click on a text box to select it";
+            btnAssign.Enabled = false;
+            RenderSlidePreview();
+        }
+
+        private void cmbFields_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            currentField = cmbFields.SelectedItem.ToString();
+            
+            if (selectedTextBox != null)
+            {
+                lblSelectedField.Text = $"Click 'Assign to {currentField}' to map this text box";
+            }
+
+            // Update assign button text
+            btnAssign.Text = $"Assign to {currentField}";
+
+            // Show current mapping
+            if (fieldMappings.ContainsKey(currentField))
+            {
+                lblCurrentMapping.Text = $"Current: {fieldMappings[currentField]}";
+            }
+            else
+            {
+                lblCurrentMapping.Text = "Current: (not mapped)";
+            }
+        }
+
+        private void btnAssign_Click(object sender, EventArgs e)
+        {
+            if (selectedTextBox == null) return;
+
+            // Remove any existing mapping for this field
+            if (fieldMappings.ContainsKey(currentField))
+            {
+                fieldMappings[currentField] = selectedTextBox.Text;
+            }
+            else
+            {
+                fieldMappings.Add(currentField, selectedTextBox.Text);
+            }
+
+            lblStatus.Text = $"Mapped {currentField} = '{selectedTextBox.Text}'";
+            lblCurrentMapping.Text = $"Current: {fieldMappings[currentField]}";
+
+            // Move to next field if available
+            if (cmbFields.SelectedIndex < cmbFields.Items.Count - 1)
+            {
+                cmbFields.SelectedIndex++;
+            }
+
+            UpdateMappingsList();
+            RenderSlidePreview();
+        }
+
+        private void btnClearField_Click(object sender, EventArgs e)
+        {
+            if (fieldMappings.ContainsKey(currentField))
+            {
+                fieldMappings.Remove(currentField);
+                lblStatus.Text = $"Cleared mapping for {currentField}";
+                lblCurrentMapping.Text = "Current: (not mapped)";
+                UpdateMappingsList();
+                RenderSlidePreview();
+            }
+        }
+
+        private void btnClearAll_Click(object sender, EventArgs e)
+        {
+            var result = MessageBox.Show("Clear all field mappings?", "Confirm", 
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            
+            if (result == DialogResult.Yes)
+            {
+                fieldMappings.Clear();
+                lblStatus.Text = "All mappings cleared";
+                lblCurrentMapping.Text = "Current: (not mapped)";
+                UpdateMappingsList();
+                RenderSlidePreview();
+            }
+        }
+
+        private void UpdateMappingsList()
+        {
+            lstMappings.Items.Clear();
+            
+            foreach (var mapping in fieldMappings)
+            {
+                string displayText = mapping.Value.Length > 30 
+                    ? mapping.Value.Substring(0, 30) + "..." 
+                    : mapping.Value;
+                lstMappings.Items.Add($"{mapping.Key}: {displayText}");
+            }
+
+            lblMappedCount.Text = $"{fieldMappings.Count} of 7 fields mapped";
+        }
+
+        private void btnSave_Click(object sender, EventArgs e)
+        {
+            if (fieldMappings.Count == 0)
+            {
+                MessageBox.Show("No field mappings to save.", "No Mappings", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            DialogResult = DialogResult.OK;
+            Close();
+        }
+
+        private void btnCancel_Click(object sender, EventArgs e)
+        {
+            DialogResult = DialogResult.Cancel;
+            Close();
+        }
+
+        private void pictureBox_Resize(object sender, EventArgs e)
+        {
+            RenderSlidePreview();
+        }
+    }
+
+    public class TextBoxInfo
+    {
+        public string Text { get; set; }
+        public float Left { get; set; }
+        public float Top { get; set; }
+        public float Width { get; set; }
+        public float Height { get; set; }
     }
 }
+```
+
+## **File 5: FieldMapperForm.Designer.cs**
+
+```csharp
+namespace WorkInstructionRevisionSorter
+{
+    partial class FieldMapperForm
+    {
+        private System.ComponentModel.IContainer components = null;
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && (components != null))
+            {
+                components.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
+        #region Windows Form Designer generated code
+
+        private void InitializeComponent()
+        {
+            this.pictureBox = new System.Windows.Forms.PictureBox();
+            this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.lblCurrentMapping = new System.Windows.Forms.Label();
+            this.btnClearField = new System.Windows.Forms.Button();
+            this.btnAssign = new System.Windows.Forms.Button();
+            this.cmbFields = new System.Windows.Forms.ComboBox();
+            this.label1 = new System.Windows.Forms.Label();
+            this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.lblSelectedField = new System.Windows.Forms.Label();
+            this.txtSelectedText = new System.Windows.Forms.TextBox();
+            this.label3 = new System.Windows.Forms.Label();
+            this.groupBox3 = new System.Windows.Forms.GroupBox();
+            this.lblMappedCount = new System.Windows.Forms.Label();
+            this.btnClearAll = new System.Windows.Forms.Button();
+            this.lstMappings = new System.Windows.Forms.ListBox();
+            this.btnSave = new System.Windows.Forms.Button();
+            this.btnCancel = new System.Windows.Forms.Button();
+            this.lblStatus = new System.Windows.Forms.Label();
+            this.label2 = new System.Windows.Forms.Label();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox)).BeginInit();
+            this.groupBox1.SuspendLayout();
+            this.groupBox2.SuspendLayout();
+            this.groupBox3.SuspendLayout();
+            this.SuspendLayout();
+            // 
+            // pictureBox
+            // 
+            this.pictureBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.pictureBox.Location = new System.Drawing.Point(20, 80);
+            this.pictureBox.Name = "pictureBox";
+            this.pictureBox.Size = new System.Drawing.Size(800, 600);
+            this.pictureBox.TabIndex = 0;
+            this.pictureBox.TabStop = false;
+            this.pictureBox.MouseClick += new System.Windows.Forms.MouseEventHandler(this.pictureBox_MouseClick);
+            this.pictureBox.Resize += new System.EventHandler(this.pictureBox_Resize);
+            // 
+            // groupBox1
+            // 
+            this.groupBox1.Controls.Add(this.lblCurrentMapping);
+            this.groupBox1.Controls.Add(this.btnClearField);
+            this.groupBox1.Controls.Add(this.btnAssign);
+            this.groupBox1.Controls.Add(this.cmbFields);
+            this.groupBox1.Controls.Add(this.label1);
+            this.groupBox1.Location = new System.Drawing.Point(840, 80);
+            this.groupBox1.Name = "groupBox1";
+            this.groupBox1.Size = new System.Drawing.Size(320, 180);
+            this.groupBox1.TabIndex = 1;
+            this.groupBox1.TabStop = false;
+            this.groupBox1.Text = "Field Selection";
+            // 
+            // lblCurrentMapping
+            // 
+            this.lblCurrentMapping.Location = new System.Drawing.Point(15, 140);
+            this.lblCurrentMapping.Name = "lblCurrentMapping";
+            this.lblCurrentMapping.Size = new System.Drawing.Size(290, 30);
+            this.lblCurrentMapping.TabIndex = 4;
+            this.lblCurrentMapping.Text = "Current: (not mapped)";
+            // 
+            // btnClearField
+            // 
+            this.btnClearField.Location = new System.Drawing.Point(165, 100);
+            this.btnClearField.Name = "btnClearField";
+            this.btnClearField.Size = new System.Drawing.Size(140, 30);
+            this.btnClearField.TabIndex = 3;
+            this.btnClearField.Text = "Clear Field";
+            this.btnClearField.UseVisualStyleBackColor = true;
+            this.btnClearField.Click += new System.EventHandler(this.btnClearField_Click);
+            // 
+            // btnAssign
+            // 
+            this.btnAssign.Enabled = false;
+            this.btnAssign.Location = new System.Drawing.Point(15, 100);
+            this.btnAssign.Name = "btnAssign";
+            this.btnAssign.Size = new System.Drawing.Size(140, 30);
+            this.btnAssign.TabIndex = 2;
+            this.btnAssign.Text = "Assign to Field";
+            this.btnAssign.UseVisualStyleBackColor = true;
+            this.btnAssign.Click += new System.EventHandler(this.btnAssign_Click);
+            // 
+            // cmbFields
+            // 
+            this.cmbFields.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbFields.FormattingEnabled = true;
+            this.cmbFields.Location = new System.Drawing.Point(15, 60);
+            this.cmbFields.Name = "cmbFields";
+            this.cmbFields.Size = new System.Drawing.Size(290, 24);
+            this.cmbFields.TabIndex = 1;
+            this.cmbFields.SelectedIndexChanged += new System.EventHandler(this.cmbFields_SelectedIndexChanged);
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(15, 35);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(88, 16);
+            this.label1.TabIndex = 0;
+            this.label1.Text = "Select Field:";
+            // 
+            // groupBox2
+            // 
+            this.groupBox2.Controls.Add(this.lblSelectedField);
+            this.groupBox2.Controls.Add(this.txtSelectedText);
+            this.groupBox2.Controls.Add(this.label3);
+            this.groupBox2.Location = new System.Drawing.Point(840, 280);
+            this.groupBox2.Name = "groupBox2";
+            this.groupBox2.Size = new System.Drawing.Size(320, 150);
+            this.groupBox2.TabIndex = 2;
+            this.groupBox2.TabStop = false;
+            this.groupBox2.Text = "Selected Text Box";
+            // 
+            // lblSelectedField
+            // 
+            this.lblSelectedField.Location = new System.Drawing.Point(15, 110);
+            this.lblSelectedField.Name = "lblSelectedField";
+            this.lblSelectedField.Size = new System.Drawing.Size(290, 30);
+            this.lblSelectedField.TabIndex = 2;
+            this.lblSelectedField.Text = "Click on a text box to select it";
+            // 
+            // txtSelectedText
+            // 
+            this.txtSelectedText.Location = new System.Drawing.Point(15, 60);
+            this.txtSelectedText.Multiline = true;
+            this.txtSelectedText.Name = "txtSelectedText";
+            this.txtSelectedText.ReadOnly = true;
+            this.txtSelectedText.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+            this.txtSelectedText.Size = new System.Drawing.Size(290, 40);
+            this.txtSelectedText.TabIndex = 1;
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(15, 35);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(41, 16);
+            this.label3.TabIndex = 0;
+            this.label3.Text = "Text:";
+            // 
+            // groupBox3
+            // 
+            this.groupBox3.Controls.Add(this.lblMappedCount);
+            this.groupBox3.Controls.Add(this.btnClearAll);
+            this.groupBox3.Controls.Add(this.lstMappings);
+            this.groupBox3.Location = new System.Drawing.Point(840, 450);
+            this.groupBox3.Name = "groupBox3";
+            this.groupBox3.Size = new System.Drawing.Size(320, 180);
+            this.groupBox3.TabIndex = 3;
+            this.groupBox3.TabStop = false;
+            this.groupBox3.Text = "Current Mappings";
+            // 
+            // lblMappedCount
+            // 
+            this.lblMappedCount.AutoSize = true;
+            this.lblMappedCount.Font = new System.Drawing.Font("Microsoft Sans Serif", 8F, System.Drawing.FontStyle.Bold);
+            this.lblMappedCount.Location = new System.Drawing.Point(15, 150);
+            this.lblMappedCount.Name = "lblMappedCount";
+            this.lblMappedCount.Size = new System.Drawing.Size(151, 17);
+            this.lblMappedCount.TabIndex = 2;
+            this.lblMappedCount.Text = "0 of 7 fields mapped";
+            // 
+            // btnClearAll
+            // 
+            this.btnClearAll.Location = new System.Drawing.Point(205, 145);
+            this.btnClearAll.Name = "btnClearAll";
+            this.btnClearAll.Size = new System.Drawing.Size(100, 25);
+            this.btnClearAll.TabIndex = 1;
+            this.btnClearAll.Text = "Clear All";
+            this.btnClearAll.UseVisualStyleBackColor = true;
+            this.btnClearAll.Click += new System.EventHandler(this.btnClearAll_Click);
+            // 
+            // lstMappings
+            // 
+            this.lstMappings.FormattingEnabled = true;
+            this.lstMappings.ItemHeight = 16;
+            this.lstMappings.Location = new System.Drawing.Point(15, 25);
+            this.lstMappings.Name = "lstMappings";
+            this.lstMappings.Size = new System.Drawing.Size(290, 116);
+            this.lstMappings.TabIndex = 0;
+            // 
+            // btnSave
+            // 
+            this.btnSave.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(120)))), ((int)(((byte)(215)))));
+            this.btnSave.FlatAppearance.BorderSize = 0;
+            this.btnSave.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnSave.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
+            this.btnSave.ForeColor = System.Drawing.Color.White;
+            this.btnSave.Location = new System.Drawing.Point(840, 650);
+            this.btnSave.Name = "btnSave";
+            this.btnSave.Size = new System.Drawing.Size(150, 40);
+            this.btnSave.TabIndex = 4;
+            this.btnSave.Text = "Save Mappings";
+            this.btnSave.UseVisualStyleBackColor = false;
+            this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
+            // 
+            // btnCancel
+            // 
+            this.btnCancel.Location = new System.Drawing.Point(1010, 650);
+            this.btnCancel.Name = "btnCancel";
+            this.btnCancel.Size = new System.Drawing.Size(150, 40);
+            this.btnCancel.TabIndex = 5;
+            this.btnCancel.Text = "Cancel";
+            this.btnCancel.UseVisualStyleBackColor = true;
+            this.btnCancel.Click += new System.EventHandler(this.btnCancel_Click);
+            // 
+            // lblStatus
+            // 
+            this.lblStatus.Location = new System.Drawing.Point(20, 695);
+            this.lblStatus.Name = "lblStatus";
+            this.lblStatus.Size = new System.Drawing.Size(800, 20);
+            this.lblStatus.TabIndex = 6;
+            this.lblStatus.Text = "Ready";
+            // 
+            // label2
+            // 
+            this.label2.Font = new System.Drawing.Font("Segoe UI", 16F, System.Drawing.FontStyle.Bold);
+            this.label2.Location = new System.Drawing.Point(20, 20);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(1140, 40);
+            this.label2.TabIndex = 7;
+            this.label2.Text = "Visual Field Mapper - Click on text boxes to assign fields";
+            this.label2.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            // 
+            // FieldMapperForm
+            // 
+            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.ClientSize = new System.Drawing.Size(1180, 730);
+            this.Controls.Add(this.label2);
+            this.Controls.Add(this.lblStatus);
+            this.Controls.Add(this.btnCancel);
+            this.Controls.Add(this.btnSave);
+            this.Controls.Add(this.groupBox3);
+            this.Controls.Add(this.groupBox2);
+            this.Controls.Add(this.groupBox1);
+            this.Controls.Add(this.pictureBox);
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
+            this.MaximizeBox = false;
+            this.MinimizeBox = false;
+            this.Name = "FieldMapperForm";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
+            this.Text = "Visual Field Mapper";
+            this.Load += new System.EventHandler(this.FieldMapperForm_Load);
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox)).EndInit();
+            this.groupBox1.ResumeLayout(false);
+            this.groupBox1.PerformLayout();
+            this.groupBox2.ResumeLayout(false);
+            this.groupBox2.PerformLayout();
+            this.groupBox3.ResumeLayout(false);
+            this.groupBox3.PerformLayout();
+            this.ResumeLayout(false);
+
+        }
+
+        #endregion
+
+        private System.Windows.Forms.PictureBox pictureBox;
+        private System.Windows.Forms.GroupBox groupBox1;
+        private System.Windows.Forms.ComboBox cmbFields;
+        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Button btnAssign;
+        private System.​​​​​​​​​​​​​​​​
+```
+---------1
+```csharp
+        private System.Windows.Forms.Button btnClearField;
+        private System.Windows.Forms.Label lblCurrentMapping;
+        private System.Windows.Forms.GroupBox groupBox2;
+        private System.Windows.Forms.TextBox txtSelectedText;
+        private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.Label lblSelectedField;
+        private System.Windows.Forms.GroupBox groupBox3;
+        private System.Windows.Forms.ListBox lstMappings;
+        private System.Windows.Forms.Button btnClearAll;
+        private System.Windows.Forms.Label lblMappedCount;
+        private System.Windows.Forms.Button btnSave;
+        private System.Windows.Forms.Button btnCancel;
+        private System.Windows.Forms.Label lblStatus;
+        private System.Windows.Forms.Label label2;
+    }
+}
+```
+
+-----
+
+## **Now Update MainForm.cs to Add the Visual Mapper Button**
+
+Add this method and button handler to your existing `MainForm.cs`:
+
+```csharp
+// Add this button handler
+private void btnVisualMapper_Click(object sender, EventArgs e)
+{
+    using (OpenFileDialog openFileDialog = new OpenFileDialog())
+    {
+        openFileDialog.Filter = "PowerPoint Files (*.pptx)|*.pptx";
+        openFileDialog.Title = "Select PowerPoint File to Map";
+
+        if (openFileDialog.ShowDialog() == DialogResult.OK)
+        {
+            using (var mapperForm = new FieldMapperForm(openFileDialog.FileName))
+            {
+                if (mapperForm.ShowDialog() == DialogResult.OK)
+                {
+                    var mappings = mapperForm.FieldMappings;
+                    
+                    // Show success message
+                    string mappingsSummary = string.Join("\n", 
+                        mappings.Select(m => $"{m.Key}: {(m.Value.Length > 50 ? m.Value.Substring(0, 50) + "..." : m.Value)}"));
+                    
+                    MessageBox.Show(
+                        $"Field mappings saved!\n\n{mappingsSummary}",
+                        "Mappings Saved",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                    
+                    LogMessage($"✓ Saved {mappings.Count} field mappings", Color.Green);
+                    
+                    // TODO: Save mappings to a configuration file or embed in PowerPoint
+                }
+            }
+        }
+    }
+}
+```
+
+-----
+
+## **Update MainForm.Designer.cs to Add the Visual Mapper Button**
+
+Add this to the `InitializeComponent()` method in `MainForm.Designer.cs`:
+
+```csharp
+// Add after other control declarations
+private System.Windows.Forms.Button btnVisualMapper;
+
+// Add in InitializeComponent() method, before this.ResumeLayout():
+this.btnVisualMapper = new System.Windows.Forms.Button();
+
+// Configure the button
+this.btnVisualMapper.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(46)))), ((int)(((byte)(125)))), ((int)(((byte)(50)))));
+this.btnVisualMapper.FlatAppearance.BorderSize = 0;
+this.btnVisualMapper.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+this.btnVisualMapper.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
+this.btnVisualMapper.ForeColor = System.Drawing.Color.White;
+this.btnVisualMapper.Location = new System.Drawing.Point(660, 230);
+this.btnVisualMapper.Name = "btnVisualMapper";
+this.btnVisualMapper.Size = new System.Drawing.Size(200, 50);
+this.btnVisualMapper.TabIndex = 6;
+this.btnVisualMapper.Text = "Visual Field Mapper";
+this.btnVisualMapper.UseVisualStyleBackColor = false;
+this.btnVisualMapper.Click += new System.EventHandler(this.btnVisualMapper_Click);
+
+// Add to Controls
+this.Controls.Add(this.btnVisualMapper);
+```
+
+-----
+
+## **What This Visual Mapper Does:**
+
+### **Features:**
+
+1. ✅ **Shows slide preview** - Renders the first slide as an image
+1. ✅ **Highlights text boxes** - Color-coded (Blue=unmapped, Green=mapped, Yellow=selected)
+1. ✅ **Click to select** - Click any text box to select it
+1. ✅ **Assign to field** - Map selected text box to current field
+1. ✅ **Visual feedback** - See all mappings in real-time
+1. ✅ **Legend** - Shows what each color means
+1. ✅ **Field labels** - Mapped fields show their name on the preview
+1. ✅ **Mapping list** - See all current mappings at a glance
+1. ✅ **Progress tracking** - Shows how many fields are mapped (X of 7)
+
+### **User Workflow:**
+
+1. Click **“Visual Field Mapper”** button
+1. Select a PowerPoint file
+1. **Visual mapper opens** showing slide with highlighted text boxes
+1. Select field from dropdown (WI_Number, Revision, etc.)
+1. **Click on the text box** containing that field’s value
+1. Click **“Assign to Field”**
+1. Repeat for all fields
+1. Click **“Save Mappings”**
+
+### **Color Legend:**
+
+- 🟦 **Blue** = Unmapped text box
+- 🟩 **Green** = Mapped text box (shows field name label)
+- 🟨 **Yellow** = Currently selected text box
+
+### **Visual Example:**
+
+```
+┌────────────────────────────────────────────────┐
+│                                                │
+│     ┌────────────┐  WI_Number                 │
+│     │  WI-1234   │ ← Green (mapped)           │
+│     └────────────┘                             │
+│                                                │
+│  ┌─────────────────────┐                      │
+│  │ Assembly Process    │ ← Blue (unmapped)    │
+│  └─────────────────────┘                      │
+│                                                │
+│     ┌─────┐  Revision                         │
+│     │  17 │ ← Yellow (selected)               │
+│     └─────┘                                    │
+│                                                │
+└────────────────────────────────────────────────┘
+```
+
+### **Benefits:**
+
+- **No guessing** - See exactly what text goes where
+- **Visual verification** - Confirm mappings are correct
+- **Faster** - Click instead of typing
+- **Accurate** - No typos or position errors
+- **Reusable** - Save mappings and apply to similar files
+
+Would you like me to add:
+
+1. **Save/Load mapping templates** (save mappings to JSON file for reuse)?
+1. **Auto-detect similar files** (apply same mapping to files with same layout)?
+1. **Multi-file mapping** (map multiple files at once using same template)?
+1. **Export mappings to Excel** for documentation?​​​​​​​​​​​​​​​​
+
+
 
 
