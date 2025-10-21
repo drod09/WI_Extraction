@@ -1,95 +1,30 @@
-You have **two copies** of the `LstFiles_SelectionChanged` method in your code! You need to **merge them into one**. Here’s the corrected version:
-
-## **Remove the Duplicate and Replace with This Single Method:**
-
-Find and **delete both** `LstFiles_SelectionChanged` methods, then add this single merged version:
-
-```csharp
-private void LstFiles_SelectionChanged(object sender, SelectionChangedEventArgs e)
-{
-    // Check if user is leaving a file without completing it
-    if (e.RemovedItems.Count > 0 && e.RemovedItems[0] is PowerPointFileInfo previousFile)
-    {
-        // Check if previous file was completed
-        if (!previousFile.IsCompleted)
-        {
-            var missingLabels = CheckRequiredLabelsForFile(previousFile.FilePath);
-            
-            if (missingLabels.Count > 0)
-            {
-                var result = MessageBox.Show(
-                    $"You haven't completed labeling the previous file:\n{previousFile.FileName}\n\n" +
-                    $"Missing labels:\n{string.Join("\n", missingLabels)}\n\n" +
-                    "Do you want to continue to the next file without completing it?",
-                    "Incomplete File",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Warning);
-                
-                if (result == MessageBoxResult.No)
-                {
-                    // Prevent changing selection
-                    lstFiles.SelectionChanged -= LstFiles_SelectionChanged;
-                    lstFiles.SelectedItem = previousFile;
-                    lstFiles.SelectionChanged += LstFiles_SelectionChanged;
-                    return;
-                }
-            }
-        }
-    }
-    
-    // Load the newly selected file
-    if (lstFiles.SelectedItem is PowerPointFileInfo fileInfo)
-    {
-        LoadPowerPointFile(fileInfo);
-    }
-}
-```
-
-## **Also Missing: Add the LabeledTextBox Class**
-
-You’re missing the `LabeledTextBox` class definition. Add this at the bottom with your other helper classes:
-
-```csharp
-// Helper classes at the bottom of MainWindow.xaml.cs
-public class PowerPointFileInfo
-{
-    public string FilePath { get; set; }
-    public string FileName { get; set; }
-    public bool IsLabeled { get; set; }
-    public bool IsCompleted { get; set; }
-}
-
-public class TextBoxInfo
-{
-    public string Text { get; set; }
-    public float Left { get; set; }
-    public float Top { get; set; }
-    public float Width { get; set; }
-    public float Height { get; set; }
-}
-
-// ADD THIS CLASS:
-public class LabeledTextBox
-{
-    public string Text { get; set; }
-    public float Left { get; set; }
-    public float Top { get; set; }
-    public float Width { get; set; }
-    public float Height { get; set; }
-    public string AssignedLabel { get; set; }
-    public string RevisionType { get; set; }
-    public string SourceFile { get; set; }
-    public int SlideNumber { get; set; }
-    public bool IsHidden { get; set; }
-}
-```
-
-## **Summary of Changes:**
-
-1. ✅ **Removed duplicate `LstFiles_SelectionChanged`** - kept only one merged version
-1. ✅ **Added `LabeledTextBox` class** - was missing from your code
-
-The errors should now be resolved! The merged method handles both:
-
-- Warning when leaving an incomplete file
-- Loading the newly selected file​​​​​​​​​​​​​​​​
+Ambiguity between 'LabeledTextBox.AssignedLabel' and 'LabeledTextBox.AssignedLabel'
+Ambiguity between 'LabeledTextBox.SourceFile' and 'LabeledTextBox.SourceFile'
+Ambiguity between 'LabeledTextBox.IsHidden' and 'LabeledTextBox.IsHidden'
+Ambiguity between 'LabeledTextBox.IsHidden' and 'LabeledTextBox.IsHidden'
+Ambiguity between 'LabeledTextBox.SourceFile' and 'LabeledTextBox.SourceFile'
+Ambiguity between 'LabeledTextBox.IsHidden' and 'LabeledTextBox.IsHidden'
+Ambiguity between 'LabeledTextBox.SourceFile' and 'LabeledTextBox.SourceFile'
+Ambiguity between 'LabeledTextBox.Text' and 'LabeledTextBox.Text'
+Ambiguity between 'LabeledTextBox.Left' and 'LabeledTextBox.Left'
+Ambiguity between 'LabeledTextBox.Top' and 'LabeledTextBox.Top'
+Ambiguity between 'LabeledTextBox.Width' and 'LabeledTextBox.Width'
+Ambiguity between 'LabeledTextBox.Height' and 'LabeledTextBox.Height'
+Ambiguity between 'LabeledTextBox.RevisionType' and 'LabeledTextBox.RevisionType'
+Ambiguity between 'LabeledTextBox.SourceFile' and 'LabeledTextBox.SourceFile'
+Ambiguity between 'LabeledTextBox.SlideNumber' and 'LabeledTextBox.SlideNumber'
+Ambiguity between 'LabeledTextBox.AssignedLabel' and 'LabeledTextBox.AssignedLabel'
+Ambiguity between 'LabeledTextBox.SourceFile' and 'LabeledTextBox.SourceFile'
+Ambiguity between 'LabeledTextBox.SlideNumber' and 'LabeledTextBox.SlideNumber'
+Ambiguity between 'LabeledTextBox.IsHidden' and 'LabeledTextBox.IsHidden'
+Ambiguity between 'LabeledTextBox.Text' and 'LabeledTextBox.Text'
+Ambiguity between 'LabeledTextBox.Left' and 'LabeledTextBox.Left'
+Ambiguity between 'LabeledTextBox.Top' and 'LabeledTextBox.Top'
+Ambiguity between 'LabeledTextBox.Width' and 'LabeledTextBox.Width'
+Ambiguity between 'LabeledTextBox.Height' and 'LabeledTextBox.Height'
+Ambiguity between 'LabeledTextBox.AssignedLabel' and 'LabeledTextBox.AssignedLabel'
+Ambiguity between 'LabeledTextBox.AssignedLabel' and 'LabeledTextBox.AssignedLabel'
+Ambiguity between 'LabeledTextBox.IsHidden' and 'LabeledTextBox.IsHidden'
+Ambiguity between 'LabeledTextBox.AssignedLabel' and 'LabeledTextBox.AssignedLabel'
+Ambiguity between 'LabeledTextBox.AssignedLabel' and 'LabeledTextBox.AssignedLabel'
+The namespace 'WorkInstructionLabeler' already contains a definition for 'LabeledTextBox'
