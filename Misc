@@ -1,19 +1,8 @@
 import os
-import re
 
 # === SETTINGS ===
 target_folder = r"C:\Users\U309011\Desktop\CurrentPP"
-recursive = False      # set True if you want to scan subfolders too
-dry_run = True         # set False to actually delete
-
-# Optional: send to Recycle Bin instead of permanent delete
-use_recycle_bin = False
-if use_recycle_bin:
-    try:
-        from send2trash import send2trash  # pip install send2trash
-    except ImportError:
-        print("Note: send2trash not installed; falling back to permanent delete.")
-        use_recycle_bin = False
+recursive = False  # set to True if you want to include subfolders
 
 def iter_files(root):
     if recursive:
@@ -26,33 +15,23 @@ def iter_files(root):
             if os.path.isfile(p):
                 yield root, f
 
-# Map stems → available extensions in that folder
+# Map base names → available extensions
 files_by_stem = {}
 for root, fname in iter_files(target_folder):
     stem, ext = os.path.splitext(fname)
     files_by_stem.setdefault((root, stem.lower()), set()).add(ext.lower())
 
-to_delete = []
+deleted = []
 
-# If both .ppt and .pptx are present for same stem, delete .ppt
+# Delete .ppt if a matching .pptx exists
 for (root, stem), exts in files_by_stem.items():
     if ".ppt" in exts and ".pptx" in exts:
         ppt_path = os.path.join(root, stem + ".ppt")
-        to_delete.append(ppt_path)
-
-print(f"Found {len(to_delete)} .ppt duplicates with matching .pptx.")
-for path in to_delete:
-    if dry_run:
-        print("[DRY RUN] Would delete:", path)
-    else:
         try:
-            if use_recycle_bin:
-                send2trash(path)
-            else:
-                os.remove(path)
-            print("Deleted:", path)
+            os.remove(ppt_path)
+            deleted.append(ppt_path)
+            print(f"🗑️ Deleted: {ppt_path}")
         except Exception as e:
-            print("Failed to delete:", path, "->", e)
+            print(f"❌ Failed to delete {ppt_path}: {e}")
 
-if dry_run:
-    print("\nDry run complete. Set dry_run=False to actually delete.")
+print(f"\n✅ Completed. Deleted {len(deleted)} duplicate .ppt files.")
