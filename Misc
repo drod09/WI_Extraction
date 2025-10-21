@@ -1,35 +1,58 @@
 import os
-import win32com.client
+import re
 
-# === Folder containing your PPT/PPTX files ===
-source_folder = r"C:\Users\U309011\Desktop\CurrentPP"
+# === SETTINGS ===
+target_folder = r"C:\Users\U309011\Desktop\CurrentPP"
+recursive = False      # set True if you want to scan subfolders too
+dry_run = True         # set False to actually delete
 
-# Launch PowerPoint application (invisible)
-ppt_app = win32com.client.Dispatch("PowerPoint.Application")
-ppt_app.Visible = True
+# Optional: send to Recycle Bin instead of permanent delete
+use_recycle_bin = False
+if use_recycle_bin:
+    try:
+        from send2trash import send2trash  # pip install send2trash
+    except ImportError:
+        print("Note: send2trash not installed; falling back to permanent delete.")
+        use_recycle_bin = False
 
-converted = []
-skipped = []
+def iter_files(root):
+    if recursive:
+        for r, _, files in os.walk(root):
+            for f in files:
+                yield r, f
+    else:
+        for f in os.listdir(root):
+            p = os.path.join(root, f)
+            if os.path.isfile(p):
+                yield root, f
 
-for file_name in os.listdir(source_folder):
-    if file_name.lower().endswith(".ppt") and not file_name.lower().endswith(".pptx"):
-        full_path = os.path.join(source_folder, file_name)
-        new_path = os.path.splitext(full_path)[0] + ".pptx"
+# Map stems → available extensions in that folder
+files_by_stem = {}
+for root, fname in iter_files(target_folder):
+    stem, ext = os.path.splitext(fname)
+    files_by_stem.setdefault((root, stem.lower()), set()).add(ext.lower())
 
+to_delete = []
+
+# If both .ppt and .pptx are present for same stem, delete .ppt
+for (root, stem), exts in files_by_stem.items():
+    if ".ppt" in exts and ".pptx" in exts:
+        ppt_path = os.path.join(root, stem + ".ppt")
+        to_delete.append(ppt_path)
+
+print(f"Found {len(to_delete)} .ppt duplicates with matching .pptx.")
+for path in to_delete:
+    if dry_run:
+        print("[DRY RUN] Would delete:", path)
+    else:
         try:
-            presentation = ppt_app.Presentations.Open(full_path, WithWindow=False)
-            presentation.SaveAs(new_path, 24)  # 24 = ppSaveAsOpenXMLPresentation
-            presentation.Close()
-            converted.append(file_name)
-            print(f"Converted: {file_name} → {os.path.basename(new_path)}")
+            if use_recycle_bin:
+                send2trash(path)
+            else:
+                os.remove(path)
+            print("Deleted:", path)
         except Exception as e:
-            skipped.append((file_name, str(e)))
-            print(f"❌ Failed to convert {file_name}: {e}")
+            print("Failed to delete:", path, "->", e)
 
-ppt_app.Quit()
-
-print(f"\n✅ Conversion complete: {len(converted)} converted, {len(skipped)} skipped.")
-if skipped:
-    print("Skipped files:")
-    for name, err in skipped:
-        print(f" - {name}: {err}")
+if dry_run:
+    print("\nDry run complete. Set dry_run=False to actually delete.")
