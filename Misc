@@ -1,30 +1,835 @@
-Ambiguity between 'LabeledTextBox.AssignedLabel' and 'LabeledTextBox.AssignedLabel'
-Ambiguity between 'LabeledTextBox.SourceFile' and 'LabeledTextBox.SourceFile'
-Ambiguity between 'LabeledTextBox.IsHidden' and 'LabeledTextBox.IsHidden'
-Ambiguity between 'LabeledTextBox.IsHidden' and 'LabeledTextBox.IsHidden'
-Ambiguity between 'LabeledTextBox.SourceFile' and 'LabeledTextBox.SourceFile'
-Ambiguity between 'LabeledTextBox.IsHidden' and 'LabeledTextBox.IsHidden'
-Ambiguity between 'LabeledTextBox.SourceFile' and 'LabeledTextBox.SourceFile'
-Ambiguity between 'LabeledTextBox.Text' and 'LabeledTextBox.Text'
-Ambiguity between 'LabeledTextBox.Left' and 'LabeledTextBox.Left'
-Ambiguity between 'LabeledTextBox.Top' and 'LabeledTextBox.Top'
-Ambiguity between 'LabeledTextBox.Width' and 'LabeledTextBox.Width'
-Ambiguity between 'LabeledTextBox.Height' and 'LabeledTextBox.Height'
-Ambiguity between 'LabeledTextBox.RevisionType' and 'LabeledTextBox.RevisionType'
-Ambiguity between 'LabeledTextBox.SourceFile' and 'LabeledTextBox.SourceFile'
-Ambiguity between 'LabeledTextBox.SlideNumber' and 'LabeledTextBox.SlideNumber'
-Ambiguity between 'LabeledTextBox.AssignedLabel' and 'LabeledTextBox.AssignedLabel'
-Ambiguity between 'LabeledTextBox.SourceFile' and 'LabeledTextBox.SourceFile'
-Ambiguity between 'LabeledTextBox.SlideNumber' and 'LabeledTextBox.SlideNumber'
-Ambiguity between 'LabeledTextBox.IsHidden' and 'LabeledTextBox.IsHidden'
-Ambiguity between 'LabeledTextBox.Text' and 'LabeledTextBox.Text'
-Ambiguity between 'LabeledTextBox.Left' and 'LabeledTextBox.Left'
-Ambiguity between 'LabeledTextBox.Top' and 'LabeledTextBox.Top'
-Ambiguity between 'LabeledTextBox.Width' and 'LabeledTextBox.Width'
-Ambiguity between 'LabeledTextBox.Height' and 'LabeledTextBox.Height'
-Ambiguity between 'LabeledTextBox.AssignedLabel' and 'LabeledTextBox.AssignedLabel'
-Ambiguity between 'LabeledTextBox.AssignedLabel' and 'LabeledTextBox.AssignedLabel'
-Ambiguity between 'LabeledTextBox.IsHidden' and 'LabeledTextBox.IsHidden'
-Ambiguity between 'LabeledTextBox.AssignedLabel' and 'LabeledTextBox.AssignedLabel'
-Ambiguity between 'LabeledTextBox.AssignedLabel' and 'LabeledTextBox.AssignedLabel'
-The namespace 'WorkInstructionLabeler' already contains a definition for 'LabeledTextBox'
+using CsvHelper;
+using Microsoft.Office.Core;
+using Microsoft.Office.Interop.PowerPoint;
+using Microsoft.Win32;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Formats.Asn1;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Shapes;
+using Ookii.Dialogs.Wpf;
+
+namespace WorkInstructionLabeler
+{
+    public partial class MainWindow : Window
+    {
+        private List<PowerPointFileInfo> _powerPointFiles = new List<PowerPointFileInfo>();
+        private PowerPointFileInfo _currentFile;
+        private int _currentSlideIndex = 0;
+        private List<LabeledTextBox> _allLabeledBoxes = new List<LabeledTextBox>();
+        private LabeledTextBox _selectedTextBox;
+        private Dictionary<Border, LabeledTextBox> _borderToTextBoxMap = new Dictionary<Border, LabeledTextBox>();
+
+        public MainWindow()
+        {
+            InitializeComponent();
+        }
+
+        private void BtnMarkComplete_Click(object sender, RoutedEventArgs e)
+{
+    if (_currentFile == null)
+    {
+        MessageBox.Show("No file is currently loaded.", "No File", 
+            MessageBoxButton.OK, MessageBoxImage.Warning);
+        return;
+    }
+    
+    // Check if required fields are labeled
+    var missingLabels = CheckRequiredLabels();
+    
+    if (missingLabels.Count > 0)
+    {
+        var result = MessageBox.Show(
+            $"The following fields are not labeled:\n\n{string.Join("\n", missingLabels)}\n\n" +
+            "Do you want to mark this file as complete anyway?",
+            "Missing Labels",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+        
+        if (result == MessageBoxResult.No)
+            return;
+    }
+    
+    // Mark as completed
+    _currentFile.IsCompleted = true;
+    _currentFile.IsLabeled = true;
+    
+    UpdateProgress();
+    
+    // Show success message
+    MessageBox.Show(
+        $"✓ File marked as complete!\n\n{_currentFile.FileName}\n\n" +
+        "You can now move to the next file.",
+        "File Completed",
+        MessageBoxButton.OK,
+        MessageBoxImage.Information);
+    
+    // Auto-select next file
+    int currentIndex = _powerPointFiles.IndexOf(_currentFile);
+    if (currentIndex < _powerPointFiles.Count - 1)
+    {
+        lstFiles.SelectedIndex = currentIndex + 1;
+    }
+}
+
+private List<string> CheckRequiredLabels()
+{
+    var missingLabels = new List<string>();
+    var requiredLabels = new[]
+    {
+        "WI_Number",
+        "WI_Title",
+        "Revision",
+        "BOM_ASSY_DWG_NO",
+        "Operation_No",
+        "Product_Line",
+        "Subject",
+        "Template_Revision"
+    };
+    
+    var labeledFields = _allLabeledBoxes
+        .Where(b => b.SourceFile == _currentFile.FilePath && !b.IsHidden)
+        .Select(b => b.AssignedLabel)
+        .Where(l => !string.IsNullOrEmpty(l) && l != "Ignore")
+        .Distinct()
+        .ToList();
+    
+    var labelNameMap = new Dictionary<string, string>
+    {
+        { "WI_Number", "WI Number" },
+        { "WI_Title", "WI Title" },
+        { "Revision", "Revision" },
+        { "BOM_ASSY_DWG_NO", "BOM/ASSY DWG NO" },
+        { "Operation_No", "Operation No" },
+        { "Product_Line", "Product Line" },
+        { "Subject", "Subject" },
+        { "Template_Revision", "Template Revision" }
+    };
+    
+    foreach (var required in requiredLabels)
+    {
+        if (!labeledFields.Contains(required))
+        {
+            missingLabels.Add("  • " + labelNameMap[required]);
+        }
+    }
+    
+    return missingLabels;
+}
+
+private void BtnHideBox_Click(object sender, RoutedEventArgs e)
+{
+    if (_selectedTextBox == null)
+    {
+        MessageBox.Show("Please select a text box first", "No Selection", 
+            MessageBoxButton.OK, MessageBoxImage.Warning);
+        return;
+    }
+    
+    // Mark as hidden
+    _selectedTextBox.IsHidden = true;
+    
+    // Refresh display
+    DisplaySlide(_currentSlideIndex);
+    
+    // Clear selection
+    _selectedTextBox = null;
+    txtSelectedText.Text = "Text box hidden";
+    txtPosition.Text = "";
+}
+
+private List<string> CheckRequiredLabelsForFile(string filePath)
+{
+    var missingLabels = new List<string>();
+    var requiredLabels = new[]
+    {
+        "WI_Number",
+        "WI_Title",
+        "Revision",
+        "BOM_ASSY_DWG_NO",
+        "Operation_No",
+        "Product_Line",
+        "Subject",
+        "Template_Revision"
+    };
+    
+    var labeledFields = _allLabeledBoxes
+        .Where(b => b.SourceFile == filePath && !b.IsHidden)
+        .Select(b => b.AssignedLabel)
+        .Where(l => !string.IsNullOrEmpty(l) && l != "Ignore")
+        .Distinct()
+        .ToList();
+    
+    var labelNameMap = new Dictionary<string, string>
+    {
+        { "WI_Number", "WI Number" },
+        { "WI_Title", "WI Title" },
+        { "Revision", "Revision" },
+        { "BOM_ASSY_DWG_NO", "BOM/ASSY DWG NO" },
+        { "Operation_No", "Operation No" },
+        { "Product_Line", "Product Line" },
+        { "Subject", "Subject" },
+        { "Template_Revision", "Template Revision" }
+    };
+    
+    foreach (var required in requiredLabels)
+    {
+        if (!labeledFields.Contains(required))
+        {
+            missingLabels.Add("  • " + labelNameMap[required]);
+        }
+    }
+    
+    return missingLabels;
+}
+
+        // REPLACE THIS METHOD (or add it if it doesn't exist):
+        private void BtnLoadFolder_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new VistaFolderBrowserDialog
+            {
+                Description = "Select folder containing PowerPoint work instructions",
+                UseDescriptionForTitle = true
+            };
+
+            if (dialog.ShowDialog(this) == true)
+            {
+                LoadPowerPointFiles(dialog.SelectedPath);
+            }
+        }
+
+        private double _zoomLevel = 1.0;
+
+        private void BtnZoomIn_Click(object sender, RoutedEventArgs e)
+        {
+            _zoomLevel = Math.Min(_zoomLevel + 0.25, 3.0);
+            ApplyZoom();
+        }
+
+        private void BtnZoomOut_Click(object sender, RoutedEventArgs e)
+        {
+            _zoomLevel = Math.Max(_zoomLevel - 0.25, 0.5);
+            ApplyZoom();
+        }
+
+        private void BtnZoomFit_Click(object sender, RoutedEventArgs e)
+        {
+            _zoomLevel = 1.0;
+            ApplyZoom();
+        }
+
+        private void ApplyZoom()
+        {
+            var scaleTransform = new ScaleTransform(_zoomLevel, _zoomLevel);
+            slideCanvas.LayoutTransform = scaleTransform;
+            slideCanvas.Width = 960 * _zoomLevel;
+            slideCanvas.Height = 720 * _zoomLevel;
+            txtZoom.Text = $"{_zoomLevel * 100:F0}%";
+        }
+
+        private void LoadPowerPointFiles(string folderPath)
+        {
+            _powerPointFiles.Clear();
+            lstFiles.Items.Clear();
+
+            var files = Directory.GetFiles(folderPath, "*.pptx")
+                .Where(f => !System.IO.Path.GetFileName(f).StartsWith("~$"))
+                .ToList();
+
+            foreach (var file in files)
+            {
+                var fileInfo = new PowerPointFileInfo
+                {
+                    FilePath = file,
+                    FileName = System.IO.Path.GetFileName(file),
+                    IsLabeled = false
+                };
+
+                _powerPointFiles.Add(fileInfo);
+                lstFiles.Items.Add(fileInfo);
+            }
+
+            UpdateProgress();
+
+            if (_powerPointFiles.Count > 0)
+            {
+                lstFiles.SelectedIndex = 0;
+            }
+        }
+
+        private void LstFiles_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            // Check if user is leaving a file without completing it
+            if (e.RemovedItems.Count > 0 && e.RemovedItems[0] is PowerPointFileInfo previousFile)
+            {
+                // Check if previous file was completed
+                if (!previousFile.IsCompleted)
+                {
+                    var missingLabels = CheckRequiredLabelsForFile(previousFile.FilePath);
+
+                    if (missingLabels.Count > 0)
+                    {
+                        var result = MessageBox.Show(
+                            $"You haven't completed labeling the previous file:\n{previousFile.FileName}\n\n" +
+                            $"Missing labels:\n{string.Join("\n", missingLabels)}\n\n" +
+                            "Do you want to continue to the next file without completing it?",
+                            "Incomplete File",
+                            MessageBoxButton.YesNo,
+                            MessageBoxImage.Warning);
+
+                        if (result == MessageBoxResult.No)
+                        {
+                            // Prevent changing selection
+                            lstFiles.SelectionChanged -= LstFiles_SelectionChanged;
+                            lstFiles.SelectedItem = previousFile;
+                            lstFiles.SelectionChanged += LstFiles_SelectionChanged;
+                            return;
+                        }
+                    }
+                }
+            }
+
+            // Load the newly selected file
+            if (lstFiles.SelectedItem is PowerPointFileInfo fileInfo)
+            {
+                LoadPowerPointFile(fileInfo);
+            }
+        }
+
+        private void LoadPowerPointFile(PowerPointFileInfo fileInfo)
+        {
+            _currentFile = fileInfo;
+            _currentSlideIndex = 0;
+
+            txtFileName.Text = fileInfo.FileName;
+
+            // Extract text boxes from PowerPoint
+            ExtractTextBoxesFromPowerPoint(fileInfo.FilePath);
+
+            // Display first slide
+            DisplaySlide(_currentSlideIndex);
+        }
+
+        private void ExtractTextBoxesFromPowerPoint(string filePath)
+        {
+            var pptApp = new Microsoft.Office.Interop.PowerPoint.Application();
+
+            try
+            {
+                Presentation ppt = pptApp.Presentations.Open(filePath,
+                    MsoTriState.msoFalse, MsoTriState.msoFalse, MsoTriState.msoFalse);
+
+                // Detect revision type
+                string revType = DetectRevisionType(ppt);
+                txtRevType.Text = $"Rev: {revType}";
+
+                // Clear previous data for this file
+                _allLabeledBoxes.RemoveAll(b => b.SourceFile == filePath);
+
+                // Extract from first slide only (for header data)
+                if (ppt.Slides.Count > 0)
+                {
+                    Slide slide = ppt.Slides[1];
+                    var textBoxes = new List<TextBoxInfo>();
+
+                    Console.WriteLine($"\n=== Extracting text boxes from {System.IO.Path.GetFileName(filePath)} ===");
+
+                    // 1. Collect from SLIDE SHAPES (directly on slide)
+                    Console.WriteLine("Collecting from Slide Shapes...");
+                    CollectTextBoxes(slide.Shapes, textBoxes, "Slide");
+
+                    // 2. Collect from MASTER SLIDE
+                    try
+                    {
+                        Console.WriteLine("Collecting from Master Slide...");
+                        CollectTextBoxes(slide.Master.Shapes, textBoxes, "Master");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"  Could not access Master: {ex.Message}");
+                    }
+
+                    // 3. Collect from SLIDE MASTER (Design)
+                    try
+                    {
+                        Console.WriteLine("Collecting from Slide Master (Design)...");
+                        CollectTextBoxes(slide.Design.SlideMaster.Shapes, textBoxes, "Design");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"  Could not access Design: {ex.Message}");
+                    }
+
+                    // 4. Collect from CUSTOM LAYOUT
+                    try
+                    {
+                        Console.WriteLine("Collecting from Custom Layout...");
+                        CollectTextBoxes(slide.CustomLayout.Shapes, textBoxes, "CustomLayout");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"  Could not access CustomLayout: {ex.Message}");
+                    }
+
+                    Console.WriteLine($"Total text boxes collected: {textBoxes.Count}");
+
+                    // Remove duplicates (same text at same position)
+                    var uniqueBoxes = textBoxes
+                        .GroupBy(b => new { b.Text, Left = Math.Round(b.Left, 1), Top = Math.Round(b.Top, 1) })
+                        .Select(g => g.First())
+                        .ToList();
+
+                    Console.WriteLine($"After removing duplicates: {uniqueBoxes.Count}");
+
+                    // Convert to LabeledTextBox
+                    foreach (var box in uniqueBoxes)
+                    {
+                        if (string.IsNullOrWhiteSpace(box.Text))
+                            continue;
+
+                        // Don't automatically filter labels - let user decide
+                        _allLabeledBoxes.Add(new LabeledTextBox
+                        {
+                            Text = box.Text,
+                            Left = box.Left,
+                            Top = box.Top,
+                            Width = box.Width,
+                            Height = box.Height,
+                            RevisionType = revType,
+                            SourceFile = filePath,
+                            SlideNumber = 1,
+                            AssignedLabel = null
+                        });
+
+                        Console.WriteLine($"  Added: '{box.Text.Substring(0, Math.Min(30, box.Text.Length))}' at ({box.Left:F1}, {box.Top:F1})");
+                    }
+                }
+
+                txtSlideInfo.Text = $"Slide 1 of {ppt.Slides.Count}";
+
+                ppt.Close();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading PowerPoint:\n{ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                pptApp.Quit();
+            }
+        }
+
+        private string DetectRevisionType(Presentation ppt)
+        {
+            if (ppt.Slides.Count > 0)
+            {
+                Slide slide = ppt.Slides[1];
+
+                foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in slide.Shapes)
+                {
+                    if (shape.HasTextFrame == MsoTriState.msoTrue)
+                    {
+                        string text = shape.TextFrame.TextRange.Text.ToLower();
+                        if (text.Contains("fm-me-") || text.Contains("fm me") || text.Contains("fmme"))
+                        {
+                            var match = Regex.Match(text, @"rev\.?\s*(\d+)", RegexOptions.IgnoreCase);
+                            if (match.Success)
+                                return match.Groups[1].Value;
+                        }
+                    }
+                }
+            }
+            return "Unknown";
+        }
+
+        private void CollectTextBoxes(Microsoft.Office.Interop.PowerPoint.Shapes shapes,
+            List<TextBoxInfo> textBoxes, string source = "Unknown")
+        {
+            foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in shapes)
+            {
+                try
+                {
+                    if (shape.Type == MsoShapeType.msoGroup)
+                    {
+                        CollectTextBoxesFromGroup(shape.GroupItems, textBoxes, source);
+                    }
+                    else if (shape.HasTextFrame == MsoTriState.msoTrue)
+                    {
+                        try
+                        {
+                            string text = shape.TextFrame.TextRange.Text.Trim();
+                            if (!string.IsNullOrEmpty(text))
+                            {
+                                textBoxes.Add(new TextBoxInfo
+                                {
+                                    Text = text,
+                                    Left = shape.Left,
+                                    Top = shape.Top,
+                                    Width = shape.Width,
+                                    Height = shape.Height
+                                });
+
+                                Console.WriteLine($"  [{source}] '{text.Substring(0, Math.Min(20, text.Length))}...' at ({shape.Left:F1}, {shape.Top:F1})");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"  [{source}] Error reading text: {ex.Message}");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"  [{source}] Error processing shape: {ex.Message}");
+                }
+            }
+        }
+
+        private void CollectTextBoxesFromGroup(Microsoft.Office.Interop.PowerPoint.GroupShapes groupShapes,
+            List<TextBoxInfo> textBoxes, string source = "Unknown")
+        {
+            foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in groupShapes)
+            {
+                try
+                {
+                    if (shape.Type == MsoShapeType.msoGroup)
+                    {
+                        CollectTextBoxesFromGroup(shape.GroupItems, textBoxes, source);
+                    }
+                    else if (shape.HasTextFrame == MsoTriState.msoTrue)
+                    {
+                        try
+                        {
+                            string text = shape.TextFrame.TextRange.Text.Trim();
+                            if (!string.IsNullOrEmpty(text))
+                            {
+                                textBoxes.Add(new TextBoxInfo
+                                {
+                                    Text = text,
+                                    Left = shape.Left,
+                                    Top = shape.Top,
+                                    Width = shape.Width,
+                                    Height = shape.Height
+                                });
+                            }
+                        }
+                        catch { }
+                    }
+                }
+                catch { }
+            }
+        }
+
+        private bool IsLabel(string upperText)
+        {
+            var labels = new[] {
+                "WORK INSTRUCTION TITLE", "WORK INSTRUCTION", "DESCRIPTION", "DESCRIPTION:",
+                "W.I. NUMBER", "WI NUMBER", "BOM/ASSY DWG NO", "BOM DWG NO", "ASSY DWG NO",
+                "OPS (OPTIONAL)", "OPERATION NO", "OPERATION NO.", "PRODUCT LINE",
+                "SUBJECT", "SUBJECT:", "PAGE", "REV", "REV:", "REVISION", "REVISION:"
+            };
+
+            return labels.Any(label => upperText == label || (upperText.Contains(label) && upperText.Length < 40)) ||
+                   (upperText.EndsWith(":") && upperText.Length < 25);
+        }
+
+        private void DisplaySlide(int slideIndex)
+        {
+            slideCanvas.Children.Clear();
+            _borderToTextBoxMap.Clear();
+
+            var slideBoxes = _allLabeledBoxes
+                .Where(b => b.SourceFile == _currentFile.FilePath &&
+                            b.SlideNumber == slideIndex + 1 &&
+                            !b.IsHidden)  // ADD THIS LINE - filter out hidden boxes
+                .ToList();
+
+            Console.WriteLine($"\nDisplaying {slideBoxes.Count} text boxes on canvas (hidden boxes excluded)");
+
+            // No scaling - use actual positions
+            float scaleFactor = 1.0f;
+
+            foreach (var box in slideBoxes)
+            {
+
+                // Create border for text box
+                var border = new Border
+                {
+                    Width = Math.Max(box.Width * scaleFactor, 50), // Minimum width
+                    Height = Math.Max(box.Height * scaleFactor, 20), // Minimum height
+                    Cursor = System.Windows.Input.Cursors.Hand,
+                    ToolTip = box.Text // FULL TEXT IN TOOLTIP
+                };
+
+                // Apply style based on label
+                border.Style = GetStyleForLabel(box.AssignedLabel);
+
+                // Create text block with better wrapping
+                var textBlock = new TextBlock
+                {
+                    Text = box.Text,
+                    TextWrapping = TextWrapping.Wrap,
+                    Padding = new Thickness(3),
+                    FontSize = 9,
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+
+                border.Child = textBlock;
+
+                // Position on canvas using actual coordinates
+                Canvas.SetLeft(border, box.Left * scaleFactor);
+                Canvas.SetTop(border, box.Top * scaleFactor);
+
+                // Add click handler
+                border.MouseDown += (s, e) =>
+                {
+                    SelectTextBox(box, border);
+                };
+
+                slideCanvas.Children.Add(border);
+                _borderToTextBoxMap[border] = box;
+
+                Console.WriteLine($"  Displayed '{box.Text.Substring(0, Math.Min(15, box.Text.Length))}' at ({box.Left:F1}, {box.Top:F1})");
+            }
+
+            Console.WriteLine($"Canvas updated with {slideCanvas.Children.Count} visual elements");
+        }
+
+        private Style GetStyleForLabel(string label)
+        {
+            if (string.IsNullOrEmpty(label))
+                return (Style)FindResource("UnlabeledBox");
+
+            return label switch
+            {
+                "WI_Number" => (Style)FindResource("WINumberBox"),
+                "WI_Title" => (Style)FindResource("TitleBox"),
+                "Revision" => (Style)FindResource("RevisionBox"),
+                "BOM_ASSY_DWG_NO" => (Style)FindResource("BOMBox"),
+                "Operation_No" => (Style)FindResource("OperationBox"),
+                "Product_Line" => (Style)FindResource("ProductLineBox"),
+                "Subject" => (Style)FindResource("SubjectBox"),
+                "Template_Revision" => (Style)FindResource("TemplateRevisionBox"),  // ADD THIS LINE
+                _ => (Style)FindResource("UnlabeledBox")
+            };
+        }
+
+        private void SelectTextBox(LabeledTextBox box, Border border)
+        {
+            _selectedTextBox = box;
+
+            // Highlight selected
+            foreach (var kvp in _borderToTextBoxMap)
+            {
+                if (kvp.Value == box)
+                    kvp.Key.BorderThickness = new Thickness(4);
+                else
+                    kvp.Key.BorderThickness = new Thickness(2);
+            }
+
+            txtSelectedText.Text = box.Text;
+            txtPosition.Text = $"Left: {box.Left:F1}, Top: {box.Top:F1}, W: {box.Width:F1}, H: {box.Height:F1}";
+        }
+
+        private void BtnLabel_Click(object sender, RoutedEventArgs e)
+        {
+            if (_selectedTextBox == null)
+            {
+                MessageBox.Show("Please select a text box first", "No Selection",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var button = sender as Button;
+            string label = button.Tag.ToString();
+
+            _selectedTextBox.AssignedLabel = label;
+
+            // Refresh display
+            DisplaySlide(_currentSlideIndex);
+
+            // Mark file as having changes
+            _currentFile.IsLabeled = true;
+            UpdateProgress();
+        }
+
+        private void BtnClearLabel_Click(object sender, RoutedEventArgs e)
+        {
+            if (_selectedTextBox == null) return;
+
+            _selectedTextBox.AssignedLabel = null;
+            DisplaySlide(_currentSlideIndex);
+        }
+
+        private void BtnPrevSlide_Click(object sender, RoutedEventArgs e)
+        {
+            if (_currentSlideIndex > 0)
+            {
+                _currentSlideIndex--;
+                DisplaySlide(_currentSlideIndex);
+                txtSlideInfo.Text = $"Slide {_currentSlideIndex + 1}";
+            }
+        }
+
+        private void BtnNextSlide_Click(object sender, RoutedEventArgs e)
+        {
+            // For now, only working with slide 1
+            MessageBox.Show("Currently only labeling slide 1 (header data)", "Info");
+        }
+
+        private void BtnSaveTrainingData_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new SaveFileDialog
+            {
+                Filter = "CSV Files (*.csv)|*.csv",
+                FileName = "training_data.csv"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                SaveTrainingDataToCSV(dialog.FileName);
+                MessageBox.Show($"Training data saved to:\n{dialog.FileName}",
+                    "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        private void SaveTrainingDataToCSV(string filePath)
+        {
+            using (var writer = new StreamWriter(filePath))
+            using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+            {
+                // Write header
+                csv.WriteField("Left");
+                csv.WriteField("Top");
+                csv.WriteField("Width");
+                csv.WriteField("Height");
+                csv.WriteField("TextLength");
+                csv.WriteField("ContainsNumbers");
+                csv.WriteField("ContainsHyphen");
+                csv.WriteField("StartsWithWI");
+                csv.WriteField("IsAllDigits");
+                csv.WriteField("RevisionType");
+                csv.WriteField("Label");
+                csv.NextRecord();
+
+                // Write data - EXCLUDE HIDDEN BOXES
+                foreach (var box in _allLabeledBoxes.Where(b => !string.IsNullOrEmpty(b.AssignedLabel) &&
+                                                                 !b.IsHidden &&
+                                                                 b.AssignedLabel != "Ignore"))
+                {
+                    csv.WriteField(box.Left);
+                    csv.WriteField(box.Top);
+                    csv.WriteField(box.Width);
+                    csv.WriteField(box.Height);
+                    csv.WriteField(box.Text.Length);
+                    csv.WriteField(Regex.IsMatch(box.Text, @"\d"));
+                    csv.WriteField(box.Text.Contains("-"));
+                    csv.WriteField(box.Text.StartsWith("WI", StringComparison.OrdinalIgnoreCase));
+                    csv.WriteField(Regex.IsMatch(box.Text, @"^\d+$"));
+                    csv.WriteField(box.RevisionType);
+                    csv.WriteField(box.AssignedLabel);
+                    csv.NextRecord();
+                }
+            }
+        }
+
+        private void BtnTrainModel_Click(object sender, RoutedEventArgs e)
+        {
+            // First save training data
+            string tempTrainingFile = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "temp_training.csv");
+            SaveTrainingDataToCSV(tempTrainingFile);
+
+            // Check if we have enough data
+            int labeledCount = _allLabeledBoxes.Count(b => !string.IsNullOrEmpty(b.AssignedLabel));
+            if (labeledCount < 20)
+            {
+                MessageBox.Show($"Not enough training data. You have {labeledCount} labeled examples.\n" +
+                    "Please label at least 20 text boxes before training.",
+                    "Insufficient Data", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var dialog = new SaveFileDialog
+            {
+                Filter = "Model Files (*.zip)|*.zip",
+                FileName = "wi_extractor_model.zip"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                try
+                {
+                    var trainer = new ModelTrainer();
+                    trainer.TrainModel(tempTrainingFile, dialog.FileName);
+
+                    MessageBox.Show($"Model trained successfully!\n\nModel saved to:\n{dialog.FileName}\n\n" +
+                        $"Training samples: {labeledCount}\n\n" +
+                        "You can now use this model in your PowerPointExtractor.",
+                        "Training Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error training model:\n{ex.Message}",
+                        "Training Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                finally
+                {
+                    try { File.Delete(tempTrainingFile); } catch { }
+                }
+            }
+        }
+
+        private void UpdateProgress()
+        {
+            int completed = _powerPointFiles.Count(f => f.IsCompleted);
+            int labeled = _powerPointFiles.Count(f => f.IsLabeled);
+            int total = _powerPointFiles.Count;
+
+            txtProgress.Text = $"{completed} completed, {labeled} labeled of {total} files";
+            progressBar.Maximum = total;
+            progressBar.Value = completed;
+        }
+    }
+
+    // Helper classes at the bottom of MainWindow.xaml.cs
+    public class PowerPointFileInfo
+    {
+        public string FilePath { get; set; }
+        public string FileName { get; set; }
+        public bool IsLabeled { get; set; }
+        public bool IsCompleted { get; set; }
+    }
+
+    public class TextBoxInfo
+    {
+        public string Text { get; set; }
+        public float Left { get; set; }
+        public float Top { get; set; }
+        public float Width { get; set; }
+        public float Height { get; set; }
+    }
+
+    // ADD THIS CLASS:
+    public class LabeledTextBox
+    {
+        public string Text { get; set; }
+        public float Left { get; set; }
+        public float Top { get; set; }
+        public float Width { get; set; }
+        public float Height { get; set; }
+        public string AssignedLabel { get; set; }
+        public string RevisionType { get; set; }
+        public string SourceFile { get; set; }
+        public int SlideNumber { get; set; }
+        public bool IsHidden { get; set; }
+    }
+}
