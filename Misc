@@ -1,3 +1,64 @@
-'IReadOnlyList<double>' does not contain a definition for 'Length' and no accessible extension method 'Length' accepting a first argument of type 'IReadOnlyList<double>' could be found (are you missing a using directive or an assembly reference?)
-The type or namespace name 'Forms' does not exist in the namespace 'System.Windows' (are you missing an assembly reference?)
-The type or namespace name 'Forms' does not exist in the namespace 'System.Windows' (are you missing an assembly reference?)
+namespace WorkInstructionLabeler
+{
+    public partial class MainWindow : Window
+    {
+        private List<PowerPointFileInfo> _powerPointFiles = new List<PowerPointFileInfo>();
+        private PowerPointFileInfo _currentFile;
+        private int _currentSlideIndex = 0;
+        private List<LabeledTextBox> _allLabeledBoxes = new List<LabeledTextBox>();
+        private LabeledTextBox _selectedTextBox;
+        private Dictionary<Border, LabeledTextBox> _borderToTextBoxMap = new Dictionary<Border, LabeledTextBox>();
+        
+        public MainWindow()
+        {
+            InitializeComponent();
+        }
+        
+        // REPLACE THIS METHOD (or add it if it doesn't exist):
+        private void BtnLoadFolder_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new VistaFolderBrowserDialog
+            {
+                Description = "Select folder containing PowerPoint work instructions",
+                UseDescriptionForTitle = true
+            };
+            
+            if (dialog.ShowDialog(this) == true)
+            {
+                LoadPowerPointFiles(dialog.SelectedPath);
+            }
+        }
+        
+        private void LoadPowerPointFiles(string folderPath)
+        {
+            _powerPointFiles.Clear();
+            lstFiles.Items.Clear();
+            
+            var files = Directory.GetFiles(folderPath, "*.pptx")
+                .Where(f => !System.IO.Path.GetFileName(f).StartsWith("~$"))
+                .ToList();
+            
+            foreach (var file in files)
+            {
+                var fileInfo = new PowerPointFileInfo
+                {
+                    FilePath = file,
+                    FileName = System.IO.Path.GetFileName(file),
+                    IsLabeled = false
+                };
+                
+                _powerPointFiles.Add(fileInfo);
+                lstFiles.Items.Add(fileInfo);
+            }
+            
+            UpdateProgress();
+            
+            if (_powerPointFiles.Count > 0)
+            {
+                lstFiles.SelectedIndex = 0;
+            }
+        }
+        
+        // ... rest of your methods continue below ...
+    }
+}
