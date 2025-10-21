@@ -1,1 +1,464 @@
+Excellent suggestions! Let’s add all three features. Here are the changes:
 
+## **Step 1: Add “Mark Complete” Button and Hide Feature**
+
+Update the bottom navigation section in `MainWindow.xaml`:
+
+```xml
+<!-- Bottom Navigation -->
+<Border Grid.Row="2" Background="#FAFAFA" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0" Padding="10">
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+        <!-- ADD MARK COMPLETE BUTTON -->
+        <Button x:Name="btnMarkComplete" Content="✓ Mark File Complete" 
+                Click="BtnMarkComplete_Click" 
+                Height="40" Width="200" Margin="5"
+                Background="#4CAF50" Foreground="White" FontWeight="Bold" FontSize="14"/>
+        
+        <Button x:Name="btnSaveTrainingData" Content="💾 Save Training Data" 
+                Click="BtnSaveTrainingData_Click" 
+                Height="40" Width="200" Margin="5"
+                Background="#2196F3" Foreground="White" FontWeight="Bold" FontSize="14"/>
+        
+        <Button x:Name="btnExportModel" Content="🎓 Train Model" 
+                Click="BtnTrainModel_Click" 
+                Height="40" Width="200" Margin="5"
+                Background="#FF9800" Foreground="White" FontWeight="Bold" FontSize="14"/>
+    </StackPanel>
+</Border>
+```
+
+## **Step 2: Add “Hide Box” Button to Label Panel**
+
+Update the label buttons section in `MainWindow.xaml`:
+
+```xml
+<!-- Label Buttons -->
+<ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+    <StackPanel Margin="10,0,10,10">
+        <Button x:Name="btnLabelWI" Content="WI Number" Click="BtnLabel_Click" Tag="WI_Number"
+                Height="50" Margin="0,0,0,10" Background="#2196F3" Foreground="White" 
+                FontSize="14" FontWeight="Bold"/>
+        
+        <Button x:Name="btnLabelTitle" Content="WI Title" Click="BtnLabel_Click" Tag="WI_Title"
+                Height="50" Margin="0,0,0,10" Background="#4CAF50" Foreground="White" 
+                FontSize="14" FontWeight="Bold"/>
+        
+        <Button x:Name="btnLabelRevision" Content="Revision" Click="BtnLabel_Click" Tag="Revision"
+                Height="50" Margin="0,0,0,10" Background="#FF9800" Foreground="White" 
+                FontSize="14" FontWeight="Bold"/>
+        
+        <Button x:Name="btnLabelBOM" Content="BOM/ASSY DWG NO" Click="BtnLabel_Click" Tag="BOM_ASSY_DWG_NO"
+                Height="50" Margin="0,0,0,10" Background="#9C27B0" Foreground="White" 
+                FontSize="14" FontWeight="Bold"/>
+        
+        <Button x:Name="btnLabelOperation" Content="Operation No" Click="BtnLabel_Click" Tag="Operation_No"
+                Height="50" Margin="0,0,0,10" Background="#00BCD4" Foreground="White" 
+                FontSize="14" FontWeight="Bold"/>
+        
+        <Button x:Name="btnLabelProductLine" Content="Product Line" Click="BtnLabel_Click" Tag="Product_Line"
+                Height="50" Margin="0,0,0,10" Background="#FF5722" Foreground="White" 
+                FontSize="14" FontWeight="Bold"/>
+        
+        <Button x:Name="btnLabelSubject" Content="Subject" Click="BtnLabel_Click" Tag="Subject"
+                Height="50" Margin="0,0,0,10" Background="#795548" Foreground="White" 
+                FontSize="14" FontWeight="Bold"/>
+        
+        <Button x:Name="btnLabelTemplateRev" Content="Template Revision" Click="BtnLabel_Click" Tag="Template_Revision"
+                Height="50" Margin="0,0,0,10" Background="#3F51B5" Foreground="White" 
+                FontSize="14" FontWeight="Bold"/>
+        
+        <Separator Margin="0,10"/>
+        
+        <Button x:Name="btnLabelIgnore" Content="❌ Ignore (Label)" Click="BtnLabel_Click" Tag="Ignore"
+                Height="40" Margin="0,0,0,10" Background="#757575" Foreground="White" 
+                FontSize="12"/>
+        
+        <!-- ADD HIDE BOX BUTTON -->
+        <Button x:Name="btnHideBox" Content="👁️ Hide Box" Click="BtnHideBox_Click"
+                Height="40" Margin="0,0,0,10" Background="#607D8B" Foreground="White" 
+                FontSize="12" ToolTip="Hides this text box from view (won't be used for training)"/>
+        
+        <Button x:Name="btnClearLabel" Content="Clear Label" Click="BtnClearLabel_Click"
+                Height="40" Margin="0,0,0,10" Background="#F44336" Foreground="White" 
+                FontSize="12"/>
+    </StackPanel>
+</ScrollViewer>
+```
+
+## **Step 3: Update PowerPointFileInfo Class**
+
+Add completion tracking in `MainWindow.xaml.cs`:
+
+```csharp
+// Helper classes at the bottom of MainWindow.xaml.cs
+public class PowerPointFileInfo
+{
+    public string FilePath { get; set; }
+    public string FileName { get; set; }
+    public bool IsLabeled { get; set; }
+    public bool IsCompleted { get; set; }  // ADD THIS
+}
+```
+
+## **Step 4: Update LabeledTextBox Class**
+
+Add hidden flag:
+
+```csharp
+public class LabeledTextBox
+{
+    public string Text { get; set; }
+    public float Left { get; set; }
+    public float Top { get; set; }
+    public float Width { get; set; }
+    public float Height { get; set; }
+    public string AssignedLabel { get; set; }
+    public string RevisionType { get; set; }
+    public string SourceFile { get; set; }
+    public int SlideNumber { get; set; }
+    public bool IsHidden { get; set; }  // ADD THIS
+}
+```
+
+## **Step 5: Add the New Methods to MainWindow.xaml.cs**
+
+Add these methods to your `MainWindow` class:
+
+```csharp
+private void BtnMarkComplete_Click(object sender, RoutedEventArgs e)
+{
+    if (_currentFile == null)
+    {
+        MessageBox.Show("No file is currently loaded.", "No File", 
+            MessageBoxButton.OK, MessageBoxImage.Warning);
+        return;
+    }
+    
+    // Check if required fields are labeled
+    var missingLabels = CheckRequiredLabels();
+    
+    if (missingLabels.Count > 0)
+    {
+        var result = MessageBox.Show(
+            $"The following fields are not labeled:\n\n{string.Join("\n", missingLabels)}\n\n" +
+            "Do you want to mark this file as complete anyway?",
+            "Missing Labels",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+        
+        if (result == MessageBoxResult.No)
+            return;
+    }
+    
+    // Mark as completed
+    _currentFile.IsCompleted = true;
+    _currentFile.IsLabeled = true;
+    
+    UpdateProgress();
+    
+    // Show success message
+    MessageBox.Show(
+        $"✓ File marked as complete!\n\n{_currentFile.FileName}\n\n" +
+        "You can now move to the next file.",
+        "File Completed",
+        MessageBoxButton.OK,
+        MessageBoxImage.Information);
+    
+    // Auto-select next file
+    int currentIndex = _powerPointFiles.IndexOf(_currentFile);
+    if (currentIndex < _powerPointFiles.Count - 1)
+    {
+        lstFiles.SelectedIndex = currentIndex + 1;
+    }
+}
+
+private List<string> CheckRequiredLabels()
+{
+    var missingLabels = new List<string>();
+    var requiredLabels = new[]
+    {
+        "WI_Number",
+        "WI_Title",
+        "Revision",
+        "BOM_ASSY_DWG_NO",
+        "Operation_No",
+        "Product_Line",
+        "Subject",
+        "Template_Revision"
+    };
+    
+    var labeledFields = _allLabeledBoxes
+        .Where(b => b.SourceFile == _currentFile.FilePath && !b.IsHidden)
+        .Select(b => b.AssignedLabel)
+        .Where(l => !string.IsNullOrEmpty(l) && l != "Ignore")
+        .Distinct()
+        .ToList();
+    
+    var labelNameMap = new Dictionary<string, string>
+    {
+        { "WI_Number", "WI Number" },
+        { "WI_Title", "WI Title" },
+        { "Revision", "Revision" },
+        { "BOM_ASSY_DWG_NO", "BOM/ASSY DWG NO" },
+        { "Operation_No", "Operation No" },
+        { "Product_Line", "Product Line" },
+        { "Subject", "Subject" },
+        { "Template_Revision", "Template Revision" }
+    };
+    
+    foreach (var required in requiredLabels)
+    {
+        if (!labeledFields.Contains(required))
+        {
+            missingLabels.Add("  • " + labelNameMap[required]);
+        }
+    }
+    
+    return missingLabels;
+}
+
+private void BtnHideBox_Click(object sender, RoutedEventArgs e)
+{
+    if (_selectedTextBox == null)
+    {
+        MessageBox.Show("Please select a text box first", "No Selection", 
+            MessageBoxButton.OK, MessageBoxImage.Warning);
+        return;
+    }
+    
+    // Mark as hidden
+    _selectedTextBox.IsHidden = true;
+    
+    // Refresh display
+    DisplaySlide(_currentSlideIndex);
+    
+    // Clear selection
+    _selectedTextBox = null;
+    txtSelectedText.Text = "Text box hidden";
+    txtPosition.Text = "";
+}
+
+private void LstFiles_SelectionChanged(object sender, SelectionChangedEventArgs e)
+{
+    if (e.RemovedItems.Count > 0 && e.RemovedItems[0] is PowerPointFileInfo previousFile)
+    {
+        // Check if previous file was completed
+        if (!previousFile.IsCompleted)
+        {
+            var missingLabels = CheckRequiredLabelsForFile(previousFile.FilePath);
+            
+            if (missingLabels.Count > 0)
+            {
+                var result = MessageBox.Show(
+                    $"You haven't completed labeling the previous file:\n{previousFile.FileName}\n\n" +
+                    $"Missing labels:\n{string.Join("\n", missingLabels)}\n\n" +
+                    "Do you want to continue to the next file without completing it?",
+                    "Incomplete File",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+                
+                if (result == MessageBoxResult.No)
+                {
+                    // Prevent changing selection
+                    lstFiles.SelectionChanged -= LstFiles_SelectionChanged;
+                    lstFiles.SelectedItem = previousFile;
+                    lstFiles.SelectionChanged += LstFiles_SelectionChanged;
+                    return;
+                }
+            }
+        }
+    }
+    
+    if (lstFiles.SelectedItem is PowerPointFileInfo fileInfo)
+    {
+        LoadPowerPointFile(fileInfo);
+    }
+}
+
+private List<string> CheckRequiredLabelsForFile(string filePath)
+{
+    var missingLabels = new List<string>();
+    var requiredLabels = new[]
+    {
+        "WI_Number",
+        "WI_Title",
+        "Revision",
+        "BOM_ASSY_DWG_NO",
+        "Operation_No",
+        "Product_Line",
+        "Subject",
+        "Template_Revision"
+    };
+    
+    var labeledFields = _allLabeledBoxes
+        .Where(b => b.SourceFile == filePath && !b.IsHidden)
+        .Select(b => b.AssignedLabel)
+        .Where(l => !string.IsNullOrEmpty(l) && l != "Ignore")
+        .Distinct()
+        .ToList();
+    
+    var labelNameMap = new Dictionary<string, string>
+    {
+        { "WI_Number", "WI Number" },
+        { "WI_Title", "WI Title" },
+        { "Revision", "Revision" },
+        { "BOM_ASSY_DWG_NO", "BOM/ASSY DWG NO" },
+        { "Operation_No", "Operation No" },
+        { "Product_Line", "Product Line" },
+        { "Subject", "Subject" },
+        { "Template_Revision", "Template Revision" }
+    };
+    
+    foreach (var required in requiredLabels)
+    {
+        if (!labeledFields.Contains(required))
+        {
+            missingLabels.Add("  • " + labelNameMap[required]);
+        }
+    }
+    
+    return missingLabels;
+}
+```
+
+## **Step 6: Update DisplaySlide to Filter Hidden Boxes**
+
+Update the `DisplaySlide` method to skip hidden boxes:
+
+```csharp
+private void DisplaySlide(int slideIndex)
+{
+    slideCanvas.Children.Clear();
+    _borderToTextBoxMap.Clear();
+    
+    var slideBoxes = _allLabeledBoxes
+        .Where(b => b.SourceFile == _currentFile.FilePath && 
+                    b.SlideNumber == slideIndex + 1 &&
+                    !b.IsHidden)  // ADD THIS LINE - filter out hidden boxes
+        .ToList();
+    
+    Console.WriteLine($"\nDisplaying {slideBoxes.Count} text boxes on canvas (hidden boxes excluded)");
+    
+    // No scaling - use actual positions
+    float scaleFactor = 1.0f;
+    
+    foreach (var box in slideBoxes)
+    {
+        // ... rest of the method stays the same
+    }
+}
+```
+
+## **Step 7: Update Progress Display**
+
+Update the `UpdateProgress` method to show completed vs labeled:
+
+```csharp
+private void UpdateProgress()
+{
+    int completed = _powerPointFiles.Count(f => f.IsCompleted);
+    int labeled = _powerPointFiles.Count(f => f.IsLabeled);
+    int total = _powerPointFiles.Count;
+    
+    txtProgress.Text = $"{completed} completed, {labeled} labeled of {total} files";
+    progressBar.Maximum = total;
+    progressBar.Value = completed;
+}
+```
+
+## **Step 8: Update File List Display to Show Status**
+
+Update the file list item template in `MainWindow.xaml`:
+
+```xml
+<ListBox Grid.Row="1" x:Name="lstFiles" Margin="10,0,10,10" 
+         SelectionChanged="LstFiles_SelectionChanged"
+         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+    <ListBox.ItemTemplate>
+        <DataTemplate>
+            <StackPanel Orientation="Horizontal" Margin="5">
+                <TextBlock x:Name="StatusIcon" FontSize="16" Margin="0,0,5,0"/>
+                <TextBlock Text="{Binding FileName}" TextWrapping="Wrap"/>
+            </StackPanel>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding IsCompleted}" Value="True">
+                    <Setter TargetName="StatusIcon" Property="Text" Value="✓"/>
+                    <Setter TargetName="StatusIcon" Property="Foreground" Value="#4CAF50"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsCompleted}" Value="False">
+                    <Setter TargetName="StatusIcon" Property="Text" Value="○"/>
+                    <Setter TargetName="StatusIcon" Property="Foreground" Value="#999"/>
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+    </ListBox.ItemTemplate>
+</ListBox>
+```
+
+## **Step 9: Update SaveTrainingDataToCSV to Exclude Hidden**
+
+Update the CSV export to exclude hidden boxes:
+
+```csharp
+private void SaveTrainingDataToCSV(string filePath)
+{
+    using (var writer = new StreamWriter(filePath))
+    using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+    {
+        // Write header
+        csv.WriteField("Left");
+        csv.WriteField("Top");
+        csv.WriteField("Width");
+        csv.WriteField("Height");
+        csv.WriteField("TextLength");
+        csv.WriteField("ContainsNumbers");
+        csv.WriteField("ContainsHyphen");
+        csv.WriteField("StartsWithWI");
+        csv.WriteField("IsAllDigits");
+        csv.WriteField("RevisionType");
+        csv.WriteField("Label");
+        csv.NextRecord();
+        
+        // Write data - EXCLUDE HIDDEN BOXES
+        foreach (var box in _allLabeledBoxes.Where(b => !string.IsNullOrEmpty(b.AssignedLabel) && 
+                                                         !b.IsHidden &&
+                                                         b.AssignedLabel != "Ignore"))
+        {
+            csv.WriteField(box.Left);
+            csv.WriteField(box.Top);
+            csv.WriteField(box.Width);
+            csv.WriteField(box.Height);
+            csv.WriteField(box.Text.Length);
+            csv.WriteField(Regex.IsMatch(box.Text, @"\d"));
+            csv.WriteField(box.Text.Contains("-"));
+            csv.WriteField(box.Text.StartsWith("WI", StringComparison.OrdinalIgnoreCase));
+            csv.WriteField(Regex.IsMatch(box.Text, @"^\d+$"));
+            csv.WriteField(box.RevisionType);
+            csv.WriteField(box.AssignedLabel);
+            csv.NextRecord();
+        }
+    }
+}
+```
+
+## **Summary of New Features:**
+
+✅ **“Mark File Complete” button** - Explicitly marks a file as done  
+✅ **Missing label warnings** - Warns you if required fields aren’t labeled  
+✅ **File completion tracking** - Shows ✓ for completed files, ○ for incomplete  
+✅ **Navigation warnings** - Warns when switching files without completing  
+✅ **“Hide Box” button** - Hides distracting/irrelevant text boxes from view  
+✅ **Auto-advance** - Automatically selects next file after marking complete  
+✅ **Progress tracking** - Shows “X completed, Y labeled of Z files”
+
+Now your workflow is:
+
+1. Load files
+1. Click a file → label all text boxes
+1. Click “Hide Box” for irrelevant text boxes
+1. Click “✓ Mark File Complete” when done
+1. Gets warning if you forgot labels
+1. Auto-advances to next file
+1. See visual checkmarks (✓) for completed files
+
+Perfect for managing your 300 PowerPoint files!​​​​​​​​​​​​​​​​
