@@ -1,1 +1,3 @@
-
+'IReadOnlyList<double>' does not contain a definition for 'Length' and no accessible extension method 'Length' accepting a first argument of type 'IReadOnlyList<double>' could be found (are you missing a using directive or an assembly reference?)
+The type or namespace name 'Forms' does not exist in the namespace 'System.Windows' (are you missing an assembly reference?)
+The type or namespace name 'Forms' does not exist in the namespace 'System.Windows' (are you missing an assembly reference?)
