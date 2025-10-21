@@ -1,1477 +1,768 @@
-using System;
-using System.IO;
-using System.Collections.Generic;
-using System.Linq;
-using System.Diagnostics;
-using System.Drawing;
-using System.Drawing.Imaging;
-using PowerPointApp = Microsoft.Office.Interop.PowerPoint.Application;
-using Microsoft.Office.Interop.PowerPoint;
-using Microsoft.Office.Core;
-using OfficeOpenXml;
+"""
+Work Instruction PowerPoint Data Extractor
+Extracts tables and images from PowerPoint files to Excel
+"""
 
-namespace WorkInstructionExtractor
-{
-    public class PowerPointExtractor
-    {
-        static PowerPointExtractor()
-        {
-            ExcelPackage.License.SetNonCommercialPersonal("<Diana>");
-        }
+import os
+from pptx import Presentation
+import pandas as pd
+from datetime import datetime
+from openpyxl import load_workbook
+from openpyxl.styles import Font, PatternFill, Alignment, numbers
+import re
+from PIL import Image
+import io
 
-        public ExtractionResult ExtractWorkInstruction(
-            string pptxPath,
-            string outputFolder,
-            Action<int, string> progressCallback = null)
-        {
-            progressCallback?.Invoke(0, "Starting extraction...");
+def identify_revision_type(prs):
+    """Identifies revision type from FM-ME-07 text box at bottom right"""
+    if len(prs.slides) > 0:
+        slide = prs.slides[0]
+        
+        # Look for FM-ME-07 text in all shapes (including grouped shapes)
+        for shape in slide.shapes:
+            if shape.has_text_frame:
+                text = shape.text.lower()
+                if 'fm-me-' in text or 'fm me' in text or 'fmme' in text:
+                    # Check for revision numbers
+                    if 'rev15' in text or 'rev16' in text or 'rev 15' in text or 'rev 16' in text:
+                        return '15-16'
+                    elif 'rev17' in text or 'rev18' in text or 'rev19' in text or 'rev 17' in text or 'rev 18' in text or 'rev 19' in text:
+                        return '17-19'
+    
+    return 'Unknown'
 
-            // Create output folders
-            string baseImagesFolder = Path.Combine(outputFolder, "BaseImages");
-            string composedImagesFolder = Path.Combine(outputFolder, "ComposedImages");
-            Directory.CreateDirectory(baseImagesFolder);
-            Directory.CreateDirectory(composedImagesFolder);
+def clean_cell_value(value):
+    """Cleans cell values to remove illegal characters for Excel"""
+    if not value or not isinstance(value, str):
+        return value
+    
+    # Replace newlines with spaces
+    value = value.replace('\n', ' ').replace('\r', ' ')
+    
+    # Replace tabs with spaces
+    value = value.replace('\t', ' ')
+    
+    # Remove other control characters (ASCII 0-31 except tab, newline, carriage return)
+    value = ''.join(char for char in value if ord(char) >= 32 or char in '\t\n\r')
+    
+    # Clean up multiple spaces
+    value = ' '.join(value.split())
+    
+    return value.strip()
 
-            string headerExcel = Path.Combine(outputFolder, "HeaderData.xlsx");
-            string tablesExcel = Path.Combine(outputFolder, "TablesData.xlsx");
-            string finalExcel = Path.Combine(outputFolder, "ExtractedData.xlsx");  // CHANGED THIS LINE
+def parse_date(date_str):
+    """Parses various date formats and returns MM/DD/YYYY format"""
+    if not date_str or not isinstance(date_str, str):
+        return ""
+    
+    date_str = date_str.strip()
+    
+    if not date_str or date_str == '':
+        return ""
+    
+    # Common date patterns
+    patterns = [
+        r'(\d{1,2})/(\d{1,2})/(\d{4})',  # MM/DD/YYYY or M/D/YYYY
+        r'(\d{1,2})/(\d{1,2})/(\d{2})',  # MM/DD/YY or M/D/YY
+        r'(\d{4})-(\d{1,2})-(\d{1,2})',  # YYYY-MM-DD
+        r'(\d{1,2})-(\d{1,2})-(\d{4})',  # MM-DD-YYYY or DD-MM-YYYY
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, date_str)
+        if match:
+            try:
+                if len(match.groups()) == 3:
+                    part1, part2, part3 = match.groups()
+                    
+                    # Handle YYYY-MM-DD format
+                    if len(part1) == 4:
+                        year = int(part1)
+                        month = int(part2)
+                        day = int(part3)
+                    # Handle YY format
+                    elif len(part3) == 2:
+                        month = int(part1)
+                        day = int(part2)
+                        year = 2000 + int(part3)
+                    # Handle MM/DD/YYYY or MM-DD-YYYY
+                    else:
+                        month = int(part1)
+                        day = int(part2)
+                        year = int(part3)
+                    
+                    # Validate and format
+                    if 1 <= month <= 12 and 1 <= day <= 31 and 1900 <= year <= 2100:
+                        return f"{month:02d}/{day:02d}/{year:04d}"
+            except:
+                pass
+    
+    return date_str  # Return original if can't parse
 
-            // Extract header data and images
-            progressCallback?.Invoke(10, "Extracting header data and images...");
-            var (headerData, tocData) = ExtractHeadersAndImages(pptxPath, headerExcel,
-                baseImagesFolder, composedImagesFolder, progressCallback);
+def find_table_by_header(slide, header_text):
+    """Finds a table by looking for header text"""
+    for shape in slide.shapes:
+        if shape.has_table:
+            table = shape.table
+            # Check first row for header
+            first_row_text = ' '.join([cell.text for cell in table.rows[0].cells])
+            if header_text.upper() in first_row_text.upper():
+                return table
+    return None
 
-            string wiNumber = headerData.FirstOrDefault()?["WI_Number"] ?? "";
+def extract_bom_table(slide, doc_id):
+    """Extracts BOM/Configuration table from slide"""
+    bom_data = []
+    
+    print(f"    Searching for BOM table...")
+    
+    # Look for BOM/CONFIGURATION TABLE
+    table = find_table_by_header(slide, 'BOM/CONFIGURATION TABLE')
+    if not table:
+        table = find_table_by_header(slide, 'BOM/CONFIGURATION')
+    if not table:
+        table = find_table_by_header(slide, 'CONFIGURATION TABLE')
+    if not table:
+        table = find_table_by_header(slide, 'BOM')
+    if not table:
+        table = find_table_by_header(slide, 'CONFIGURATION')
+    
+    if table:
+        print(f"    Found BOM table with {len(table.rows)} rows")
+        
+        # Look for the actual column headers row (Part Number, Description)
+        header_row_index = None
+        for idx, row in enumerate(table.rows):
+            row_text = ' '.join([cell.text for cell in row.cells]).upper()
+            if 'PART NUMBER' in row_text or 'DESCRIPTION' in row_text:
+                header_row_index = idx
+                break
+        
+        if header_row_index is not None:
+            # Extract data rows after the column header row
+            data_row_count = 0
+            for idx, row in enumerate(list(table.rows)[header_row_index + 1:], start=1):
+                if len(row.cells) >= 2:
+                    part_num = row.cells[0].text.strip()
+                    description = row.cells[1].text.strip()
+                    
+                    # Only add if both part number and description have content
+                    if part_num and description and len(part_num) > 0 and len(description) > 0:
+                        bom_data.append({
+                            'DocumentID': doc_id,
+                            'PartNumber': clean_cell_value(part_num),
+                            'Description': clean_cell_value(description),
+                            'RowOrder': idx
+                        })
+                        data_row_count += 1
+            
+            print(f"    Extracted {data_row_count} BOM entries")
+    else:
+        print(f"    No BOM/CONFIGURATION table found")
+    
+    return bom_data
 
-            // Run Python script to extract tables
-            progressCallback?.Invoke(40, "Extracting table data with Python...");
-            bool pythonSuccess = RunPythonScript(pptxPath, tablesExcel, progressCallback);
+def get_merged_cell_value(table, row_idx, col_idx):
+    """
+    Gets the actual value from a cell, handling merged cells.
+    If a cell is part of a merged region, returns the value from the top-left cell of that region.
+    """
+    try:
+        cell = table.cell(row_idx, col_idx)
+        # Try to get text from this cell
+        text = cell.text_frame.text.strip()
+        
+        # If empty, it might be part of a merged cell - look upward for the value
+        if not text:
+            # Check cells above in the same column
+            for check_row in range(row_idx - 1, -1, -1):
+                try:
+                    check_cell = table.cell(check_row, col_idx)
+                    check_text = check_cell.text_frame.text.strip()
+                    if check_text:
+                        return check_text
+                except:
+                    pass
+        
+        return text
+    except:
+        return ""
 
-            if (pythonSuccess)
-            {
-                progressCallback?.Invoke(80, "Merging data into final Excel file...");
-                MergeExcelFiles(headerExcel, tablesExcel, finalExcel);
 
-                try
-                {
-                    File.Delete(headerExcel);
-                    File.Delete(tablesExcel);
-                }
-                catch { }
-            }
-            else
-            {
-                File.Move(headerExcel, finalExcel);
-                progressCallback?.Invoke(100, "⚠️ Table extraction failed. Only header data extracted.");
-            }
+def extract_equipment_and_parts(slide, doc_id):
+    """Extracts Equipment Required and Parts Required tables from slide 2"""
+    equipment_data = []
+    parts_data = []
+    
+    print(f"    Searching for Equipment and Parts tables on slide 2...")
+    
+    # Look for Equipment Required table
+    equipment_table = find_table_by_header(slide, 'EQUIPMENT REQUIRED')
+    if not equipment_table:
+        equipment_table = find_table_by_header(slide, 'Equipment Required')
+    
+    if equipment_table:
+        print(f"    Found Equipment Required table with {len(equipment_table.rows)} rows")
+        
+        # Find header row
+        header_row_index = None
+        for idx, row in enumerate(equipment_table.rows):
+            row_text = ' '.join([cell.text for cell in row.cells]).upper()
+            if 'QTY' in row_text and ('PART NO' in row_text or 'DESCRIPTION' in row_text):
+                header_row_index = idx
+                print(f"    Header row found at index {idx}")
+                break
+        
+        if header_row_index is not None:
+            data_row_count = 0
+            
+            # Process each data row
+            for row_idx, row in enumerate(list(equipment_table.rows)[header_row_index + 1:], start=header_row_index + 1):
+                print(f"    Processing row {row_idx}, cells: {len(row.cells)}")
+                
+                if len(row.cells) < 3:
+                    continue
+                
+                # Get cell values - handle merged cells by looking up for values
+                cell0_text = get_merged_cell_value(equipment_table, row_idx, 0)  # Qty
+                cell1_text = get_merged_cell_value(equipment_table, row_idx, 1)  # Part No
+                cell2_text = clean_cell_value(row.cells[2].text.strip())  # Description
+                
+                # Clean the values
+                cell0_text = clean_cell_value(cell0_text)
+                cell1_text = clean_cell_value(cell1_text)
+                
+                print(f"      Cell 0 (Qty): '{cell0_text}' (merged-aware)")
+                print(f"      Cell 1 (Part): '{cell1_text}' (merged-aware)")
+                print(f"      Cell 2 (Desc): '{cell2_text}'")
+                
+                # Check if Description cell contains multiple items separated by semicolons or newlines
+                descriptions = []
+                if ';' in cell2_text:
+                    descriptions = [d.strip() for d in cell2_text.split(';') if d.strip()]
+                elif '\n' in cell2_text or '\r' in cell2_text:
+                    descriptions = [d.strip() for d in cell2_text.replace('\r', '\n').split('\n') if d.strip()]
+                else:
+                    descriptions = [cell2_text] if cell2_text else []
+                
+                print(f"      Found {len(descriptions)} description(s)")
+                
+                # If we have multiple descriptions, repeat Qty and Part No for each
+                if len(descriptions) > 1:
+                    print(f"      MERGED CELL DETECTED - Creating {len(descriptions)} separate rows")
+                    for desc in descriptions:
+                        equipment_data.append({
+                            'DocumentID': doc_id,
+                            'Quantity': cell0_text,  # Repeat same Qty
+                            'PartNumber': cell1_text,  # Repeat same Part No
+                            'Description': desc,
+                            'RowOrder': data_row_count + 1
+                        })
+                        data_row_count += 1
+                        print(f"        Row {data_row_count}: Qty='{cell0_text}', Part='{cell1_text}', Desc='{desc}'")
+                else:
+                    # Normal single row - but still use merged-aware values
+                    if cell0_text or cell1_text or (descriptions and descriptions[0]):
+                        equipment_data.append({
+                            'DocumentID': doc_id,
+                            'Quantity': cell0_text,
+                            'PartNumber': cell1_text,
+                            'Description': descriptions[0] if descriptions else "",
+                            'RowOrder': data_row_count + 1
+                        })
+                        data_row_count += 1
+                        print(f"        Row {data_row_count}: Qty='{cell0_text}', Part='{cell1_text}', Desc='{descriptions[0] if descriptions else ''}'")
+            
+            print(f"    Extracted {data_row_count} equipment entries")
+    else:
+        print(f"    No Equipment Required table found")
+    
+    # Parts Required - same logic with merged cell handling
+    parts_table = find_table_by_header(slide, 'PARTS REQUIRED')
+    if not parts_table:
+        parts_table = find_table_by_header(slide, 'Parts Required')
+    
+    if parts_table:
+        print(f"    Found Parts Required table with {len(parts_table.rows)} rows")
+        
+        header_row_index = None
+        for idx, row in enumerate(parts_table.rows):
+            row_text = ' '.join([cell.text for cell in row.cells]).upper()
+            if 'QTY' in row_text and ('PART NO' in row_text or 'DESCRIPTION' in row_text):
+                header_row_index = idx
+                break
+        
+        if header_row_index is not None:
+            data_row_count = 0
+            
+            for row_idx, row in enumerate(list(parts_table.rows)[header_row_index + 1:], start=header_row_index + 1):
+                if len(row.cells) < 3:
+                    continue
+                
+                # Get cell values - handle merged cells
+                cell0_text = get_merged_cell_value(parts_table, row_idx, 0)  # Qty
+                cell1_text = get_merged_cell_value(parts_table, row_idx, 1)  # Part No
+                cell2_text = clean_cell_value(row.cells[2].text.strip())  # Description
+                
+                # Clean the values
+                cell0_text = clean_cell_value(cell0_text)
+                cell1_text = clean_cell_value(cell1_text)
+                
+                # Handle multiple descriptions
+                descriptions = []
+                if ';' in cell2_text:
+                    descriptions = [d.strip() for d in cell2_text.split(';') if d.strip()]
+                elif '\n' in cell2_text or '\r' in cell2_text:
+                    descriptions = [d.strip() for d in cell2_text.replace('\r', '\n').split('\n') if d.strip()]
+                else:
+                    descriptions = [cell2_text] if cell2_text else []
+                
+                if len(descriptions) > 1:
+                    for desc in descriptions:
+                        parts_data.append({
+                            'DocumentID': doc_id,
+                            'Quantity': cell0_text,  # Repeat same Qty
+                            'PartNumber': cell1_text,  # Repeat same Part No
+                            'Description': desc,
+                            'RowOrder': data_row_count + 1
+                        })
+                        data_row_count += 1
+                else:
+                    if cell0_text or cell1_text or (descriptions and descriptions[0]):
+                        parts_data.append({
+                            'DocumentID': doc_id,
+                            'Quantity': cell0_text,
+                            'PartNumber': cell1_text,
+                            'Description': descriptions[0] if descriptions else "",
+                            'RowOrder': data_row_count + 1
+                        })
+                        data_row_count += 1
+            
+            print(f"    Extracted {data_row_count} parts entries")
+    else:
+        print(f"    No Parts Required table found")
+    
+    return equipment_data, parts_data
 
-            progressCallback?.Invoke(100, "Extraction complete!");
-
-            return new ExtractionResult
-            {
-                ExcelPath = finalExcel,
-                BaseImagesFolder = baseImagesFolder,
-                ComposedImagesFolder = composedImagesFolder,
-                WINumber = wiNumber
-            };
-        }
-
-        private (List<Dictionary<string, string>>, List<Dictionary<string, string>>) ExtractHeadersAndImages(
-            string filePath, string excelPath, string baseImagesFolder, string composedImagesFolder,
-            Action<int, string> progressCallback)
-        {
-            var headerData = new List<Dictionary<string, string>>();
-            var imageData = new List<Dictionary<string, string>>();
-            var textData = new List<Dictionary<string, string>>();
-            var tocData = new List<Dictionary<string, string>>();
-
-            PowerPointApp pptApp = new PowerPointApp();
-            int docCounter = 1;
-
-            try
-            {
-                progressCallback?.Invoke(15, "Opening PowerPoint file...");
-
-                Presentation ppt = pptApp.Presentations.Open(filePath,
-                    MsoTriState.msoFalse, MsoTriState.msoFalse, MsoTriState.msoFalse);
-
-                if (ppt.Slides.Count > 0)
-                {
-                    progressCallback?.Invoke(20, "Extracting header data...");
-
-                    Slide firstSlide = ppt.Slides[1];
-                    var data = new Dictionary<string, string>
-                    {
-                        ["DocumentID"] = docCounter.ToString(),
-                        ["SourceFileName"] = Path.GetFileName(filePath)
-                    };
-
-                    // Collect all text boxes from all sources
-                    var allTextBoxes = new List<TextBoxInfo>();
-                    CollectTextBoxes(firstSlide.Shapes, allTextBoxes);
-                    try { CollectTextBoxes(firstSlide.Master.Shapes, allTextBoxes); } catch { }
-                    try { CollectTextBoxes(firstSlide.Design.SlideMaster.Shapes, allTextBoxes); } catch { }
-                    try { CollectTextBoxes(firstSlide.CustomLayout.Shapes, allTextBoxes); } catch { }
-
-                    // Extract data using pattern matching
-                    ExtractData(allTextBoxes, data);
-
-                    data["TotalPages"] = ppt.Slides.Count.ToString();
-
-                    progressCallback?.Invoke(25, "Extracting images...");
-                    var images = ExtractImagesFromPresentation(ppt, docCounter, data["WI_Number"],
-                        Path.GetFileName(filePath), baseImagesFolder, composedImagesFolder);
-                    imageData.AddRange(images);
-                    data["TotalImages"] = images.Count.ToString();
-
-                    progressCallback?.Invoke(30, "Extracting text content...");
-                    var slideTexts = ExtractTextFromSlides(ppt, docCounter, data["WI_Number"],
-                        Path.GetFileName(filePath));
-                    textData.AddRange(slideTexts);
-
-                    progressCallback?.Invoke(33, "Building table of contents...");
-                    var tocEntries = ExtractTableOfContents(ppt, docCounter, data["WI_Number"],
-                        Path.GetFileName(filePath));
-                    tocData.AddRange(tocEntries);
-
-                    // Extract subject from TOC if still empty
-                    if (tocEntries.Count > 0 && string.IsNullOrEmpty(data.GetValueOrDefault("Subject")))
-                    {
-                        data["Subject"] = tocEntries[0]["SlideSubject"];
+def extract_all_other_tables(prs, doc_id, known_table_headers):
+    """
+    Scans all slides for tables that aren't already identified.
+    Creates a separate dataset for each unique table found.
+    
+    Args:
+        prs: PowerPoint presentation object
+        doc_id: Document ID
+        known_table_headers: List of table headers we already extract (to skip them)
+    
+    Returns:
+        Dictionary where keys are table names and values are lists of row data
+    """
+    all_tables = {}
+    table_counter = 1
+    
+    print(f"\n  Scanning for additional tables across all slides...")
+    
+    for slide_idx in range(len(prs.slides)):
+        slide = prs.slides[slide_idx]
+        slide_num = slide_idx + 1
+        
+        for shape in slide.shapes:
+            if shape.has_table:
+                table = shape.table
+                
+                # Get first row to identify the table
+                if len(table.rows) == 0:
+                    continue
+                
+                first_row_text = ' '.join([cell.text for cell in table.rows[0].cells]).upper()
+                
+                # Skip if this is a known table we already process
+                is_known = False
+                for known_header in known_table_headers:
+                    if known_header.upper() in first_row_text:
+                        is_known = True
+                        print(f"    Slide {slide_num}: Skipping known table '{known_header}'")
+                        break
+                
+                if is_known:
+                    continue
+                
+                # This is a new table!
+                # Determine table name from first row or use generic name
+                table_name = first_row_text[:50].strip() if first_row_text else f"Table_{table_counter}"
+                
+                # Make it a valid sheet name (Excel limit: 31 chars, no special chars)
+                table_name = table_name.replace('/', '_').replace('\\', '_').replace('*', '_')
+                table_name = table_name.replace('[', '_').replace(']', '_').replace(':', '_')
+                table_name = table_name.replace('?', '_').replace('|', '_')
+                table_name = table_name[:31]  # Excel sheet name limit
+                
+                # Make unique if duplicate
+                original_name = table_name
+                suffix = 1
+                while table_name in all_tables:
+                    table_name = f"{original_name[:27]}_{suffix}"
+                    suffix += 1
+                
+                print(f"    Slide {slide_num}: Found new table - '{table_name}'")
+                print(f"      Rows: {len(table.rows)}, Columns: {len(table.columns)}")
+                
+                # Extract all rows from this table
+                table_data = []
+                
+                for row_idx in range(len(table.rows)):
+                    row_data = {
+                        'DocumentID': doc_id,
+                        'SlideNumber': slide_num,
+                        'RowNumber': row_idx + 1
                     }
-
-                    headerData.Add(data);
-                    progressCallback?.Invoke(35, $"Extracted: {data["WI_Number"]}");
-                }
-
-                ppt.Close();
-            }
-            finally
-            {
-                pptApp.Quit();
-            }
-
-            WriteToExcel(headerData, imageData, textData, tocData, excelPath);
-            return (headerData, tocData);
-        }
-
-        /// <summary>
-        /// Extract all header fields using pattern matching only - no position dependencies
-        /// </summary>
-        private void ExtractData(List<TextBoxInfo> textBoxes, Dictionary<string, string> data)
-        {
-            // Initialize all fields
-            data["WI_Number"] = "";
-            data["WI_Title"] = "";
-            data["Revision"] = "";
-            data["BOM_ASSY_DWG_NO"] = "";
-            data["Operation_No"] = "";
-            data["Product_Line"] = "";
-            data["Subject"] = "";
-            data["RevisionType"] = "";
-
-            // First, detect the revision type from FM-ME text
-            string revisionType = DetectRevisionType(textBoxes);
-            data["RevisionType"] = revisionType;
-
-            Console.WriteLine($"Detected Revision Type: {revisionType}");
-
-            // Extract based on revision type
-            if (revisionType == "15" || revisionType == "16")
-            {
-                ExtractRev15_16(textBoxes, data);
-            }
-            else if (revisionType == "17" || revisionType == "18" || revisionType == "19")
-            {
-                ExtractRev17_19(textBoxes, data);
-            }
-            else
-            {
-                // Unknown revision - try pattern-based as fallback
-                Console.WriteLine("Unknown revision type - using pattern-based extraction");
-                ExtractWithPatterns(textBoxes, data);
-            }
-        }
-
-        /// <summary>
-        /// Detect revision type from FM-ME text box
-        /// </summary>
-        private string DetectRevisionType(List<TextBoxInfo> textBoxes)
-        {
-            foreach (var box in textBoxes)
-            {
-                string upper = box.Text.ToUpper();
-                if (upper.Contains("FM-ME") || upper.Contains("FM ME") || upper.Contains("FMME"))
-                {
-                    var match = System.Text.RegularExpressions.Regex.Match(box.Text,
-                        @"rev\.?\s*(\d+)",
-                        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-
-                    if (match.Success && match.Groups.Count > 1)
-                    {
-                        return match.Groups[1].Value;
-                    }
-                }
-            }
-            return "Unknown";
-        }
-
-        /// <summary>
-        /// Extract fields for Rev 15-16 templates (Slide format 5:4, needs conversion to 4:3)
-        /// Position ranges are approximate and may need adjustment
-        /// </summary>
-        private void ExtractRev15_16(List<TextBoxInfo> textBoxes, Dictionary<string, string> data)
-        {
-            Console.WriteLine("Using Rev 15-16 extraction logic");
-
-            foreach (var box in textBoxes)
-            {
-                string text = box.Text.Trim();
-                string upper = text.ToUpper();
-
-                // Skip labels
-                if (IsLabel(upper) || string.IsNullOrWhiteSpace(text)) continue;
-
-                Console.WriteLine($"Rev15-16: Text='{text}', Left={box.Left:F1}, Top={box.Top:F1}");
-
-                // WI Number - pattern based (consistent across all revs)
-                if (string.IsNullOrEmpty(data["WI_Number"]))
-                {
-                    var wiMatch = System.Text.RegularExpressions.Regex.Match(text,
-                        @"W\.?\s*I\.?\s*-?\s*\d{2,}",
-                        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                    if (wiMatch.Success)
-                    {
-                        string wiNum = wiMatch.Value.Replace(" ", "").Replace(".", "").ToUpper();
-                        if (!wiNum.Contains("-"))
-                            wiNum = wiNum.Replace("WI", "WI-");
-                        data["WI_Number"] = wiNum;
-                        Console.WriteLine($"  -> WI_Number: {wiNum}");
-                        continue;
-                    }
-                }
-
-                // WI Title - Rev 15/16: Left 20-80, Top 515-525
-                if (string.IsNullOrEmpty(data["WI_Title"]))
-                {
-                    if (box.Left > 20 && box.Left < 80 && box.Top > 510 && box.Top < 530 &&
-                        text.Length > 10 && text.Length < 150)
-                    {
-                        data["WI_Title"] = text;
-                        Console.WriteLine($"  -> WI_Title: {text}");
-                        continue;
-                    }
-                }
-
-                // Revision - Rev 15/16: Left 595-620, Top 555-565, 1-2 digits
-                if (string.IsNullOrEmpty(data["Revision"]))
-                {
-                    if (box.Left > 590 && box.Left < 625 && box.Top > 550 && box.Top < 570 &&
-                        System.Text.RegularExpressions.Regex.IsMatch(text, @"^\d{1,2}$"))
-                    {
-                        data["Revision"] = text;
-                        Console.WriteLine($"  -> Revision: {text}");
-                        continue;
-                    }
-                }
-
-                // BOM/ASSY DWG NO - Rev 15/16: Left 300-315, Top 558-565
-                if (string.IsNullOrEmpty(data["BOM_ASSY_DWG_NO"]))
-                {
-                    if (box.Left > 295 && box.Left < 320 && box.Top > 555 && box.Top < 568 &&
-                        text.Length > 2 && text.Length < 50 &&
-                        !text.StartsWith("WI", StringComparison.OrdinalIgnoreCase))
-                    {
-                        data["BOM_ASSY_DWG_NO"] = text;
-                        Console.WriteLine($"  -> BOM_ASSY_DWG_NO: {text}");
-                        continue;
-                    }
-                }
-
-                // Operation No - Rev 15/16: Left 185-195, Top 555-565
-                if (string.IsNullOrEmpty(data["Operation_No"]))
-                {
-                    if (box.Left > 180 && box.Left < 200 && box.Top > 550 && box.Top < 570 &&
-                        text.Length > 1 && text.Length < 40)
-                    {
-                        data["Operation_No"] = text;
-                        Console.WriteLine($"  -> Operation_No: {text}");
-                        continue;
-                    }
-                }
-
-                // Product Line - Rev 15/16: Left 460-515, Top 555-565
-                if (string.IsNullOrEmpty(data["Product_Line"]))
-                {
-                    if (box.Left > 455 && box.Left < 520 && box.Top > 550 && box.Top < 570 &&
-                        text.Length >= 2 && text.Length < 30 &&
-                        !upper.Contains("PAGE"))
-                    {
-                        data["Product_Line"] = text;
-                        Console.WriteLine($"  -> Product_Line: {text}");
-                        continue;
-                    }
-                }
-
-                // Subject - Rev 15/16: Left 420-430, Top 520-525
-                if (string.IsNullOrEmpty(data["Subject"]))
-                {
-                    if (box.Left > 415 && box.Left < 435 && box.Top > 515 && box.Top < 530 &&
-                        text.Length > 5 && text.Length < 80 &&
-                        !upper.Contains("COMPANY") &&
-                        text != data["WI_Title"])
-                    {
-                        data["Subject"] = text;
-                        Console.WriteLine($"  -> Subject: {text}");
-                        continue;
-                    }
-                }
-            }
-
-            // Fallback: if Subject is still empty, try pattern-based
-            if (string.IsNullOrEmpty(data["Subject"]))
-            {
-                foreach (var box in textBoxes)
-                {
-                    string text = box.Text.Trim();
-                    string upper = text.ToUpper();
-
-                    if (text.Length > 5 && text.Length < 80 &&
-                        !IsLabel(upper) &&
-                        !upper.Contains("COMPANY") &&
-                        !upper.Contains("PAGE") &&
-                        text != data["WI_Title"] &&
-                        text != data["WI_Number"] &&
-                        text != data["BOM_ASSY_DWG_NO"])
-                    {
-                        data["Subject"] = text;
-                        Console.WriteLine($"  -> Subject (fallback): {text}");
-                        break;
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Extract fields for Rev 17-19 templates (Slide format 4:3)
-        /// </summary>
-        private void ExtractRev17_19(List<TextBoxInfo> textBoxes, Dictionary<string, string> data)
-        {
-            Console.WriteLine("Using Rev 17-19 extraction logic");
-
-            foreach (var box in textBoxes)
-            {
-                string text = box.Text.Trim();
-                string upper = text.ToUpper();
-
-                // Skip labels
-                if (IsLabel(upper) || string.IsNullOrWhiteSpace(text)) continue;
-
-                Console.WriteLine($"Rev17-19: Text='{text}', Left={box.Left:F1}, Top={box.Top:F1}");
-
-                // WI Number - pattern based (consistent across all revs)
-                if (string.IsNullOrEmpty(data["WI_Number"]))
-                {
-                    var wiMatch = System.Text.RegularExpressions.Regex.Match(text,
-                        @"W\.?\s*I\.?\s*-?\s*\d{2,}",
-                        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                    if (wiMatch.Success)
-                    {
-                        string wiNum = wiMatch.Value.Replace(" ", "").Replace(".", "").ToUpper();
-                        if (!wiNum.Contains("-"))
-                            wiNum = wiNum.Replace("WI", "WI-");
-                        data["WI_Number"] = wiNum;
-                        Console.WriteLine($"  -> WI_Number: {wiNum}");
-                        continue;
-                    }
-                }
-
-                // WI Title - Rev 17/19: Left 100-110, Top 455-470
-                if (string.IsNullOrEmpty(data["WI_Title"]))
-                {
-                    if (box.Left > 95 && box.Left < 115 && box.Top > 450 && box.Top < 475 &&
-                        text.Length > 10 && text.Length < 150)
-                    {
-                        data["WI_Title"] = text;
-                        Console.WriteLine($"  -> WI_Title: {text}");
-                        continue;
-                    }
-                }
-
-                // Revision - Rev 17/19: Left 665-680, Top 460-470, 1-2 digits
-                if (string.IsNullOrEmpty(data["Revision"]))
-                {
-                    if (box.Left > 660 && box.Left < 685 && box.Top > 455 && box.Top < 475 &&
-                        System.Text.RegularExpressions.Regex.IsMatch(text, @"^\d{1,2}$"))
-                    {
-                        data["Revision"] = text;
-                        Console.WriteLine($"  -> Revision: {text}");
-                        continue;
-                    }
-                }
-
-                // BOM/ASSY DWG NO - Rev 17/19: Left 0-20, Top 498-505
-                if (string.IsNullOrEmpty(data["BOM_ASSY_DWG_NO"]))
-                {
-                    if (box.Left > -5 && box.Left < 25 && box.Top > 493 && box.Top < 510 &&
-                        text.Length > 2 && text.Length < 50 &&
-                        !text.StartsWith("WI", StringComparison.OrdinalIgnoreCase))
-                    {
-                        data["BOM_ASSY_DWG_NO"] = text;
-                        Console.WriteLine($"  -> BOM_ASSY_DWG_NO: {text}");
-                        continue;
-                    }
-                }
-
-                // Operation No - Rev 17/19: Left 140-155, Top 498-505
-                if (string.IsNullOrEmpty(data["Operation_No"]))
-                {
-                    if (box.Left > 135 && box.Left < 160 && box.Top > 493 && box.Top < 510 &&
-                        text.Length > 1 && text.Length < 40)
-                    {
-                        data["Operation_No"] = text;
-                        Console.WriteLine($"  -> Operation_No: {text}");
-                        continue;
-                    }
-                }
-
-                // Product Line - Rev 17/19: Left 210-230, Top 498-505
-                if (string.IsNullOrEmpty(data["Product_Line"]))
-                {
-                    if (box.Left > 205 && box.Left < 235 && box.Top > 493 && box.Top < 510 &&
-                        text.Length >= 2 && text.Length < 30 &&
-                        !upper.Contains("PAGE"))
-                    {
-                        data["Product_Line"] = text;
-                        Console.WriteLine($"  -> Product_Line: {text}");
-                        continue;
-                    }
-                }
-
-                // Subject - Rev 17/19: Left 315-640, Top 495-510
-                if (string.IsNullOrEmpty(data["Subject"]))
-                {
-                    if (box.Left > 310 && box.Left < 645 && box.Top > 490 && box.Top < 515 &&
-                        text.Length > 5 && text.Length < 80 &&
-                        !upper.Contains("COMPANY") &&
-                        text != data["WI_Title"])
-                    {
-                        data["Subject"] = text;
-                        Console.WriteLine($"  -> Subject: {text}");
-                        continue;
-                    }
-                }
-            }
-
-            // Fallback: if Subject is still empty, try pattern-based
-            if (string.IsNullOrEmpty(data["Subject"]))
-            {
-                foreach (var box in textBoxes)
-                {
-                    string text = box.Text.Trim();
-                    string upper = text.ToUpper();
-
-                    if (text.Length > 5 && text.Length < 80 &&
-                        !IsLabel(upper) &&
-                        !upper.Contains("COMPANY") &&
-                        !upper.Contains("PAGE") &&
-                        text != data["WI_Title"] &&
-                        text != data["WI_Number"] &&
-                        text != data["BOM_ASSY_DWG_NO"])
-                    {
-                        data["Subject"] = text;
-                        Console.WriteLine($"  -> Subject (fallback): {text}");
-                        break;
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Fallback pattern-based extraction for unknown revisions
-        /// </summary>
-        private void ExtractWithPatterns(List<TextBoxInfo> textBoxes, Dictionary<string, string> data)
-        {
-            // WI Number
-            foreach (var box in textBoxes)
-            {
-                if (string.IsNullOrEmpty(data["WI_Number"]))
-                {
-                    var wiMatch = System.Text.RegularExpressions.Regex.Match(box.Text,
-                        @"W\.?\s*I\.?\s*-?\s*\d{2,}",
-                        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                    if (wiMatch.Success)
-                    {
-                        string wiNum = wiMatch.Value.Replace(" ", "").Replace(".", "").ToUpper();
-                        if (!wiNum.Contains("-"))
-                            wiNum = wiNum.Replace("WI", "WI-");
-                        data["WI_Number"] = wiNum;
-                    }
-                }
-            }
-
-            // Simple pattern-based extraction for other fields
-            foreach (var box in textBoxes)
-            {
-                string text = box.Text.Trim();
-                string upper = text.ToUpper();
-
-                if (IsLabel(upper) || string.IsNullOrWhiteSpace(text)) continue;
-
-                // Revision
-                if (string.IsNullOrEmpty(data["Revision"]) &&
-                    System.Text.RegularExpressions.Regex.IsMatch(text, @"^\d{1,2}$"))
-                {
-                    data["Revision"] = text;
-                }
-
-                // Title - longer text
-                if (string.IsNullOrEmpty(data["WI_Title"]) &&
-                    text.Length > 15 && text.Length < 150)
-                {
-                    data["WI_Title"] = text;
-                }
-
-                // Subject - medium text
-                if (string.IsNullOrEmpty(data["Subject"]) &&
-                    text.Length > 5 && text.Length < 80 &&
-                    text != data["WI_Title"])
-                {
-                    data["Subject"] = text;
-                }
-            }
-        }
-
-        private bool IsLabel(string upperText)
-        {
-            var labels = new[] {
-                "WORK INSTRUCTION TITLE", "WORK INSTRUCTION", "DESCRIPTION", "DESCRIPTION:",
-                "W.I. NUMBER", "WI NUMBER", "BOM/ASSY DWG NO", "BOM DWG NO", "ASSY DWG NO",
-                "OPS (OPTIONAL)", "OPERATION NO", "OPERATION NO.", "PRODUCT LINE",
-                "SUBJECT", "SUBJECT:", "PAGE", "REV", "REV:", "REVISION", "REVISION:",
-                "TRAINING RECORD", "REVISION HISTORY", "NOTICE", "STATEMENT"
-            };
-
-            return labels.Any(label => upperText == label || upperText.Contains(label) && upperText.Length < 40) ||
-                   (upperText.EndsWith(":") && upperText.Length < 25);
-        }
-
-        private List<Dictionary<string, string>> ExtractTextFromSlides(Presentation ppt, int docId,
-            string wiNumber, string sourceFileName)
-        {
-            var textData = new List<Dictionary<string, string>>();
-
-            for (int slideIdx = 2; slideIdx <= ppt.Slides.Count; slideIdx++)
-            {
-                try
-                {
-                    Slide slide = ppt.Slides[slideIdx];
-                    string slideSubject = ExtractSlideSubject(slide);
-                    int textBoxCounter = 1;
-
-                    foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in slide.Shapes)
-                    {
-                        if (shape.HasTable == MsoTriState.msoTrue) continue;
-
-                        string extractedText = ExtractTextFromShape(shape);
-                        if (!string.IsNullOrWhiteSpace(extractedText) &&
-                            !extractedText.Trim().Equals(slideSubject.Trim(), StringComparison.OrdinalIgnoreCase))
-                        {
-                            textData.Add(new Dictionary<string, string>
-                            {
-                                ["DocumentID"] = docId.ToString(),
-                                ["WI_Number"] = wiNumber,
-                                ["SourceFileName"] = sourceFileName,
-                                ["SlideNumber"] = slideIdx.ToString(),
-                                ["SlideSubject"] = slideSubject,
-                                ["TextBoxNumber"] = textBoxCounter.ToString(),
-                                ["TextContent"] = extractedText.Trim()
-                            });
-                            textBoxCounter++;
-                        }
-                    }
-                }
-                catch { }
-            }
-
-            return textData;
-        }
-
-        private string ExtractSlideSubject(Slide slide)
-        {
-            try
-            {
-                // First, collect all text boxes from the slide
-                var textBoxes = new List<TextBoxInfo>();
-                CollectTextBoxes(slide.Shapes, textBoxes);
-
-                // Detect revision type from the first slide (if we have it cached, use it)
-                // For now, we'll detect it from each slide's master/layout
-                string revisionType = DetectRevisionTypeFromSlide(slide);
-
-                Console.WriteLine($"Slide {slide.SlideIndex}: Detected revision {revisionType}");
-
-                // Extract subject based on revision type using position
-                string subject = "";
-
-                if (revisionType == "15" || revisionType == "16")
-                {
-                    // Rev 15/16: Subject position - Left 420-430, Top 520-525 (or similar)
-                    // But for other slides, subject might be in title position
-                    subject = ExtractSubjectRev15_16(textBoxes);
-                }
-                else if (revisionType == "17" || revisionType == "18" || revisionType == "19")
-                {
-                    // Rev 17/19: Subject position - Left 315-640, Top 495-510
-                    subject = ExtractSubjectRev17_19(textBoxes);
-                }
-                else
-                {
-                    // Unknown revision - try standard title placeholder
-                    subject = ExtractSubjectFallback(slide);
-                }
-
-                if (!string.IsNullOrWhiteSpace(subject))
-                {
-                    Console.WriteLine($"  Found subject: {subject}");
-                    return subject.ToUpper();
-                }
-
-                // If still not found, try the standard placeholder method
-                subject = ExtractSubjectFallback(slide);
-
-                if (!string.IsNullOrWhiteSpace(subject))
-                    return subject.ToUpper();
-
-                return "UNTITLED SLIDE";
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error extracting slide subject: {ex.Message}");
-                return "UNTITLED SLIDE";
-            }
-        }
-
-        private string DetectRevisionTypeFromSlide(Slide slide)
-        {
-            try
-            {
-                // Check master shapes for FM-ME text
-                var textBoxes = new List<TextBoxInfo>();
-
-                try { CollectTextBoxes(slide.Master.Shapes, textBoxes); } catch { }
-                try { CollectTextBoxes(slide.Design.SlideMaster.Shapes, textBoxes); } catch { }
-                try { CollectTextBoxes(slide.CustomLayout.Shapes, textBoxes); } catch { }
-
-                return DetectRevisionType(textBoxes);
-            }
-            catch
-            {
-                return "Unknown";
-            }
-        }
-
-        private string ExtractSubjectRev15_16(List<TextBoxInfo> textBoxes)
-        {
-            // For Rev 15/16, subject is typically in a specific position
-            // Check multiple possible positions
-
-            // Position 1: Left 420-430, Top 520-525 (header area)
-            foreach (var box in textBoxes)
-            {
-                string text = box.Text.Trim();
-                string upper = text.ToUpper();
-
-                if (IsLabel(upper) || string.IsNullOrWhiteSpace(text)) continue;
-
-                Console.WriteLine($"  Rev15-16 Subject check: Text='{text}', Left={box.Left:F1}, Top={box.Top:F1}");
-
-                // Header position
-                if (box.Left > 415 && box.Left < 435 && box.Top > 515 && box.Top < 530 &&
-                    text.Length > 3 && text.Length < 80)
-                {
-                    return text;
-                }
-            }
-
-            // Position 2: Top of slide (for subsequent slides) - Left 50-500, Top 30-80
-            foreach (var box in textBoxes)
-            {
-                string text = box.Text.Trim();
-                string upper = text.ToUpper();
-
-                if (IsLabel(upper) || string.IsNullOrWhiteSpace(text)) continue;
-
-                // Top of slide position
-                if (box.Top > 25 && box.Top < 85 &&
-                    box.Left > 45 && box.Left < 505 &&
-                    text.Length > 3 && text.Length < 100)
-                {
-                    return text;
-                }
-            }
-
-            // Position 3: Largest font at top
-            var topShapes = textBoxes
-                .Where(b => b.Top < 100 && b.Text.Trim().Length > 3 && b.Text.Trim().Length < 100)
-                .OrderByDescending(b => b.Height)
-                .ThenBy(b => b.Top)
-                .FirstOrDefault();
-
-            if (topShapes != null)
-                return topShapes.Text.Trim();
-
-            return "";
-        }
-
-        private string ExtractSubjectRev17_19(List<TextBoxInfo> textBoxes)
-        {
-            // For Rev 17/19, subject is typically in a specific position
-
-            // Position 1: Left 315-640, Top 495-510 (header area)
-            foreach (var box in textBoxes)
-            {
-                string text = box.Text.Trim();
-                string upper = text.ToUpper();
-
-                if (IsLabel(upper) || string.IsNullOrWhiteSpace(text)) continue;
-
-                Console.WriteLine($"  Rev17-19 Subject check: Text='{text}', Left={box.Left:F1}, Top={box.Top:F1}");
-
-                // Header position
-                if (box.Left > 310 && box.Left < 645 && box.Top > 490 && box.Top < 515 &&
-                    text.Length > 3 && text.Length < 80)
-                {
-                    return text;
-                }
-            }
-
-            // Position 2: Top of slide (for subsequent slides) - Left 50-650, Top 30-100
-            foreach (var box in textBoxes)
-            {
-                string text = box.Text.Trim();
-                string upper = text.ToUpper();
-
-                if (IsLabel(upper) || string.IsNullOrWhiteSpace(text)) continue;
-
-                // Top of slide position
-                if (box.Top > 25 && box.Top < 105 &&
-                    box.Left > 45 && box.Left < 655 &&
-                    text.Length > 3 && text.Length < 100)
-                {
-                    return text;
-                }
-            }
-
-            // Position 3: Largest font at top
-            var topShapes = textBoxes
-                .Where(b => b.Top < 120 && b.Text.Trim().Length > 3 && b.Text.Trim().Length < 100)
-                .OrderByDescending(b => b.Height)
-                .ThenBy(b => b.Top)
-                .FirstOrDefault();
-
-            if (topShapes != null)
-                return topShapes.Text.Trim();
-
-            return "";
-        }
-
-        private string ExtractSubjectFallback(Slide slide)
-        {
-            try
-            {
-                // Check for title placeholder
-                foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in slide.Shapes)
-                {
-                    try
-                    {
-                        if (shape.Type == MsoShapeType.msoPlaceholder)
-                        {
-                            var placeholder = shape.PlaceholderFormat;
-                            if (placeholder.Type == PpPlaceholderType.ppPlaceholderTitle ||
-                                placeholder.Type == PpPlaceholderType.ppPlaceholderCenterTitle)
-                            {
-                                if (shape.HasTextFrame == MsoTriState.msoTrue)
-                                {
-                                    string titleText = shape.TextFrame.TextRange.Text.Trim();
-                                    if (!string.IsNullOrWhiteSpace(titleText))
-                                        return titleText;
-                                }
-                            }
-                        }
-                    }
-                    catch { }
-                }
-
-                // Find largest font at top of slide
-                var topShapes = new List<(string text, float top, float fontSize)>();
-                foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in slide.Shapes)
-                {
-                    try
-                    {
-                        if (shape.HasTextFrame == MsoTriState.msoTrue && shape.Top < 100)
-                        {
-                            string text = shape.TextFrame.TextRange.Text.Trim();
-                            if (!string.IsNullOrWhiteSpace(text) && text.Length < 100)
-                            {
-                                float fontSize = 12;
-                                try { fontSize = shape.TextFrame.TextRange.Font.Size; } catch { }
-                                topShapes.Add((text, shape.Top, fontSize));
-                            }
-                        }
-                    }
-                    catch { }
-                }
-
-                if (topShapes.Count > 0)
-                {
-                    var largestFont = topShapes.OrderByDescending(s => s.fontSize).ThenBy(s => s.top).First();
-                    return largestFont.text;
-                }
-
-                return "";
-            }
-            catch
-            {
-                return "";
-            }
-        }
-
-        private string ExtractTextFromShape(Microsoft.Office.Interop.PowerPoint.Shape shape)
-        {
-            var text = new System.Text.StringBuilder();
-            try
-            {
-                if (shape.Type == MsoShapeType.msoGroup)
-                {
-                    foreach (Microsoft.Office.Interop.PowerPoint.Shape groupShape in shape.GroupItems)
-                    {
-                        string groupText = ExtractTextFromShape(groupShape);
-                        if (!string.IsNullOrWhiteSpace(groupText))
-                            text.AppendLine(groupText);
-                    }
-                }
-                else if (shape.HasTextFrame == MsoTriState.msoTrue)
-                {
-                    try
-                    {
-                        string shapeText = shape.TextFrame.TextRange.Text;
-                        if (!string.IsNullOrWhiteSpace(shapeText))
-                            text.AppendLine(shapeText.Trim());
-                    }
-                    catch { }
-                }
-            }
-            catch { }
-            return text.ToString().Trim();
-        }
-
-        private List<Dictionary<string, string>> ExtractTableOfContents(Presentation ppt, int docId,
-            string wiNumber, string sourceFileName)
-        {
-            var tocData = new List<Dictionary<string, string>>();
-            string currentSubject = null;
-            int subjectStartSlide = 0;
-            int slideCount = 0;
-
-            for (int slideIdx = 1; slideIdx <= ppt.Slides.Count; slideIdx++)
-            {
-                try
-                {
-                    Slide slide = ppt.Slides[slideIdx];
-                    string slideSubject = ExtractSlideSubject(slide);
-
-                    if (currentSubject == null)
-                    {
-                        currentSubject = slideSubject;
-                        subjectStartSlide = slideIdx;
-                        slideCount = 1;
-                    }
-                    else if (slideSubject == currentSubject)
-                    {
-                        slideCount++;
-                    }
-                    else
-                    {
-                        tocData.Add(new Dictionary<string, string>
-                        {
-                            ["DocumentID"] = docId.ToString(),
-                            ["WI_Number"] = wiNumber,
-                            ["SourceFileName"] = sourceFileName,
-                            ["SlideNumber"] = subjectStartSlide.ToString(),
-                            ["SlideSubject"] = currentSubject,
-                            ["SlideTotal"] = slideCount.ToString()
-                        });
-
-                        currentSubject = slideSubject;
-                        subjectStartSlide = slideIdx;
-                        slideCount = 1;
-                    }
-                }
-                catch { }
-            }
-
-            if (currentSubject != null)
-            {
-                tocData.Add(new Dictionary<string, string>
-                {
-                    ["DocumentID"] = docId.ToString(),
-                    ["WI_Number"] = wiNumber,
-                    ["SourceFileName"] = sourceFileName,
-                    ["SlideNumber"] = subjectStartSlide.ToString(),
-                    ["SlideSubject"] = currentSubject,
-                    ["SlideTotal"] = slideCount.ToString()
-                });
-            }
-
-            return tocData;
-        }
-
-        private List<Dictionary<string, string>> ExtractImagesFromPresentation(Presentation ppt, int docId,
-            string wiNumber, string sourceFileName, string baseImagesFolder, string composedImagesFolder)
-        {
-            var imageData = new List<Dictionary<string, string>>();
-            int imageCounter = 1;
-
-            string cleanWiNumber = wiNumber.StartsWith("WI-WI-") ? wiNumber.Substring(3) : wiNumber;
-            string docFolderName = !string.IsNullOrEmpty(cleanWiNumber) ? cleanWiNumber : $"Doc-{docId}";
-            docFolderName = string.Join("_", docFolderName.Split(Path.GetInvalidFileNameChars()));
-
-            string baseDocFolder = Path.Combine(baseImagesFolder, docFolderName);
-            string composedDocFolder = Path.Combine(composedImagesFolder, docFolderName);
-            Directory.CreateDirectory(baseDocFolder);
-            Directory.CreateDirectory(composedDocFolder);
-
-            for (int slideIdx = 1; slideIdx <= ppt.Slides.Count; slideIdx++)
-            {
-                Slide slide = ppt.Slides[slideIdx];
-                foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in slide.Shapes)
-                {
-                    try
-                    {
-                        if (shape.Type == MsoShapeType.msoPicture)
-                        {
-                            string imageFileName = $"{cleanWiNumber}_Slide{slideIdx:D2}_Img{imageCounter:D2}.png";
-                            string imagePath = Path.Combine(baseDocFolder, imageFileName);
-                            ExportShape(shape, imagePath);
-
-                            imageData.Add(new Dictionary<string, string>
-                            {
-                                ["DocumentID"] = docId.ToString(),
-                                ["WI_Number"] = cleanWiNumber,
-                                ["SourceFileName"] = sourceFileName,
-                                ["SlideNumber"] = slideIdx.ToString(),
-                                ["ImageNumber"] = imageCounter.ToString(),
-                                ["ImageType"] = "Base",
-                                ["ImageFileName"] = imageFileName,
-                                ["ImagePath"] = Path.Combine(docFolderName, imageFileName),
-                                ["IsGrouped"] = "No",
-                                ["Width"] = shape.Width.ToString("F2"),
-                                ["Height"] = shape.Height.ToString("F2")
-                            });
-                            imageCounter++;
-                        }
-                        else if (shape.Type == MsoShapeType.msoGroup && ContainsPictures(shape.GroupItems))
-                        {
-                            string composedFileName = $"{cleanWiNumber}_Slide{slideIdx:D2}_Composed{imageCounter:D2}.png";
-                            string composedPath = Path.Combine(composedDocFolder, composedFileName);
-                            ExportShape(shape, composedPath);
-
-                            imageData.Add(new Dictionary<string, string>
-                            {
-                                ["DocumentID"] = docId.ToString(),
-                                ["WI_Number"] = cleanWiNumber,
-                                ["SourceFileName"] = sourceFileName,
-                                ["SlideNumber"] = slideIdx.ToString(),
-                                ["ImageNumber"] = imageCounter.ToString(),
-                                ["ImageType"] = "Composed",
-                                ["ImageFileName"] = composedFileName,
-                                ["ImagePath"] = Path.Combine(docFolderName, composedFileName),
-                                ["IsGrouped"] = "Yes",
-                                ["Width"] = shape.Width.ToString("F2"),
-                                ["Height"] = shape.Height.ToString("F2")
-                            });
-
-                            ExtractImagesFromGroup(shape.GroupItems, docId, cleanWiNumber, sourceFileName,
-                                slideIdx, ref imageCounter, baseDocFolder, docFolderName, imageData);
-                            imageCounter++;
-                        }
-                    }
-                    catch { }
-                }
-            }
-
-            return imageData;
-        }
-
-        private void ExtractImagesFromGroup(Microsoft.Office.Interop.PowerPoint.GroupShapes groupShapes,
-            int docId, string wiNumber, string sourceFileName, int slideIdx, ref int imageCounter,
-            string baseDocFolder, string docFolderName, List<Dictionary<string, string>> imageData)
-        {
-            foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in groupShapes)
-            {
-                try
-                {
-                    if (shape.Type == MsoShapeType.msoPicture)
-                    {
-                        string imageFileName = $"{wiNumber}_Slide{slideIdx:D2}_Img{imageCounter:D2}_FromGroup.png";
-                        string imagePath = Path.Combine(baseDocFolder, imageFileName);
-                        ExportShape(shape, imagePath);
-
-                        imageData.Add(new Dictionary<string, string>
-                        {
-                            ["DocumentID"] = docId.ToString(),
-                            ["WI_Number"] = wiNumber,
-                            ["SourceFileName"] = sourceFileName,
-                            ["SlideNumber"] = slideIdx.ToString(),
-                            ["ImageNumber"] = imageCounter.ToString(),
-                            ["ImageType"] = "Base",
-                            ["ImageFileName"] = imageFileName,
-                            ["ImagePath"] = Path.Combine(docFolderName, imageFileName),
-                            ["IsGrouped"] = "Yes (Extracted)",
-                            ["Width"] = shape.Width.ToString("F2"),
-                            ["Height"] = shape.Height.ToString("F2")
-                        });
-                        imageCounter++;
-                    }
-                    else if (shape.Type == MsoShapeType.msoGroup)
-                    {
-                        ExtractImagesFromGroup(shape.GroupItems, docId, wiNumber, sourceFileName,
-                            slideIdx, ref imageCounter, baseDocFolder, docFolderName, imageData);
-                    }
-                }
-                catch { }
-            }
-        }
-
-        private bool ContainsPictures(Microsoft.Office.Interop.PowerPoint.GroupShapes groupShapes)
-        {
-            foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in groupShapes)
-            {
-                if (shape.Type == MsoShapeType.msoPicture) return true;
-                if (shape.Type == MsoShapeType.msoGroup && ContainsPictures(shape.GroupItems)) return true;
-            }
-            return false;
-        }
-
-        private void ExportShape(Microsoft.Office.Interop.PowerPoint.Shape shape, string outputPath)
-        {
-            try
-            {
-                shape.Export(outputPath, PpShapeFormat.ppShapeFormatPNG);
-            }
-            catch
-            {
-                try
-                {
-                    shape.Copy();
-                    var img = System.Windows.Forms.Clipboard.GetImage();
-                    if (img != null) img.Save(outputPath, ImageFormat.Png);
-                }
-                catch { }
-            }
-        }
-
-        private void CollectTextBoxes(Microsoft.Office.Interop.PowerPoint.Shapes shapes, List<TextBoxInfo> textBoxes)
-        {
-            foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in shapes)
-            {
-                try
-                {
-                    if (shape.Type == MsoShapeType.msoGroup)
-                        CollectTextBoxesFromGroup(shape.GroupItems, textBoxes);
-                    else if (shape.HasTextFrame == MsoTriState.msoTrue)
-                    {
-                        string text = shape.TextFrame.TextRange.Text.Trim();
-                        if (!string.IsNullOrEmpty(text))
-                        {
-                            textBoxes.Add(new TextBoxInfo
-                            {
-                                Text = text,
-                                Left = shape.Left,
-                                Top = shape.Top,
-                                Width = shape.Width,
-                                Height = shape.Height
-                            });
-                        }
-                    }
-                }
-                catch { }
-            }
-        }
-
-        private void CollectTextBoxesFromGroup(Microsoft.Office.Interop.PowerPoint.GroupShapes groupShapes,
-            List<TextBoxInfo> textBoxes)
-        {
-            foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in groupShapes)
-            {
-                try
-                {
-                    if (shape.Type == MsoShapeType.msoGroup)
-                        CollectTextBoxesFromGroup(shape.GroupItems, textBoxes);
-                    else if (shape.HasTextFrame == MsoTriState.msoTrue)
-                    {
-                        string text = shape.TextFrame.TextRange.Text.Trim();
-                        if (!string.IsNullOrEmpty(text))
-                        {
-                            textBoxes.Add(new TextBoxInfo
-                            {
-                                Text = text,
-                                Left = shape.Left,
-                                Top = shape.Top,
-                                Width = shape.Width,
-                                Height = shape.Height
-                            });
-                        }
-                    }
-                }
-                catch { }
-            }
-        }
-
-        #region Python and Excel Operations
-
-        private bool RunPythonScript(string pptxFilePath, string outputExcel, Action<int, string> progressCallback)
-        {
-            try
-            {
-                progressCallback?.Invoke(45, "Looking for Python...");
-                string pythonExe = FindPythonExecutable();
-
-                if (string.IsNullOrEmpty(pythonExe))
-                {
-                    progressCallback?.Invoke(50, "Python not found - skipping table extraction");
-                    return false;
-                }
-
-                string scriptPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "extract_tables.py");
-
-                if (!File.Exists(scriptPath))
-                {
-                    progressCallback?.Invoke(50, $"Python script not found at: {scriptPath}");
-                    return false;
-                }
-
-                // Create temp folder with single file
-                string tempFolder = Path.Combine(Path.GetTempPath(), "TempWI_" + Guid.NewGuid());
-                Directory.CreateDirectory(tempFolder);
-
-                string tempFilePath = Path.Combine(tempFolder, Path.GetFileName(pptxFilePath));
-                File.Copy(pptxFilePath, tempFilePath, true);
-
-                progressCallback?.Invoke(50, "Running Python table extraction...");
-
-                // Run Python directly with arguments
-                ProcessStartInfo start = new ProcessStartInfo
-                {
-                    FileName = pythonExe,
-                    Arguments = $"\"{scriptPath}\" \"{tempFolder}\" \"{outputExcel}\"",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true,
-                    WorkingDirectory = Path.GetDirectoryName(scriptPath)
-                };
-
-                using (Process process = Process.Start(start))
-                {
-                    // Read output asynchronously to prevent deadlock
-                    var outputBuilder = new System.Text.StringBuilder();
-                    var errorBuilder = new System.Text.StringBuilder();
-
-                    process.OutputDataReceived += (sender, e) =>
-                    {
-                        if (e.Data != null)
-                        {
-                            outputBuilder.AppendLine(e.Data);
-                            // Show progress in UI
-                            if (e.Data.Contains("Processing:") || e.Data.Contains("Extracted"))
-                            {
-                                progressCallback?.Invoke(55, e.Data);
-                            }
-                        }
-                    };
-
-                    process.ErrorDataReceived += (sender, e) =>
-                    {
-                        if (e.Data != null)
-                        {
-                            errorBuilder.AppendLine(e.Data);
-                        }
-                    };
-
-                    process.BeginOutputReadLine();
-                    process.BeginErrorReadLine();
-
-                    // Wait up to 5 minutes for Python script
-                    bool completed = process.WaitForExit(300000); // 5 minutes timeout
-
-                    if (!completed)
-                    {
-                        progressCallback?.Invoke(60, "Python script timed out - killing process");
-                        try { process.Kill(); } catch { }
-
-                        // Cleanup
-                        try
-                        {
-                            File.Delete(tempFilePath);
-                            Directory.Delete(tempFolder);
-                        }
-                        catch { }
-
-                        return false;
-                    }
-
-                    // Cleanup temp files
-                    try
-                    {
-                        File.Delete(tempFilePath);
-                        Directory.Delete(tempFolder);
-                    }
-                    catch { }
-
-                    string output = outputBuilder.ToString();
-                    string errors = errorBuilder.ToString();
-
-                    if (process.ExitCode != 0)
-                    {
-                        progressCallback?.Invoke(60, $"Python exit code: {process.ExitCode}");
-                        if (!string.IsNullOrEmpty(errors))
-                            progressCallback?.Invoke(60, $"Python error: {errors.Substring(0, Math.Min(200, errors.Length))}");
-                        return false;
-                    }
-
-                    bool success = File.Exists(outputExcel);
-                    if (success)
-                    {
-                        progressCallback?.Invoke(70, "Table extraction complete");
-                    }
-                    else
-                    {
-                        progressCallback?.Invoke(70, "No output file created");
-                        if (!string.IsNullOrEmpty(output))
-                            progressCallback?.Invoke(70, $"Output: {output.Substring(0, Math.Min(200, output.Length))}");
-                    }
-
-                    return success;
-                }
-            }
-            catch (Exception ex)
-            {
-                progressCallback?.Invoke(50, $"Error running Python: {ex.Message}");
-                return false;
-            }
-        }
-
-        private string FindPythonExecutable()
-        {
-            string[] paths = { "python", "python3",
-                @"C:\Python313\python.exe",
-                @"C:\Python311\python.exe",
-                @"C:\Python310\python.exe"
-            };
-
-            foreach (string path in paths)
-            {
-                try
-                {
-                    ProcessStartInfo psi = new ProcessStartInfo
-                    {
-                        FileName = path,
-                        Arguments = "--version",
-                        UseShellExecute = false,
-                        RedirectStandardOutput = true,
-                        CreateNoWindow = true
-                    };
-
-                    using (Process process = Process.Start(psi))
-                    {
-                        process.WaitForExit();
-                        if (process.ExitCode == 0) return path;
-                    }
-                }
-                catch { continue; }
-            }
-            return null;
-        }
-
-        private void MergeExcelFiles(string headerFile, string tablesFile, string outputFile)
-        {
-            using (var headerPackage = new ExcelPackage(new FileInfo(headerFile)))
-            using (var tablesPackage = new ExcelPackage(new FileInfo(tablesFile)))
-            using (var outputPackage = new ExcelPackage())
-            {
-                // Copy header sheets
-                foreach (var sheet in headerPackage.Workbook.Worksheets)
-                    outputPackage.Workbook.Worksheets.Add(sheet.Name, sheet);
-
-                // Copy table sheets
-                foreach (var sheet in tablesPackage.Workbook.Worksheets)
-                    outputPackage.Workbook.Worksheets.Add(sheet.Name, sheet);
-
-                outputPackage.SaveAs(new FileInfo(outputFile));
-            }
-        }
-
-        private void WriteToExcel(List<Dictionary<string, string>> headerData,
-            List<Dictionary<string, string>> imageData,
-            List<Dictionary<string, string>> textData,
-            List<Dictionary<string, string>> tocData,
-            string excelPath)
-        {
-            if (File.Exists(excelPath)) File.Delete(excelPath);
-
-            using (var package = new ExcelPackage())
-            {
-                // Header Data sheet
-                var ws = package.Workbook.Worksheets.Add("Header Data");
-                var headers = new[] { "Document ID", "Source File Name", "WI Number", "WI Title",
-                    "Revision", "BOM/ASSY DWG NO", "Operation No", "Product Line", "Subject",
-                    "Revision Type", "Total Pages", "Total Images" };
-
-                for (int i = 0; i < headers.Length; i++)
-                    ws.Cells[1, i + 1].Value = headers[i];
-
-                FormatHeader(ws, headers.Length);
-
-                int row = 2;
-                foreach (var record in headerData)
-                {
-                    ws.Cells[row, 1].Value = record.GetValueOrDefault("DocumentID");
-                    ws.Cells[row, 2].Value = record.GetValueOrDefault("SourceFileName");
-                    ws.Cells[row, 3].Value = record.GetValueOrDefault("WI_Number");
-                    ws.Cells[row, 4].Value = record.GetValueOrDefault("WI_Title");
-                    ws.Cells[row, 5].Value = record.GetValueOrDefault("Revision");
-                    ws.Cells[row, 6].Value = record.GetValueOrDefault("BOM_ASSY_DWG_NO");
-                    ws.Cells[row, 7].Value = record.GetValueOrDefault("Operation_No");
-                    ws.Cells[row, 8].Value = record.GetValueOrDefault("Product_Line");
-                    ws.Cells[row, 9].Value = record.GetValueOrDefault("Subject");
-                    ws.Cells[row, 10].Value = record.GetValueOrDefault("RevisionType");
-                    ws.Cells[row, 11].Value = record.GetValueOrDefault("TotalPages");
-                    ws.Cells[row, 12].Value = record.GetValueOrDefault("TotalImages");
-                    row++;
-                }
-                ws.Cells[ws.Dimension.Address].AutoFitColumns();
-
-                // Images sheet
-                if (imageData.Count > 0)
-                {
-                    var imgWs = package.Workbook.Worksheets.Add("Images");
-                    var imgHeaders = new[] { "Document ID", "WI Number", "Source File Name",
-                        "Slide Number", "Image Number", "Image Type", "Image File Name",
-                        "Image Path", "Is Grouped", "Width", "Height" };
-
-                    for (int i = 0; i < imgHeaders.Length; i++)
-                        imgWs.Cells[1, i + 1].Value = imgHeaders[i];
-
-                    FormatHeader(imgWs, imgHeaders.Length);
-
-                    row = 2;
-                    foreach (var img in imageData)
-                    {
-                        imgWs.Cells[row, 1].Value = img.GetValueOrDefault("DocumentID");
-                        imgWs.Cells[row, 2].Value = img.GetValueOrDefault("WI_Number");
-                        imgWs.Cells[row, 3].Value = img.GetValueOrDefault("SourceFileName");
-                        imgWs.Cells[row, 4].Value = img.GetValueOrDefault("SlideNumber");
-                        imgWs.Cells[row, 5].Value = img.GetValueOrDefault("ImageNumber");
-                        imgWs.Cells[row, 6].Value = img.GetValueOrDefault("ImageType");
-                        imgWs.Cells[row, 7].Value = img.GetValueOrDefault("ImageFileName");
-                        imgWs.Cells[row, 8].Value = img.GetValueOrDefault("ImagePath");
-                        imgWs.Cells[row, 9].Value = img.GetValueOrDefault("IsGrouped");
-                        imgWs.Cells[row, 10].Value = img.GetValueOrDefault("Width");
-                        imgWs.Cells[row, 11].Value = img.GetValueOrDefault("Height");
-                        row++;
-                    }
-                    imgWs.Cells[imgWs.Dimension.Address].AutoFitColumns();
-                }
-
-                // Table of Contents sheet
-                if (tocData.Count > 0)
-                {
-                    var tocWs = package.Workbook.Worksheets.Add("Table of Contents");
-                    var tocHeaders = new[] { "Document ID", "WI Number", "Source File Name",
-                        "Slide Number", "Slide Subject", "Slide Total" };
-
-                    for (int i = 0; i < tocHeaders.Length; i++)
-                        tocWs.Cells[1, i + 1].Value = tocHeaders[i];
-
-                    FormatHeader(tocWs, tocHeaders.Length);
-
-                    row = 2;
-                    foreach (var toc in tocData)
-                    {
-                        tocWs.Cells[row, 1].Value = toc.GetValueOrDefault("DocumentID");
-                        tocWs.Cells[row, 2].Value = toc.GetValueOrDefault("WI_Number");
-                        tocWs.Cells[row, 3].Value = toc.GetValueOrDefault("SourceFileName");
-                        tocWs.Cells[row, 4].Value = toc.GetValueOrDefault("SlideNumber");
-                        tocWs.Cells[row, 5].Value = toc.GetValueOrDefault("SlideSubject");
-                        tocWs.Cells[row, 6].Value = toc.GetValueOrDefault("SlideTotal");
-                        row++;
-                    }
-                    tocWs.Cells[tocWs.Dimension.Address].AutoFitColumns();
-                }
-
-                // Text Content sheet
-                if (textData.Count > 0)
-                {
-                    var textWs = package.Workbook.Worksheets.Add("Text Content");
-                    var textHeaders = new[] { "Document ID", "WI Number", "Source File Name",
-                        "Slide Number", "Slide Subject", "TextBox Number", "Text Content" };
-
-                    for (int i = 0; i < textHeaders.Length; i++)
-                        textWs.Cells[1, i + 1].Value = textHeaders[i];
-
-                    FormatHeader(textWs, textHeaders.Length);
-
-                    row = 2;
-                    foreach (var txt in textData)
-                    {
-                        textWs.Cells[row, 1].Value = txt.GetValueOrDefault("DocumentID");
-                        textWs.Cells[row, 2].Value = txt.GetValueOrDefault("WI_Number");
-                        textWs.Cells[row, 3].Value = txt.GetValueOrDefault("SourceFileName");
-                        textWs.Cells[row, 4].Value = txt.GetValueOrDefault("SlideNumber");
-                        textWs.Cells[row, 5].Value = txt.GetValueOrDefault("SlideSubject");
-                        textWs.Cells[row, 6].Value = txt.GetValueOrDefault("TextBoxNumber");
-                        textWs.Cells[row, 7].Value = txt.GetValueOrDefault("TextContent");
-                        textWs.Cells[row, 7].Style.WrapText = true;
-                        row++;
-                    }
-                    textWs.Column(7).Width = 80;
-                    textWs.Cells[textWs.Dimension.Address].AutoFitColumns();
-                }
-
-                package.SaveAs(new FileInfo(excelPath));
-            }
-        }
-
-        private void FormatHeader(OfficeOpenXml.ExcelWorksheet ws, int columnCount)
-        {
-            using (var range = ws.Cells[1, 1, 1, columnCount])
-            {
-                range.Style.Font.Bold = true;
-                range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
-                range.Style.Fill.BackgroundColor.SetColor(Color.LightGray);
-                range.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
-            }
-        }
-
-        #endregion
-    }
-
-    public class ExtractionResult
-    {
-        public string ExcelPath { get; set; } = string.Empty;
-        public string BaseImagesFolder { get; set; } = string.Empty;
-        public string ComposedImagesFolder { get; set; } = string.Empty;
-        public string WINumber { get; set; } = string.Empty;
-    }
-
-    public class TextBoxInfo
-    {
-        public string Text { get; set; } = string.Empty;
-        public float Left { get; set; }
-        public float Top { get; set; }
-        public float Width { get; set; }
-        public float Height { get; set; }
-    }
-}
+                    
+                    # Extract each cell in the row
+                    for col_idx in range(len(table.columns)):
+                        # Use merged-cell-aware extraction
+                        cell_value = get_merged_cell_value(table, row_idx, col_idx)
+                        cell_value = clean_cell_value(cell_value)
+                        
+                        # Column name: use first row as headers if it looks like headers,
+                        # otherwise use generic Column1, Column2, etc.
+                        if row_idx == 0:
+                            col_name = f"Column{col_idx + 1}"
+                        else:
+                            # Try to use first row as header
+                            try:
+                                header_cell = table.rows[0].cells[col_idx].text.strip()
+                                if header_cell and len(header_cell) < 50:
+                                    col_name = header_cell.replace(' ', '_').replace('/', '_')
+                                    # Make it Excel-friendly
+                                    col_name = ''.join(c for c in col_name if c.isalnum() or c == '_')
+                                    if not col_name:
+                                        col_name = f"Column{col_idx + 1}"
+                                else:
+                                    col_name = f"Column{col_idx + 1}"
+                            except:
+                                col_name = f"Column{col_idx + 1}"
+                        
+                        row_data[col_name] = cell_value
+                    
+                    table_data.append(row_data)
+                
+                all_tables[table_name] = table_data
+                print(f"      Extracted {len(table_data)} rows")
+                
+                table_counter += 1
+    
+    if all_tables:
+        print(f"\n  Found {len(all_tables)} additional table(s)")
+    else:
+        print(f"\n  No additional tables found")
+    
+    return all_tables
+
+def extract_revision_history(slide, doc_id):
+    """Extracts Revision History table from slide"""
+    rev_data = []
+    
+    table = find_table_by_header(slide, 'REVISION HISTORY')
+    
+    if table:
+        # Skip first row (header) and get data
+        for idx, row in enumerate(list(table.rows)[1:], start=1):
+            if len(row.cells) >= 3:
+                rev_num = row.cells[0].text.strip()
+                rev_desc = row.cells[1].text.strip()
+                rev_date = row.cells[2].text.strip()
+                
+                # Skip header row and empty rows
+                if rev_num and 'Rev' not in rev_num and rev_num != '#' and 'Description' not in rev_desc:
+                    # Format date
+                    formatted_date = parse_date(rev_date)
+                    
+                    rev_data.append({
+                        'DocumentID': doc_id,
+                        'RevNumber': rev_num,
+                        'ChangeDescription': rev_desc,
+                        'ChangeDate': formatted_date,
+                        'RowOrder': idx
+                    })
+    
+    return rev_data
+
+def extract_drafting_and_approvals(slide, doc_id):
+    """Extracts both Drafting and Approvals from combined table"""
+    drafting_data = []
+    approvals_data = []
+    
+    for shape in slide.shapes:
+        if shape.has_table:
+            table = shape.table
+            
+            # Check if this table has both Drafting and Approvals
+            all_text = ' '.join([cell.text for row in table.rows for cell in row.cells]).upper()
+            
+            if 'DRAFTING' in all_text and 'APPROVALS' in all_text:
+                # This is the combined table
+                in_approvals_section = False
+                
+                for row_idx, row in enumerate(table.rows):
+                    if len(row.cells) >= 3:
+                        first_cell = row.cells[0].text.strip()
+                        
+                        # Check if we've reached Approvals section
+                        if 'Approvals' in first_cell:
+                            in_approvals_section = True
+                            continue
+                        
+                        # Skip header rows
+                        if first_cell in ['Drafting', 'Signatures', 'Date']:
+                            continue
+                        
+                        # Extract data
+                        col1 = row.cells[0].text.strip()
+                        col2 = row.cells[1].text.strip()
+                        col3 = row.cells[2].text.strip()
+                        
+                        # Format date
+                        formatted_date = parse_date(col3)
+                        
+                        if col1:  # Has data
+                            if in_approvals_section:
+                                # Approvals section
+                                approvals_data.append({
+                                    'DocumentID': doc_id,
+                                    'Department': col1,
+                                    'Signature': col2,
+                                    'ApprovalDate': formatted_date
+                                })
+                            else:
+                                # Drafting section
+                                drafting_data.append({
+                                    'DocumentID': doc_id,
+                                    'Role': col1,
+                                    'Signature': col2,
+                                    'SignatureDate': formatted_date
+                                })
+                
+                break
+    
+    return drafting_data, approvals_data
+
+def format_excel_sheet(worksheet):
+    """Formats Excel sheet with gray headers and auto-fit columns"""
+    # Format header row
+    gray_fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
+    bold_font = Font(bold=True)
+    center_alignment = Alignment(horizontal="center")
+    
+    for cell in worksheet[1]:
+        cell.fill = gray_fill
+        cell.font = bold_font
+        cell.alignment = center_alignment
+    
+    # Auto-fit columns
+    for column in worksheet.columns:
+        max_length = 0
+        column_letter = column[0].column_letter
+        
+        for cell in column:
+            try:
+                if cell.value:
+                    max_length = max(max_length, len(str(cell.value)))
+            except:
+                pass
+        
+        adjusted_width = min(max_length + 2, 50)  # Cap at 50 characters
+        worksheet.column_dimensions[column_letter].width = adjusted_width
+
+def process_powerpoint_files(folder_path, output_excel):
+    """Main function to process PowerPoint files"""
+    
+    # Initialize data containers
+    bom_data_all = []
+    equipment_data_all = []
+    parts_data_all = []
+    rev_history_all = []
+    drafting_all = []
+    approvals_all = []
+    other_tables_all = {}  # Dictionary to hold all other tables
+    
+    doc_id = 1
+    
+    # Define known table headers that we already extract
+    known_table_headers = [
+        'BOM/CONFIGURATION',
+        'BOM',
+        'CONFIGURATION',
+        'EQUIPMENT REQUIRED',
+        'PARTS REQUIRED',
+        'REVISION HISTORY',
+        'DRAFTING',
+        'APPROVALS'
+    ]
+    
+    # Process each PowerPoint file
+    for filename in os.listdir(folder_path):
+        if filename.endswith('.pptx') or filename.endswith('.ppt'):
+            if filename.startswith('~$'):  # Skip temp files
+                continue
+            
+            print(f"Processing: {filename}")
+            
+            filepath = os.path.join(folder_path, filename)
+            
+            try:
+                prs = Presentation(filepath)
+                
+                # Identify revision type
+                rev_type = identify_revision_type(prs)
+                print(f"  Revision type: {rev_type}")
+                
+                # Get first slide
+                if len(prs.slides) > 0:
+                    first_slide = prs.slides[0]
+                    
+                    # Extract tables from first slide
+                    bom_data_all.extend(extract_bom_table(first_slide, doc_id))
+                    
+                    rev_history_all.extend(extract_revision_history(first_slide, doc_id))
+                    
+                    # Extract drafting and approvals (from combined table)
+                    drafting, approvals = extract_drafting_and_approvals(first_slide, doc_id)
+                    drafting_all.extend(drafting)
+                    approvals_all.extend(approvals)
+                    
+                    print(f"  Extracted from slide 1: {len(drafting)} drafting, {len(approvals)} approvals")
+                
+                # Get second slide for Equipment and Parts
+                if len(prs.slides) > 1:
+                    second_slide = prs.slides[1]
+                    equipment, parts = extract_equipment_and_parts(second_slide, doc_id)
+                    equipment_data_all.extend(equipment)
+                    parts_data_all.extend(parts)
+                    print(f"  Extracted from slide 2: {len(equipment)} equipment, {len(parts)} parts")
+                
+                # **NEW: Scan for all other tables across all slides**
+                other_tables = extract_all_other_tables(prs, doc_id, known_table_headers)
+                
+                # Merge other tables data
+                for table_name, table_data in other_tables.items():
+                    if table_name not in other_tables_all:
+                        other_tables_all[table_name] = []
+                    other_tables_all[table_name].extend(table_data)
+                
+                doc_id += 1
+                
+            except Exception as e:
+                print(f"  ERROR processing {filename}: {str(e)}")
+                import traceback
+                traceback.print_exc()
+    
+    # Create Excel file
+    print(f"\nCreating Excel file: {output_excel}")
+    
+    with pd.ExcelWriter(output_excel, engine='openpyxl') as writer:
+        # BOM sheet
+        if bom_data_all:
+            df_bom = pd.DataFrame(bom_data_all)
+            df_bom.to_excel(writer, sheet_name='BOM', index=False)
+        else:
+            df_bom = pd.DataFrame(columns=['DocumentID', 'PartNumber', 'Description', 'RowOrder'])
+            df_bom.to_excel(writer, sheet_name='BOM', index=False)
+        
+        # Equipment Required sheet
+        if equipment_data_all:
+            df_equipment = pd.DataFrame(equipment_data_all)
+            df_equipment.to_excel(writer, sheet_name='EquipmentRequired', index=False)
+        else:
+            df_equipment = pd.DataFrame(columns=['DocumentID', 'Quantity', 'PartNumber', 'Description', 'RowOrder'])
+            df_equipment.to_excel(writer, sheet_name='EquipmentRequired', index=False)
+        
+        # Parts Required sheet
+        if parts_data_all:
+            df_parts = pd.DataFrame(parts_data_all)
+            df_parts.to_excel(writer, sheet_name='PartsRequired', index=False)
+        else:
+            df_parts = pd.DataFrame(columns=['DocumentID', 'Quantity', 'PartNumber', 'Description', 'RowOrder'])
+            df_parts.to_excel(writer, sheet_name='PartsRequired', index=False)
+        
+        # Revision History sheet
+        if rev_history_all:
+            df_rev = pd.DataFrame(rev_history_all)
+            df_rev.to_excel(writer, sheet_name='RevisionHistory', index=False)
+        else:
+            df_rev = pd.DataFrame(columns=['DocumentID', 'RevNumber', 'ChangeDescription', 'ChangeDate', 'RowOrder'])
+            df_rev.to_excel(writer, sheet_name='RevisionHistory', index=False)
+        
+        # Drafting sheet
+        if drafting_all:
+            df_draft = pd.DataFrame(drafting_all)
+            df_draft.to_excel(writer, sheet_name='Drafting', index=False)
+        else:
+            df_draft = pd.DataFrame(columns=['DocumentID', 'Role', 'Signature', 'SignatureDate'])
+            df_draft.to_excel(writer, sheet_name='Drafting', index=False)
+        
+        # Approvals sheet
+        if approvals_all:
+            df_approve = pd.DataFrame(approvals_all)
+            df_approve.to_excel(writer, sheet_name='Approvals', index=False)
+        else:
+            df_approve = pd.DataFrame(columns=['DocumentID', 'Department', 'Signature', 'ApprovalDate'])
+            df_approve.to_excel(writer, sheet_name='Approvals', index=False)
+        
+        # **NEW: Add sheets for all other discovered tables**
+        for table_name, table_data in other_tables_all.items():
+            if table_data:
+                df_other = pd.DataFrame(table_data)
+                # Ensure sheet name is valid
+                safe_sheet_name = table_name[:31]
+                df_other.to_excel(writer, sheet_name=safe_sheet_name, index=False)
+                print(f"  Created sheet: {safe_sheet_name} ({len(table_data)} rows)")
+    
+    # Apply formatting to all sheets
+    print("Applying formatting...")
+    workbook = load_workbook(output_excel)
+    
+    for sheet_name in workbook.sheetnames:
+        worksheet = workbook[sheet_name]
+        format_excel_sheet(worksheet)
+    
+    workbook.save(output_excel)
+    
+    print(f"\nExtraction complete!")
+    print(f"Processed {doc_id - 1} documents")
+    print(f"Total BOM entries: {len(bom_data_all)}")
+    print(f"Total Equipment entries: {len(equipment_data_all)}")
+    print(f"Total Parts entries: {len(parts_data_all)}")
+    print(f"Total Revision History entries: {len(rev_history_all)}")
+    print(f"Total Drafting entries: {len(drafting_all)}")
+    print(f"Total Approval entries: {len(approvals_all)}")
+    print(f"Total additional tables found: {len(other_tables_all)}")
+    for table_name, table_data in other_tables_all.items():
+        print(f"  - {table_name}: {len(table_data)} rows")
+    print(f"Saved to: {output_excel}")
+
+if __name__ == "__main__":
+    import sys
+    
+    # CONFIGURE THESE PATHS
+    if len(sys.argv) >= 3:
+        # Arguments provided from C#
+        input_folder = sys.argv[1]
+        output_excel = sys.argv[2]
+    else:
+        # Default paths for manual testing
+        input_folder = r"C:\Users\U309011\Desktop\New folder"
+        output_excel = r"C:\Users\U309011\Desktop\WorkInstructions_Extracted.xlsx"
+    
+    print("=" * 70)
+    print("WORK INSTRUCTION POWERPOINT TABLE EXTRACTOR")
+    print("=" * 70)
+    print(f"Input folder: {input_folder}")
+    print(f"Output Excel: {output_excel}")
+    print("=" * 70)
+    
+    # Run extraction
+    process_powerpoint_files(input_folder, output_excel)
+    
+    print("\n" + "=" * 70)
+    print("DONE! Open the Excel file to review extracted data.")
+    print("=" * 70)
