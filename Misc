@@ -1,64 +1,374 @@
-namespace WorkInstructionLabeler
+Ah, I see the issue! The canvas needs to be larger and we need to ensure we’re collecting text boxes from ALL sources. Let me fix both problems:
+
+## **Fix 1: Make Canvas Larger and Scrollable**
+
+Replace the Canvas section in `MainWindow.xaml`:
+
+```xml
+<!-- OLD - Canvas too small -->
+<ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" 
+              VerticalScrollBarVisibility="Auto" Background="#E0E0E0">
+    <Canvas x:Name="slideCanvas" Width="800" Height="600" Background="White">
+        <!-- Text boxes will be drawn here dynamically -->
+    </Canvas>
+</ScrollViewer>
+
+<!-- NEW - Larger canvas that matches PowerPoint slide dimensions -->
+<ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" 
+              VerticalScrollBarVisibility="Auto" Background="#E0E0E0"
+              Padding="20">
+    <Canvas x:Name="slideCanvas" Width="960" Height="720" Background="White">
+        <!-- Text boxes will be drawn here dynamically -->
+    </Canvas>
+</ScrollViewer>
+```
+
+## **Fix 2: Improve Text Box Collection from All Sources**
+
+Replace the `ExtractTextBoxesFromPowerPoint` method in `MainWindow.xaml.cs`:
+
+```csharp
+private void ExtractTextBoxesFromPowerPoint(string filePath)
 {
-    public partial class MainWindow : Window
+    var pptApp = new Microsoft.Office.Interop.PowerPoint.Application();
+    
+    try
     {
-        private List<PowerPointFileInfo> _powerPointFiles = new List<PowerPointFileInfo>();
-        private PowerPointFileInfo _currentFile;
-        private int _currentSlideIndex = 0;
-        private List<LabeledTextBox> _allLabeledBoxes = new List<LabeledTextBox>();
-        private LabeledTextBox _selectedTextBox;
-        private Dictionary<Border, LabeledTextBox> _borderToTextBoxMap = new Dictionary<Border, LabeledTextBox>();
+        Presentation ppt = pptApp.Presentations.Open(filePath,
+            MsoTriState.msoFalse, MsoTriState.msoFalse, MsoTriState.msoFalse);
         
-        public MainWindow()
-        {
-            InitializeComponent();
-        }
+        // Detect revision type
+        string revType = DetectRevisionType(ppt);
+        txtRevType.Text = $"Rev: {revType}";
         
-        // REPLACE THIS METHOD (or add it if it doesn't exist):
-        private void BtnLoadFolder_Click(object sender, RoutedEventArgs e)
+        // Clear previous data for this file
+        _allLabeledBoxes.RemoveAll(b => b.SourceFile == filePath);
+        
+        // Extract from first slide only (for header data)
+        if (ppt.Slides.Count > 0)
         {
-            var dialog = new VistaFolderBrowserDialog
-            {
-                Description = "Select folder containing PowerPoint work instructions",
-                UseDescriptionForTitle = true
-            };
+            Slide slide = ppt.Slides[1];
+            var textBoxes = new List<TextBoxInfo>();
             
-            if (dialog.ShowDialog(this) == true)
+            Console.WriteLine($"\n=== Extracting text boxes from {Path.GetFileName(filePath)} ===");
+            
+            // 1. Collect from SLIDE SHAPES (directly on slide)
+            Console.WriteLine("Collecting from Slide Shapes...");
+            CollectTextBoxes(slide.Shapes, textBoxes, "Slide");
+            
+            // 2. Collect from MASTER SLIDE
+            try
             {
-                LoadPowerPointFiles(dialog.SelectedPath);
+                Console.WriteLine("Collecting from Master Slide...");
+                CollectTextBoxes(slide.Master.Shapes, textBoxes, "Master");
             }
-        }
-        
-        private void LoadPowerPointFiles(string folderPath)
-        {
-            _powerPointFiles.Clear();
-            lstFiles.Items.Clear();
+            catch (Exception ex)
+            {
+                Console.WriteLine($"  Could not access Master: {ex.Message}");
+            }
             
-            var files = Directory.GetFiles(folderPath, "*.pptx")
-                .Where(f => !System.IO.Path.GetFileName(f).StartsWith("~$"))
+            // 3. Collect from SLIDE MASTER (Design)
+            try
+            {
+                Console.WriteLine("Collecting from Slide Master (Design)...");
+                CollectTextBoxes(slide.Design.SlideMaster.Shapes, textBoxes, "Design");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"  Could not access Design: {ex.Message}");
+            }
+            
+            // 4. Collect from CUSTOM LAYOUT
+            try
+            {
+                Console.WriteLine("Collecting from Custom Layout...");
+                CollectTextBoxes(slide.CustomLayout.Shapes, textBoxes, "CustomLayout");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"  Could not access CustomLayout: {ex.Message}");
+            }
+            
+            Console.WriteLine($"Total text boxes collected: {textBoxes.Count}");
+            
+            // Remove duplicates (same text at same position)
+            var uniqueBoxes = textBoxes
+                .GroupBy(b => new { b.Text, Left = Math.Round(b.Left, 1), Top = Math.Round(b.Top, 1) })
+                .Select(g => g.First())
                 .ToList();
             
-            foreach (var file in files)
+            Console.WriteLine($"After removing duplicates: {uniqueBoxes.Count}");
+            
+            // Convert to LabeledTextBox
+            foreach (var box in uniqueBoxes)
             {
-                var fileInfo = new PowerPointFileInfo
-                {
-                    FilePath = file,
-                    FileName = System.IO.Path.GetFileName(file),
-                    IsLabeled = false
-                };
+                if (string.IsNullOrWhiteSpace(box.Text))
+                    continue;
                 
-                _powerPointFiles.Add(fileInfo);
-                lstFiles.Items.Add(fileInfo);
-            }
-            
-            UpdateProgress();
-            
-            if (_powerPointFiles.Count > 0)
-            {
-                lstFiles.SelectedIndex = 0;
+                // Don't automatically filter labels - let user decide
+                _allLabeledBoxes.Add(new LabeledTextBox
+                {
+                    Text = box.Text,
+                    Left = box.Left,
+                    Top = box.Top,
+                    Width = box.Width,
+                    Height = box.Height,
+                    RevisionType = revType,
+                    SourceFile = filePath,
+                    SlideNumber = 1,
+                    AssignedLabel = null
+                });
+                
+                Console.WriteLine($"  Added: '{box.Text.Substring(0, Math.Min(30, box.Text.Length))}' at ({box.Left:F1}, {box.Top:F1})");
             }
         }
         
-        // ... rest of your methods continue below ...
+        txtSlideInfo.Text = $"Slide 1 of {ppt.Slides.Count}";
+        
+        ppt.Close();
+    }
+    catch (Exception ex)
+    {
+        MessageBox.Show($"Error loading PowerPoint:\n{ex.Message}", "Error", 
+            MessageBoxButton.OK, MessageBoxImage.Error);
+    }
+    finally
+    {
+        pptApp.Quit();
     }
 }
+```
+
+## **Fix 3: Improve CollectTextBoxes with Source Tracking**
+
+Replace the `CollectTextBoxes` method:
+
+```csharp
+private void CollectTextBoxes(Microsoft.Office.Interop.PowerPoint.Shapes shapes, 
+    List<TextBoxInfo> textBoxes, string source = "Unknown")
+{
+    foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in shapes)
+    {
+        try
+        {
+            if (shape.Type == MsoShapeType.msoGroup)
+            {
+                CollectTextBoxesFromGroup(shape.GroupItems, textBoxes, source);
+            }
+            else if (shape.HasTextFrame == MsoTriState.msoTrue)
+            {
+                try
+                {
+                    string text = shape.TextFrame.TextRange.Text.Trim();
+                    if (!string.IsNullOrEmpty(text))
+                    {
+                        textBoxes.Add(new TextBoxInfo
+                        {
+                            Text = text,
+                            Left = shape.Left,
+                            Top = shape.Top,
+                            Width = shape.Width,
+                            Height = shape.Height
+                        });
+                        
+                        Console.WriteLine($"  [{source}] '{text.Substring(0, Math.Min(20, text.Length))}...' at ({shape.Left:F1}, {shape.Top:F1})");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"  [{source}] Error reading text: {ex.Message}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"  [{source}] Error processing shape: {ex.Message}");
+        }
+    }
+}
+
+private void CollectTextBoxesFromGroup(Microsoft.Office.Interop.PowerPoint.GroupShapes groupShapes,
+    List<TextBoxInfo> textBoxes, string source = "Unknown")
+{
+    foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in groupShapes)
+    {
+        try
+        {
+            if (shape.Type == MsoShapeType.msoGroup)
+            {
+                CollectTextBoxesFromGroup(shape.GroupItems, textBoxes, source);
+            }
+            else if (shape.HasTextFrame == MsoTriState.msoTrue)
+            {
+                try
+                {
+                    string text = shape.TextFrame.TextRange.Text.Trim();
+                    if (!string.IsNullOrEmpty(text))
+                    {
+                        textBoxes.Add(new TextBoxInfo
+                        {
+                            Text = text,
+                            Left = shape.Left,
+                            Top = shape.Top,
+                            Width = shape.Width,
+                            Height = shape.Height
+                        });
+                    }
+                }
+                catch { }
+            }
+        }
+        catch { }
+    }
+}
+```
+
+## **Fix 4: Better Text Display with Tooltips**
+
+Replace the `DisplaySlide` method:
+
+```csharp
+private void DisplaySlide(int slideIndex)
+{
+    slideCanvas.Children.Clear();
+    _borderToTextBoxMap.Clear();
+    
+    var slideBoxes = _allLabeledBoxes
+        .Where(b => b.SourceFile == _currentFile.FilePath && b.SlideNumber == slideIndex + 1)
+        .ToList();
+    
+    Console.WriteLine($"\nDisplaying {slideBoxes.Count} text boxes on canvas");
+    
+    // No scaling - use actual positions
+    float scaleFactor = 1.0f;
+    
+    foreach (var box in slideBoxes)
+    {
+        // Create border for text box
+        var border = new Border
+        {
+            Width = Math.Max(box.Width * scaleFactor, 50), // Minimum width
+            Height = Math.Max(box.Height * scaleFactor, 20), // Minimum height
+            Cursor = System.Windows.Input.Cursors.Hand,
+            ToolTip = box.Text // FULL TEXT IN TOOLTIP
+        };
+        
+        // Apply style based on label
+        border.Style = GetStyleForLabel(box.AssignedLabel);
+        
+        // Create text block with better wrapping
+        var textBlock = new TextBlock
+        {
+            Text = box.Text,
+            TextWrapping = TextWrapping.Wrap,
+            Padding = new Thickness(3),
+            FontSize = 9,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        
+        border.Child = textBlock;
+        
+        // Position on canvas using actual coordinates
+        Canvas.SetLeft(border, box.Left * scaleFactor);
+        Canvas.SetTop(border, box.Top * scaleFactor);
+        
+        // Add click handler
+        border.MouseDown += (s, e) =>
+        {
+            SelectTextBox(box, border);
+        };
+        
+        slideCanvas.Children.Add(border);
+        _borderToTextBoxMap[border] = box;
+        
+        Console.WriteLine($"  Displayed '{box.Text.Substring(0, Math.Min(15, box.Text.Length))}' at ({box.Left:F1}, {box.Top:F1})");
+    }
+    
+    Console.WriteLine($"Canvas updated with {slideCanvas.Children.Count} visual elements");
+}
+```
+
+## **Fix 5: Add Zoom Controls (Optional but Helpful)**
+
+Add zoom buttons to the toolbar in `MainWindow.xaml`:
+
+```xml
+<!-- Add this inside the toolbar Border (Grid.Row="0") -->
+<Border Grid.Row="0" Background="#263238" Padding="10">
+    <StackPanel Orientation="Horizontal">
+        <TextBlock x:Name="txtFileName" Text="No file loaded" 
+                   Foreground="White" FontSize="14" FontWeight="Bold" 
+                   VerticalAlignment="Center" Margin="0,0,20,0"/>
+        <TextBlock x:Name="txtRevType" Text="Rev: Unknown" 
+                   Foreground="#4CAF50" FontSize="12" 
+                   VerticalAlignment="Center" Margin="0,0,20,0"/>
+        
+        <!-- ADD ZOOM CONTROLS -->
+        <Separator Margin="10,0" Background="#666" Width="1"/>
+        <TextBlock Text="Zoom:" Foreground="White" VerticalAlignment="Center" Margin="5,0"/>
+        <Button x:Name="btnZoomOut" Content="−" Click="BtnZoomOut_Click" 
+                Width="30" Height="30" Margin="5" FontSize="16" FontWeight="Bold"/>
+        <TextBlock x:Name="txtZoom" Text="100%" Foreground="White" 
+                   VerticalAlignment="Center" MinWidth="50" TextAlignment="Center"/>
+        <Button x:Name="btnZoomIn" Content="+" Click="BtnZoomIn_Click" 
+                Width="30" Height="30" Margin="5" FontSize="16" FontWeight="Bold"/>
+        <Button x:Name="btnZoomFit" Content="Fit" Click="BtnZoomFit_Click" 
+                Width="50" Height="30" Margin="5"/>
+        
+        <Separator Margin="10,0" Background="#666" Width="1"/>
+        
+        <Button x:Name="btnPrevSlide" Content="◀ Previous" Click="BtnPrevSlide_Click" 
+                Margin="5" Padding="10,5"/>
+        <TextBlock x:Name="txtSlideInfo" Text="Slide 1 of 1" 
+                   Foreground="White" FontSize="12" 
+                   VerticalAlignment="Center" Margin="10,0"/>
+        <Button x:Name="btnNextSlide" Content="Next ▶" Click="BtnNextSlide_Click" 
+                Margin="5" Padding="10,5"/>
+    </StackPanel>
+</Border>
+```
+
+And add these methods to `MainWindow.xaml.cs`:
+
+```csharp
+private double _zoomLevel = 1.0;
+
+private void BtnZoomIn_Click(object sender, RoutedEventArgs e)
+{
+    _zoomLevel = Math.Min(_zoomLevel + 0.25, 3.0);
+    ApplyZoom();
+}
+
+private void BtnZoomOut_Click(object sender, RoutedEventArgs e)
+{
+    _zoomLevel = Math.Max(_zoomLevel - 0.25, 0.5);
+    ApplyZoom();
+}
+
+private void BtnZoomFit_Click(object sender, RoutedEventArgs e)
+{
+    _zoomLevel = 1.0;
+    ApplyZoom();
+}
+
+private void ApplyZoom()
+{
+    var scaleTransform = new ScaleTransform(_zoomLevel, _zoomLevel);
+    slideCanvas.LayoutTransform = scaleTransform;
+    slideCanvas.Width = 960 * _zoomLevel;
+    slideCanvas.Height = 720 * _zoomLevel;
+    txtZoom.Text = $"{_zoomLevel * 100:F0}%";
+}
+```
+
+## **Summary of Changes:**
+
+✅ **Larger canvas** (960x720 instead of 800x600)  
+✅ **Better text box collection** from all sources with console logging  
+✅ **Duplicate removal** to avoid showing the same text box multiple times  
+✅ **Tooltips** showing full text when you hover over boxes  
+✅ **Zoom controls** to see details better  
+✅ **Console output** to debug what’s being collected
+
+Now when you load a file, you should see ALL text boxes from the slide, master, and custom layout. Check the **Output window** in Visual Studio to see the console logs showing where each text box came from!​​​​​​​​​​​​​​​​
