@@ -1,89 +1,27 @@
 import os
-import shutil
-import pandas as pd
-from datetime import datetime
+import re
 
-# === USER SETTINGS ===
-excel_path = r"C:\Users\U309011\Desktop\WorkInstructions.xlsx"
-source_root = r"C:\Users\U309011\Desktop\CurrentFolders"  # Source folder with all subfolders
-destination_folder = r"C:\Users\U309011\Desktop\CurrentPP"
-log_path = os.path.join(os.path.expanduser("~"), "Desktop", "File_Copy_Log.xlsx")
+# === Folder to clean ===
+target_folder = r"C:\Users\U309011\Desktop\CurrentPP"
 
-# === STEP 1: Read Excel ===
-df = pd.read_excel(excel_path)
+# === Compile a regex to detect duplicates ===
+pattern = re.compile(r"^(.*?)(_+\d+)(\.[^.]+)$", re.IGNORECASE)
 
-# First column contains the file names (without or with extension)
-file_column = df.columns[0]
-file_names_raw = df[file_column].dropna().astype(str).tolist()
+# Track deletions
+deleted = []
 
-# === STEP 2: Normalize file names to match .ppt or .pptx ===
-valid_extensions = (".ppt", ".pptx")
-file_names = []
+for file_name in os.listdir(target_folder):
+    match = pattern.match(file_name)
+    if match:
+        base_name = match.group(1) + match.group(3)
+        base_path = os.path.join(target_folder, base_name)
+        dup_path = os.path.join(target_folder, file_name)
 
-for name in file_names_raw:
-    name_lower = name.lower()
-    if not name_lower.endswith(valid_extensions):
-        # Try both versions in case Excel omitted the extension
-        file_names.append(name + ".pptx")
-        file_names.append(name + ".ppt")
-    else:
-        file_names.append(name)
+        # If the original file exists, delete the duplicate
+        if os.path.exists(base_path):
+            os.remove(dup_path)
+            deleted.append(file_name)
 
-# Remove duplicates while preserving order
-seen = set()
-file_names = [x for x in file_names if not (x in seen or seen.add(x))]
-
-# === STEP 3: Prepare destination ===
-os.makedirs(destination_folder, exist_ok=True)
-
-# === STEP 4: Build index of all .ppt/.pptx files recursively ===
-print("Indexing all PowerPoint files (.pptx / .ppt)... please wait.")
-available_files = {}
-for root, dirs, files in os.walk(source_root):
-    for f in files:
-        if f.lower().endswith(valid_extensions):
-            available_files[f] = os.path.join(root, f)
-
-print(f"Indexed {len(available_files)} PowerPoint files.\n")
-
-# === STEP 5: Copy matching files ===
-log_entries = []
-
-for file_name in file_names:
-    entry = {
-        "File Name": file_name,
-        "Source Path": "",
-        "Status": "",
-        "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-    }
-
-    if file_name in available_files:
-        src_path = available_files[file_name]
-        dest_path = os.path.join(destination_folder, file_name)
-
-        try:
-            # If file already exists, rename to avoid overwrite
-            base, ext = os.path.splitext(dest_path)
-            counter = 1
-            while os.path.exists(dest_path):
-                dest_path = f"{base}_{counter}{ext}"
-                counter += 1
-
-            shutil.copy2(src_path, dest_path)
-            entry["Source Path"] = src_path
-            entry["Status"] = "Copied"
-            print(f"Copied: {file_name}")
-        except Exception as e:
-            entry["Status"] = f"Error: {e}"
-            print(f"Error copying {file_name}: {e}")
-    else:
-        entry["Status"] = "Missing (Not Found)"
-        print(f"Missing: {file_name}")
-
-    log_entries.append(entry)
-
-# === STEP 6: Save log ===
-log_df = pd.DataFrame(log_entries)
-log_df.to_excel(log_path, index=False)
-
-print(f"\n✅ File copy complete. Log saved to: {log_path}")
+print(f"✅ Removed {len(deleted)} duplicate files:")
+for f in deleted:
+    print(f" - {f}")
