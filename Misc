@@ -1,27 +1,35 @@
 import os
-import re
+import win32com.client
 
-# === Folder to clean ===
-target_folder = r"C:\Users\U309011\Desktop\CurrentPP"
+# === Folder containing your PPT/PPTX files ===
+source_folder = r"C:\Users\U309011\Desktop\CurrentPP"
 
-# === Compile a regex to detect duplicates ===
-pattern = re.compile(r"^(.*?)(_+\d+)(\.[^.]+)$", re.IGNORECASE)
+# Launch PowerPoint application (invisible)
+ppt_app = win32com.client.Dispatch("PowerPoint.Application")
+ppt_app.Visible = True
 
-# Track deletions
-deleted = []
+converted = []
+skipped = []
 
-for file_name in os.listdir(target_folder):
-    match = pattern.match(file_name)
-    if match:
-        base_name = match.group(1) + match.group(3)
-        base_path = os.path.join(target_folder, base_name)
-        dup_path = os.path.join(target_folder, file_name)
+for file_name in os.listdir(source_folder):
+    if file_name.lower().endswith(".ppt") and not file_name.lower().endswith(".pptx"):
+        full_path = os.path.join(source_folder, file_name)
+        new_path = os.path.splitext(full_path)[0] + ".pptx"
 
-        # If the original file exists, delete the duplicate
-        if os.path.exists(base_path):
-            os.remove(dup_path)
-            deleted.append(file_name)
+        try:
+            presentation = ppt_app.Presentations.Open(full_path, WithWindow=False)
+            presentation.SaveAs(new_path, 24)  # 24 = ppSaveAsOpenXMLPresentation
+            presentation.Close()
+            converted.append(file_name)
+            print(f"Converted: {file_name} → {os.path.basename(new_path)}")
+        except Exception as e:
+            skipped.append((file_name, str(e)))
+            print(f"❌ Failed to convert {file_name}: {e}")
 
-print(f"✅ Removed {len(deleted)} duplicate files:")
-for f in deleted:
-    print(f" - {f}")
+ppt_app.Quit()
+
+print(f"\n✅ Conversion complete: {len(converted)} converted, {len(skipped)} skipped.")
+if skipped:
+    print("Skipped files:")
+    for name, err in skipped:
+        print(f" - {name}: {err}")
