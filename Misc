@@ -5,30 +5,48 @@ from datetime import datetime
 
 # === USER SETTINGS ===
 excel_path = r"C:\Users\U309011\Desktop\WorkInstructions.xlsx"
-source_root = r"C:\Users\U309011\Desktop\CurrentFolders"  # Where all your subfolders are
+source_root = r"C:\Users\U309011\Desktop\CurrentFolders"  # Source folder with all subfolders
 destination_folder = r"C:\Users\U309011\Desktop\CurrentPP"
 log_path = os.path.join(os.path.expanduser("~"), "Desktop", "File_Copy_Log.xlsx")
 
 # === STEP 1: Read Excel ===
 df = pd.read_excel(excel_path)
 
-# First column contains the exact file names
+# First column contains the file names (without or with extension)
 file_column = df.columns[0]
-file_names = df[file_column].dropna().astype(str).tolist()
+file_names_raw = df[file_column].dropna().astype(str).tolist()
 
-# === STEP 2: Prepare destination ===
+# === STEP 2: Normalize file names to match .ppt or .pptx ===
+valid_extensions = (".ppt", ".pptx")
+file_names = []
+
+for name in file_names_raw:
+    name_lower = name.lower()
+    if not name_lower.endswith(valid_extensions):
+        # Try both versions in case Excel omitted the extension
+        file_names.append(name + ".pptx")
+        file_names.append(name + ".ppt")
+    else:
+        file_names.append(name)
+
+# Remove duplicates while preserving order
+seen = set()
+file_names = [x for x in file_names if not (x in seen or seen.add(x))]
+
+# === STEP 3: Prepare destination ===
 os.makedirs(destination_folder, exist_ok=True)
 
-# === STEP 3: Build an index of all files (recursive scan) ===
-print("Indexing all available files... please wait.")
+# === STEP 4: Build index of all .ppt/.pptx files recursively ===
+print("Indexing all PowerPoint files (.pptx / .ppt)... please wait.")
 available_files = {}
 for root, dirs, files in os.walk(source_root):
     for f in files:
-        available_files[f] = os.path.join(root, f)
+        if f.lower().endswith(valid_extensions):
+            available_files[f] = os.path.join(root, f)
 
-print(f"Indexed {len(available_files)} files.\n")
+print(f"Indexed {len(available_files)} PowerPoint files.\n")
 
-# === STEP 4: Copy requested files ===
+# === STEP 5: Copy matching files ===
 log_entries = []
 
 for file_name in file_names:
@@ -44,6 +62,13 @@ for file_name in file_names:
         dest_path = os.path.join(destination_folder, file_name)
 
         try:
+            # If file already exists, rename to avoid overwrite
+            base, ext = os.path.splitext(dest_path)
+            counter = 1
+            while os.path.exists(dest_path):
+                dest_path = f"{base}_{counter}{ext}"
+                counter += 1
+
             shutil.copy2(src_path, dest_path)
             entry["Source Path"] = src_path
             entry["Status"] = "Copied"
@@ -57,7 +82,7 @@ for file_name in file_names:
 
     log_entries.append(entry)
 
-# === STEP 5: Save log ===
+# === STEP 6: Save log ===
 log_df = pd.DataFrame(log_entries)
 log_df.to_excel(log_path, index=False)
 
