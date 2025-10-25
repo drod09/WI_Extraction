@@ -1,11 +1,15 @@
+Here’s the complete code for all the classes that have been revised:
+
+## **1. MainWindow.xaml.cs** (Complete File)
+
+```csharp
 using CsvHelper;
 using Microsoft.Office.Core;
 using Microsoft.Office.Interop.PowerPoint;
 using Microsoft.Win32;
+using Ookii.Dialogs.Wpf;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Formats.Asn1;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -14,7 +18,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
-using Ookii.Dialogs.Wpf;
 
 namespace WorkInstructionLabeler
 {
@@ -26,6 +29,7 @@ namespace WorkInstructionLabeler
         private List<LabeledTextBox> _allLabeledBoxes = new List<LabeledTextBox>();
         private LabeledTextBox _selectedTextBox;
         private Dictionary<Border, LabeledTextBox> _borderToTextBoxMap = new Dictionary<Border, LabeledTextBox>();
+        private double _zoomLevel = 1.0;
 
         public MainWindow()
         {
@@ -33,164 +37,163 @@ namespace WorkInstructionLabeler
         }
 
         private void BtnMarkComplete_Click(object sender, RoutedEventArgs e)
-{
-    if (_currentFile == null)
-    {
-        MessageBox.Show("No file is currently loaded.", "No File", 
-            MessageBoxButton.OK, MessageBoxImage.Warning);
-        return;
-    }
-    
-    // Check if required fields are labeled
-    var missingLabels = CheckRequiredLabels();
-    
-    if (missingLabels.Count > 0)
-    {
-        var result = MessageBox.Show(
-            $"The following fields are not labeled:\n\n{string.Join("\n", missingLabels)}\n\n" +
-            "Do you want to mark this file as complete anyway?",
-            "Missing Labels",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
-        
-        if (result == MessageBoxResult.No)
-            return;
-    }
-    
-    // Mark as completed
-    _currentFile.IsCompleted = true;
-    _currentFile.IsLabeled = true;
-    
-    UpdateProgress();
-    
-    // Show success message
-    MessageBox.Show(
-        $"✓ File marked as complete!\n\n{_currentFile.FileName}\n\n" +
-        "You can now move to the next file.",
-        "File Completed",
-        MessageBoxButton.OK,
-        MessageBoxImage.Information);
-    
-    // Auto-select next file
-    int currentIndex = _powerPointFiles.IndexOf(_currentFile);
-    if (currentIndex < _powerPointFiles.Count - 1)
-    {
-        lstFiles.SelectedIndex = currentIndex + 1;
-    }
-}
-
-private List<string> CheckRequiredLabels()
-{
-    var missingLabels = new List<string>();
-    var requiredLabels = new[]
-    {
-        "WI_Number",
-        "WI_Title",
-        "Revision",
-        "BOM_ASSY_DWG_NO",
-        "Operation_No",
-        "Product_Line",
-        "Subject",
-        "Template_Revision"
-    };
-    
-    var labeledFields = _allLabeledBoxes
-        .Where(b => b.SourceFile == _currentFile.FilePath && !b.IsHidden)
-        .Select(b => b.AssignedLabel)
-        .Where(l => !string.IsNullOrEmpty(l) && l != "Ignore")
-        .Distinct()
-        .ToList();
-    
-    var labelNameMap = new Dictionary<string, string>
-    {
-        { "WI_Number", "WI Number" },
-        { "WI_Title", "WI Title" },
-        { "Revision", "Revision" },
-        { "BOM_ASSY_DWG_NO", "BOM/ASSY DWG NO" },
-        { "Operation_No", "Operation No" },
-        { "Product_Line", "Product Line" },
-        { "Subject", "Subject" },
-        { "Template_Revision", "Template Revision" }
-    };
-    
-    foreach (var required in requiredLabels)
-    {
-        if (!labeledFields.Contains(required))
         {
-            missingLabels.Add("  • " + labelNameMap[required]);
+            if (_currentFile == null)
+            {
+                MessageBox.Show("No file is currently loaded.", "No File",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // Check if required fields are labeled
+            var missingLabels = CheckRequiredLabels();
+
+            if (missingLabels.Count > 0)
+            {
+                var result = MessageBox.Show(
+                    $"The following fields are not labeled:\n\n{string.Join("\n", missingLabels)}\n\n" +
+                    "Do you want to mark this file as complete anyway?",
+                    "Missing Labels",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+                if (result == MessageBoxResult.No)
+                    return;
+            }
+
+            // Mark as completed
+            _currentFile.IsCompleted = true;
+            _currentFile.IsLabeled = true;
+
+            UpdateProgress();
+
+            // Show success message
+            MessageBox.Show(
+                $"✓ File marked as complete!\n\n{_currentFile.FileName}\n\n" +
+                "You can now move to the next file.",
+                "File Completed",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+
+            // Auto-select next file
+            int currentIndex = _powerPointFiles.IndexOf(_currentFile);
+            if (currentIndex < _powerPointFiles.Count - 1)
+            {
+                lstFiles.SelectedIndex = currentIndex + 1;
+            }
         }
-    }
-    
-    return missingLabels;
-}
 
-private void BtnHideBox_Click(object sender, RoutedEventArgs e)
-{
-    if (_selectedTextBox == null)
-    {
-        MessageBox.Show("Please select a text box first", "No Selection", 
-            MessageBoxButton.OK, MessageBoxImage.Warning);
-        return;
-    }
-    
-    // Mark as hidden
-    _selectedTextBox.IsHidden = true;
-    
-    // Refresh display
-    DisplaySlide(_currentSlideIndex);
-    
-    // Clear selection
-    _selectedTextBox = null;
-    txtSelectedText.Text = "Text box hidden";
-    txtPosition.Text = "";
-}
-
-private List<string> CheckRequiredLabelsForFile(string filePath)
-{
-    var missingLabels = new List<string>();
-    var requiredLabels = new[]
-    {
-        "WI_Number",
-        "WI_Title",
-        "Revision",
-        "BOM_ASSY_DWG_NO",
-        "Operation_No",
-        "Product_Line",
-        "Subject",
-        "Template_Revision"
-    };
-    
-    var labeledFields = _allLabeledBoxes
-        .Where(b => b.SourceFile == filePath && !b.IsHidden)
-        .Select(b => b.AssignedLabel)
-        .Where(l => !string.IsNullOrEmpty(l) && l != "Ignore")
-        .Distinct()
-        .ToList();
-    
-    var labelNameMap = new Dictionary<string, string>
-    {
-        { "WI_Number", "WI Number" },
-        { "WI_Title", "WI Title" },
-        { "Revision", "Revision" },
-        { "BOM_ASSY_DWG_NO", "BOM/ASSY DWG NO" },
-        { "Operation_No", "Operation No" },
-        { "Product_Line", "Product Line" },
-        { "Subject", "Subject" },
-        { "Template_Revision", "Template Revision" }
-    };
-    
-    foreach (var required in requiredLabels)
-    {
-        if (!labeledFields.Contains(required))
+        private List<string> CheckRequiredLabels()
         {
-            missingLabels.Add("  • " + labelNameMap[required]);
-        }
-    }
-    
-    return missingLabels;
-}
+            var missingLabels = new List<string>();
+            var requiredLabels = new[]
+            {
+                "WI_Number",
+                "WI_Title",
+                "Revision",
+                "BOM_ASSY_DWG_NO",
+                "Operation_No",
+                "Product_Line",
+                "Subject",
+                "Template_Revision"
+            };
 
-        // REPLACE THIS METHOD (or add it if it doesn't exist):
+            var labeledFields = _allLabeledBoxes
+                .Where(b => b.SourceFile == _currentFile.FilePath && !b.IsHidden)
+                .Select(b => b.AssignedLabel)
+                .Where(l => !string.IsNullOrEmpty(l) && l != "Ignore")
+                .Distinct()
+                .ToList();
+
+            var labelNameMap = new Dictionary<string, string>
+            {
+                { "WI_Number", "WI Number" },
+                { "WI_Title", "WI Title" },
+                { "Revision", "Revision" },
+                { "BOM_ASSY_DWG_NO", "BOM/ASSY DWG NO" },
+                { "Operation_No", "Operation No" },
+                { "Product_Line", "Product Line" },
+                { "Subject", "Subject" },
+                { "Template_Revision", "Template Revision" }
+            };
+
+            foreach (var required in requiredLabels)
+            {
+                if (!labeledFields.Contains(required))
+                {
+                    missingLabels.Add("  • " + labelNameMap[required]);
+                }
+            }
+
+            return missingLabels;
+        }
+
+        private void BtnHideBox_Click(object sender, RoutedEventArgs e)
+        {
+            if (_selectedTextBox == null)
+            {
+                MessageBox.Show("Please select a text box first", "No Selection",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // Mark as hidden
+            _selectedTextBox.IsHidden = true;
+
+            // Refresh display
+            DisplaySlide(_currentSlideIndex);
+
+            // Clear selection
+            _selectedTextBox = null;
+            txtSelectedText.Text = "Text box hidden";
+            txtPosition.Text = "";
+        }
+
+        private List<string> CheckRequiredLabelsForFile(string filePath)
+        {
+            var missingLabels = new List<string>();
+            var requiredLabels = new[]
+            {
+                "WI_Number",
+                "WI_Title",
+                "Revision",
+                "BOM_ASSY_DWG_NO",
+                "Operation_No",
+                "Product_Line",
+                "Subject",
+                "Template_Revision"
+            };
+
+            var labeledFields = _allLabeledBoxes
+                .Where(b => b.SourceFile == filePath && !b.IsHidden)
+                .Select(b => b.AssignedLabel)
+                .Where(l => !string.IsNullOrEmpty(l) && l != "Ignore")
+                .Distinct()
+                .ToList();
+
+            var labelNameMap = new Dictionary<string, string>
+            {
+                { "WI_Number", "WI Number" },
+                { "WI_Title", "WI Title" },
+                { "Revision", "Revision" },
+                { "BOM_ASSY_DWG_NO", "BOM/ASSY DWG NO" },
+                { "Operation_No", "Operation No" },
+                { "Product_Line", "Product Line" },
+                { "Subject", "Subject" },
+                { "Template_Revision", "Template Revision" }
+            };
+
+            foreach (var required in requiredLabels)
+            {
+                if (!labeledFields.Contains(required))
+                {
+                    missingLabels.Add("  • " + labelNameMap[required]);
+                }
+            }
+
+            return missingLabels;
+        }
+
         private void BtnLoadFolder_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new VistaFolderBrowserDialog
@@ -204,8 +207,6 @@ private List<string> CheckRequiredLabelsForFile(string filePath)
                 LoadPowerPointFiles(dialog.SelectedPath);
             }
         }
-
-        private double _zoomLevel = 1.0;
 
         private void BtnZoomIn_Click(object sender, RoutedEventArgs e)
         {
@@ -249,7 +250,8 @@ private List<string> CheckRequiredLabelsForFile(string filePath)
                 {
                     FilePath = file,
                     FileName = System.IO.Path.GetFileName(file),
-                    IsLabeled = false
+                    IsLabeled = false,
+                    IsCompleted = false
                 };
 
                 _powerPointFiles.Add(fileInfo);
@@ -328,7 +330,17 @@ private List<string> CheckRequiredLabelsForFile(string filePath)
 
                 // Detect revision type
                 string revType = DetectRevisionType(ppt);
-                txtRevType.Text = $"Rev: {revType}";
+                
+                if (revType == "Unknown")
+                {
+                    txtRevType.Text = "Template: Unknown";
+                    txtRevType.Foreground = new SolidColorBrush(Colors.Orange);
+                }
+                else
+                {
+                    txtRevType.Text = $"Template: Rev {revType}";
+                    txtRevType.Foreground = new SolidColorBrush(Color.FromRgb(76, 175, 80));
+                }
 
                 // Clear previous data for this file
                 _allLabeledBoxes.RemoveAll(b => b.SourceFile == filePath);
@@ -394,7 +406,6 @@ private List<string> CheckRequiredLabelsForFile(string filePath)
                         if (string.IsNullOrWhiteSpace(box.Text))
                             continue;
 
-                        // Don't automatically filter labels - let user decide
                         _allLabeledBoxes.Add(new LabeledTextBox
                         {
                             Text = box.Text,
@@ -405,7 +416,8 @@ private List<string> CheckRequiredLabelsForFile(string filePath)
                             RevisionType = revType,
                             SourceFile = filePath,
                             SlideNumber = 1,
-                            AssignedLabel = null
+                            AssignedLabel = null,
+                            IsHidden = false
                         });
 
                         Console.WriteLine($"  Added: '{box.Text.Substring(0, Math.Min(30, box.Text.Length))}' at ({box.Left:F1}, {box.Top:F1})");
@@ -432,21 +444,198 @@ private List<string> CheckRequiredLabelsForFile(string filePath)
             if (ppt.Slides.Count > 0)
             {
                 Slide slide = ppt.Slides[1];
+                var candidateBoxes = new List<(string text, float left, float top)>();
 
-                foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in slide.Shapes)
+                // Collect text from ALL sources (slide, master, custom layout)
+                void CollectCandidates(Microsoft.Office.Interop.PowerPoint.Shapes shapes, string source)
                 {
-                    if (shape.HasTextFrame == MsoTriState.msoTrue)
+                    foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in shapes)
                     {
-                        string text = shape.TextFrame.TextRange.Text.ToLower();
-                        if (text.Contains("fm-me-") || text.Contains("fm me") || text.Contains("fmme"))
+                        try
                         {
-                            var match = Regex.Match(text, @"rev\.?\s*(\d+)", RegexOptions.IgnoreCase);
-                            if (match.Success)
-                                return match.Groups[1].Value;
+                            if (shape.Type == MsoShapeType.msoGroup)
+                            {
+                                try
+                                {
+                                    CollectCandidates(shape.GroupItems, source + "-Group");
+                                }
+                                catch { }
+                            }
+                            else if (shape.HasTextFrame == MsoTriState.msoTrue)
+                            {
+                                try
+                                {
+                                    string text = shape.TextFrame.TextRange.Text.Trim();
+                                    if (!string.IsNullOrEmpty(text))
+                                    {
+                                        candidateBoxes.Add((text, shape.Left, shape.Top));
+                                    }
+                                }
+                                catch { }
+                            }
+                        }
+                        catch { }
+                    }
+                }
+
+                Console.WriteLine("\n=== Searching for Template Revision ===");
+
+                // Collect from all sources
+                try { CollectCandidates(slide.Shapes, "Slide"); } catch { }
+                try { CollectCandidates(slide.Master.Shapes, "Master"); } catch { }
+                try { CollectCandidates(slide.Design.SlideMaster.Shapes, "Design"); } catch { }
+                try { CollectCandidates(slide.CustomLayout.Shapes, "CustomLayout"); } catch { }
+
+                Console.WriteLine($"\nTotal text boxes found: {candidateBoxes.Count}");
+
+                // Show ALL boxes sorted by position (for debugging)
+                var sortedBoxes = candidateBoxes
+                    .OrderByDescending(b => b.top)
+                    .ThenByDescending(b => b.left)
+                    .ToList();
+
+                Console.WriteLine("\nAll text boxes (sorted by position, bottom-to-top, right-to-left):");
+                foreach (var box in sortedBoxes.Take(20)) // Show first 20
+                {
+                    Console.WriteLine($"  Left:{box.left,7:F1} Top:{box.top,7:F1} | '{box.text.Substring(0, Math.Min(40, box.text.Length))}'");
+                }
+
+                // Filter for bottom-right area
+                var bottomRightBoxes = candidateBoxes
+                    .Where(b => b.left > 300 && b.top > 450)
+                    .OrderByDescending(b => b.left)
+                    .ThenByDescending(b => b.top)
+                    .ToList();
+
+                Console.WriteLine($"\n=== Bottom-Right Area (Left > 300, Top > 450) ===");
+                Console.WriteLine($"Found {bottomRightBoxes.Count} text boxes:");
+                foreach (var box in bottomRightBoxes)
+                {
+                    Console.WriteLine($"  Left:{box.left,7:F1} Top:{box.top,7:F1} | '{box.text}'");
+                }
+
+                // Search patterns
+                var fmmePatterns = new[]
+                {
+                    @"fm[-_\s]*me[-_\s]*\d+",
+                    @"fm[-_\s]*\d+",
+                    @"fmme",
+                };
+
+                var revPatterns = new[]
+                {
+                    @"rev\.?\s*(\d+)",
+                    @"revision\s*(\d+)",
+                    @"r\.?\s*(\d+)",
+                    @"-(\d+)$",
+                    @"\b(\d{2})\b",
+                };
+
+                // Strategy 1: Look for FM-ME pattern in bottom-right
+                Console.WriteLine("\n--- Strategy 1: FM-ME text with revision ---");
+                foreach (var box in bottomRightBoxes)
+                {
+                    string text = box.text.ToLower();
+                    bool hasFMME = fmmePatterns.Any(p => Regex.IsMatch(text, p, RegexOptions.IgnoreCase));
+
+                    if (hasFMME)
+                    {
+                        Console.WriteLine($"✓ Found FM-ME text: '{box.text}'");
+
+                        foreach (var pattern in revPatterns)
+                        {
+                            var match = Regex.Match(text, pattern, RegexOptions.IgnoreCase);
+                            if (match.Success && match.Groups.Count > 1)
+                            {
+                                string revNum = match.Groups[1].Value;
+                                if (int.TryParse(revNum, out int num) && num >= 10 && num <= 30)
+                                {
+                                    Console.WriteLine($"✓✓ FOUND TEMPLATE REVISION: {revNum}");
+                                    return revNum;
+                                }
+                            }
                         }
                     }
                 }
+
+                // Strategy 2: Look for separate revision box near FM-ME
+                Console.WriteLine("\n--- Strategy 2: Separate revision box ---");
+                var fmmeBox = bottomRightBoxes.FirstOrDefault(b =>
+                    fmmePatterns.Any(p => Regex.IsMatch(b.text.ToLower(), p, RegexOptions.IgnoreCase)));
+
+                if (fmmeBox.text != null)
+                {
+                    Console.WriteLine($"✓ Found FM-ME box at Left:{fmmeBox.left:F1}, Top:{fmmeBox.top:F1}");
+                    Console.WriteLine($"  Text: '{fmmeBox.text}'");
+                    Console.WriteLine("  Looking for nearby revision box...");
+
+                    var nearbyBoxes = candidateBoxes
+                        .Where(b => b.left < fmmeBox.left &&
+                                   b.left > fmmeBox.left - 300 &&
+                                   Math.Abs(b.top - fmmeBox.top) < 100)
+                        .OrderByDescending(b => b.left)
+                        .ToList();
+
+                    Console.WriteLine($"  Found {nearbyBoxes.Count} nearby boxes:");
+                    foreach (var box in nearbyBoxes)
+                    {
+                        Console.WriteLine($"    Left:{box.left,7:F1} Top:{box.top,7:F1} | '{box.text}'");
+
+                        foreach (var pattern in revPatterns)
+                        {
+                            var match = Regex.Match(box.text, pattern, RegexOptions.IgnoreCase);
+                            if (match.Success && match.Groups.Count > 1)
+                            {
+                                string revNum = match.Groups[1].Value;
+                                if (int.TryParse(revNum, out int num) && num >= 10 && num <= 30)
+                                {
+                                    Console.WriteLine($"    ✓✓ FOUND TEMPLATE REVISION: {revNum}");
+                                    return revNum;
+                                }
+                            }
+                        }
+
+                        if (Regex.IsMatch(box.text.Trim(), @"^\d{2}$"))
+                        {
+                            Console.WriteLine($"    ✓✓ FOUND TEMPLATE REVISION (number): {box.text.Trim()}");
+                            return box.text.Trim();
+                        }
+                    }
+                }
+
+                // Strategy 3: Broader search in entire bottom area
+                Console.WriteLine("\n--- Strategy 3: Broader bottom area search ---");
+                var bottomBoxes = candidateBoxes.Where(b => b.top > 400).ToList();
+
+                foreach (var box in bottomBoxes)
+                {
+                    string text = box.text.ToLower();
+                    bool hasFMME = fmmePatterns.Any(p => Regex.IsMatch(text, p, RegexOptions.IgnoreCase));
+                    bool hasRev = Regex.IsMatch(text, @"rev", RegexOptions.IgnoreCase);
+
+                    if (hasFMME || hasRev)
+                    {
+                        Console.WriteLine($"  Checking: '{box.text}' at Left:{box.left:F1}, Top:{box.top:F1}");
+
+                        foreach (var pattern in revPatterns)
+                        {
+                            var match = Regex.Match(text, pattern, RegexOptions.IgnoreCase);
+                            if (match.Success && match.Groups.Count > 1)
+                            {
+                                string revNum = match.Groups[1].Value;
+                                if (int.TryParse(revNum, out int num) && num >= 10 && num <= 30)
+                                {
+                                    Console.WriteLine($"  ✓✓ FOUND TEMPLATE REVISION: {revNum}");
+                                    return revNum;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Console.WriteLine("\n✗✗ Template revision NOT FOUND");
             }
+
             return "Unknown";
         }
 
@@ -549,30 +738,25 @@ private List<string> CheckRequiredLabelsForFile(string filePath)
             var slideBoxes = _allLabeledBoxes
                 .Where(b => b.SourceFile == _currentFile.FilePath &&
                             b.SlideNumber == slideIndex + 1 &&
-                            !b.IsHidden)  // ADD THIS LINE - filter out hidden boxes
+                            !b.IsHidden)
                 .ToList();
 
             Console.WriteLine($"\nDisplaying {slideBoxes.Count} text boxes on canvas (hidden boxes excluded)");
 
-            // No scaling - use actual positions
             float scaleFactor = 1.0f;
 
             foreach (var box in slideBoxes)
             {
-
-                // Create border for text box
                 var border = new Border
                 {
-                    Width = Math.Max(box.Width * scaleFactor, 50), // Minimum width
-                    Height = Math.Max(box.Height * scaleFactor, 20), // Minimum height
+                    Width = Math.Max(box.Width * scaleFactor, 50),
+                    Height = Math.Max(box.Height * scaleFactor, 20),
                     Cursor = System.Windows.Input.Cursors.Hand,
-                    ToolTip = box.Text // FULL TEXT IN TOOLTIP
+                    ToolTip = box.Text
                 };
 
-                // Apply style based on label
                 border.Style = GetStyleForLabel(box.AssignedLabel);
 
-                // Create text block with better wrapping
                 var textBlock = new TextBlock
                 {
                     Text = box.Text,
@@ -585,11 +769,9 @@ private List<string> CheckRequiredLabelsForFile(string filePath)
 
                 border.Child = textBlock;
 
-                // Position on canvas using actual coordinates
                 Canvas.SetLeft(border, box.Left * scaleFactor);
                 Canvas.SetTop(border, box.Top * scaleFactor);
 
-                // Add click handler
                 border.MouseDown += (s, e) =>
                 {
                     SelectTextBox(box, border);
@@ -618,7 +800,7 @@ private List<string> CheckRequiredLabelsForFile(string filePath)
                 "Operation_No" => (Style)FindResource("OperationBox"),
                 "Product_Line" => (Style)FindResource("ProductLineBox"),
                 "Subject" => (Style)FindResource("SubjectBox"),
-                "Template_Revision" => (Style)FindResource("TemplateRevisionBox"),  // ADD THIS LINE
+                "Template_Revision" => (Style)FindResource("TemplateRevisionBox"),
                 _ => (Style)FindResource("UnlabeledBox")
             };
         }
@@ -627,7 +809,6 @@ private List<string> CheckRequiredLabelsForFile(string filePath)
         {
             _selectedTextBox = box;
 
-            // Highlight selected
             foreach (var kvp in _borderToTextBoxMap)
             {
                 if (kvp.Value == box)
@@ -640,6 +821,9 @@ private List<string> CheckRequiredLabelsForFile(string filePath)
             txtPosition.Text = $"Left: {box.Left:F1}, Top: {box.Top:F1}, W: {box.Width:F1}, H: {box.Height:F1}";
         }
 
+        private​​​​​​​​​​​​​​​​
+```
+```csharp
         private void BtnLabel_Click(object sender, RoutedEventArgs e)
         {
             if (_selectedTextBox == null)
@@ -659,15 +843,161 @@ private List<string> CheckRequiredLabelsForFile(string filePath)
 
             // Mark file as having changes
             _currentFile.IsLabeled = true;
+
+            // CAPTURE THE ACTUAL VALUE
+            CaptureExtractedValue(label, _selectedTextBox.Text);
+
             UpdateProgress();
+        }
+
+        private void CaptureExtractedValue(string label, string value)
+        {
+            if (_currentFile == null) return;
+
+            switch (label)
+            {
+                case "WI_Number":
+                    _currentFile.ExtractedWINumber = value;
+                    break;
+                case "WI_Title":
+                    _currentFile.ExtractedTitle = value;
+                    break;
+                case "Revision":
+                    _currentFile.ExtractedRevision = value;
+                    break;
+                case "BOM_ASSY_DWG_NO":
+                    _currentFile.ExtractedBOM = value;
+                    break;
+                case "Operation_No":
+                    _currentFile.ExtractedOperationNo = value;
+                    break;
+                case "Product_Line":
+                    _currentFile.ExtractedProductLine = value;
+                    break;
+                case "Subject":
+                    _currentFile.ExtractedSubject = value;
+                    break;
+                case "Page_No":
+                    _currentFile.ExtractedPageNo = ParsePageNumber(value);
+                    break;
+                case "Template_Revision":
+                    _currentFile.ExtractedTemplateRev = ParseTemplateRevision(value);
+                    break;
+            }
+
+            Console.WriteLine($"Captured: {label} = '{value}'");
+        }
+
+        private string ParseTemplateRevision(string templateText)
+        {
+            if (string.IsNullOrWhiteSpace(templateText))
+                return "";
+
+            Console.WriteLine($"\n=== Parsing Template Revision ===");
+            Console.WriteLine($"Input: '{templateText}'");
+
+            // Pattern: FM-ME-07revX or FM-ME-07 revX or FM-ME-07 rev X
+            var revMatch = Regex.Match(templateText,
+                @"fm[-_\s]*me[-_\s]*\d+\s*rev\.?\s*(\d+)",
+                RegexOptions.IgnoreCase);
+
+            if (revMatch.Success && revMatch.Groups.Count > 1)
+            {
+                string revision = revMatch.Groups[1].Value;
+                Console.WriteLine($"✓ Extracted revision: {revision}");
+                return revision;
+            }
+
+            // Fallback: Look for any 2-digit number after "rev"
+            revMatch = Regex.Match(templateText, @"rev\.?\s*(\d{1,2})", RegexOptions.IgnoreCase);
+            if (revMatch.Success && revMatch.Groups.Count > 1)
+            {
+                string revision = revMatch.Groups[1].Value;
+                Console.WriteLine($"✓ Extracted revision (fallback): {revision}");
+                return revision;
+            }
+
+            // If no pattern found, just return first 2-digit number
+            revMatch = Regex.Match(templateText, @"\b(\d{2})\b");
+            if (revMatch.Success)
+            {
+                Console.WriteLine($"✓ Extracted revision (number only): {revMatch.Groups[1].Value}");
+                return revMatch.Groups[1].Value;
+            }
+
+            Console.WriteLine($"✗ Could not parse revision");
+            return templateText; // Return original if can't parse
+        }
+
+        private string ParsePageNumber(string pageText)
+        {
+            if (string.IsNullOrWhiteSpace(pageText))
+                return "";
+
+            // Pattern: "Page X of Y" or "Page X"
+            var match = Regex.Match(pageText, @"page\s*(\d+)", RegexOptions.IgnoreCase);
+            if (match.Success)
+                return match.Groups[1].Value;
+
+            // Pattern: "X of Y" or "X/Y"
+            match = Regex.Match(pageText, @"(\d+)\s*(?:of|/)\s*\d+", RegexOptions.IgnoreCase);
+            if (match.Success)
+                return match.Groups[1].Value;
+
+            // Just return the text if no pattern
+            return pageText;
         }
 
         private void BtnClearLabel_Click(object sender, RoutedEventArgs e)
         {
             if (_selectedTextBox == null) return;
 
+            string previousLabel = _selectedTextBox.AssignedLabel;
             _selectedTextBox.AssignedLabel = null;
+
+            // Clear the extracted value
+            if (!string.IsNullOrEmpty(previousLabel))
+            {
+                ClearExtractedValue(previousLabel);
+            }
+
             DisplaySlide(_currentSlideIndex);
+        }
+
+        private void ClearExtractedValue(string label)
+        {
+            if (_currentFile == null) return;
+
+            switch (label)
+            {
+                case "WI_Number":
+                    _currentFile.ExtractedWINumber = null;
+                    break;
+                case "WI_Title":
+                    _currentFile.ExtractedTitle = null;
+                    break;
+                case "Revision":
+                    _currentFile.ExtractedRevision = null;
+                    break;
+                case "BOM_ASSY_DWG_NO":
+                    _currentFile.ExtractedBOM = null;
+                    break;
+                case "Operation_No":
+                    _currentFile.ExtractedOperationNo = null;
+                    break;
+                case "Product_Line":
+                    _currentFile.ExtractedProductLine = null;
+                    break;
+                case "Subject":
+                    _currentFile.ExtractedSubject = null;
+                    break;
+                case "Page_No":
+                    _currentFile.ExtractedPageNo = null;
+                    break;
+                case "Template_Revision":
+                    _currentFile.ExtractedTemplateRev = null;
+                    break;
+            }
         }
 
         private void BtnPrevSlide_Click(object sender, RoutedEventArgs e)
@@ -682,7 +1012,6 @@ private List<string> CheckRequiredLabelsForFile(string filePath)
 
         private void BtnNextSlide_Click(object sender, RoutedEventArgs e)
         {
-            // For now, only working with slide 1
             MessageBox.Show("Currently only labeling slide 1 (header data)", "Info");
         }
 
@@ -691,14 +1020,33 @@ private List<string> CheckRequiredLabelsForFile(string filePath)
             var dialog = new SaveFileDialog
             {
                 Filter = "CSV Files (*.csv)|*.csv",
-                FileName = "training_data.csv"
+                FileName = "training_data_with_values.csv"
             };
 
             if (dialog.ShowDialog() == true)
             {
                 SaveTrainingDataToCSV(dialog.FileName);
-                MessageBox.Show($"Training data saved to:\n{dialog.FileName}",
-                    "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                int filesWithData = _powerPointFiles.Count(f =>
+                    !string.IsNullOrEmpty(f.ExtractedWINumber) ||
+                    !string.IsNullOrEmpty(f.ExtractedTitle));
+
+                int labeledBoxes = _allLabeledBoxes.Count(b =>
+                    !string.IsNullOrEmpty(b.AssignedLabel) &&
+                    !b.IsHidden &&
+                    b.AssignedLabel != "Ignore");
+
+                MessageBox.Show(
+                    $"Training data saved!\n\n" +
+                    $"File: {dialog.FileName}\n\n" +
+                    $"Files with extracted values: {filesWithData}\n" +
+                    $"Total labeled text boxes: {labeledBoxes}\n\n" +
+                    $"This file contains:\n" +
+                    $"• Extracted values (for human review)\n" +
+                    $"• Text box positions (for ML training)",
+                    "Success",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
             }
         }
 
@@ -707,7 +1055,18 @@ private List<string> CheckRequiredLabelsForFile(string filePath)
             using (var writer = new StreamWriter(filePath))
             using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
             {
-                // Write header
+                // Write comprehensive headers
+                csv.WriteField("FileName");
+                csv.WriteField("WI_Number");
+                csv.WriteField("WI_Title");
+                csv.WriteField("Revision");
+                csv.WriteField("BOM_ASSY_DWG_NO");
+                csv.WriteField("Operation_No");
+                csv.WriteField("Product_Line");
+                csv.WriteField("Subject");
+                csv.WriteField("Page_No");
+                csv.WriteField("Template_Rev");
+                csv.WriteField("TextBoxText");
                 csv.WriteField("Left");
                 csv.WriteField("Top");
                 csv.WriteField("Width");
@@ -721,25 +1080,60 @@ private List<string> CheckRequiredLabelsForFile(string filePath)
                 csv.WriteField("Label");
                 csv.NextRecord();
 
-                // Write data - EXCLUDE HIDDEN BOXES
-                foreach (var box in _allLabeledBoxes.Where(b => !string.IsNullOrEmpty(b.AssignedLabel) &&
-                                                                 !b.IsHidden &&
-                                                                 b.AssignedLabel != "Ignore"))
+                // Group labeled boxes by file
+                var fileGroups = _allLabeledBoxes
+                    .Where(b => !string.IsNullOrEmpty(b.AssignedLabel) &&
+                               !b.IsHidden &&
+                               b.AssignedLabel != "Ignore")
+                    .GroupBy(b => b.SourceFile);
+
+                foreach (var fileGroup in fileGroups)
                 {
-                    csv.WriteField(box.Left);
-                    csv.WriteField(box.Top);
-                    csv.WriteField(box.Width);
-                    csv.WriteField(box.Height);
-                    csv.WriteField(box.Text.Length);
-                    csv.WriteField(Regex.IsMatch(box.Text, @"\d"));
-                    csv.WriteField(box.Text.Contains("-"));
-                    csv.WriteField(box.Text.StartsWith("WI", StringComparison.OrdinalIgnoreCase));
-                    csv.WriteField(Regex.IsMatch(box.Text, @"^\d+$"));
-                    csv.WriteField(box.RevisionType);
-                    csv.WriteField(box.AssignedLabel);
-                    csv.NextRecord();
+                    // Find the file info for this group
+                    var fileInfo = _powerPointFiles.FirstOrDefault(f => f.FilePath == fileGroup.Key);
+
+                    string fileName = fileInfo?.FileName ?? System.IO.Path.GetFileName(fileGroup.Key);
+                    string wiNumber = fileInfo?.ExtractedWINumber ?? "";
+                    string wiTitle = fileInfo?.ExtractedTitle ?? "";
+                    string revision = fileInfo?.ExtractedRevision ?? "";
+                    string bom = fileInfo?.ExtractedBOM ?? "";
+                    string opNo = fileInfo?.ExtractedOperationNo ?? "";
+                    string productLine = fileInfo?.ExtractedProductLine ?? "";
+                    string subject = fileInfo?.ExtractedSubject ?? "";
+                    string pageNo = fileInfo?.ExtractedPageNo ?? "";
+                    string templateRev = fileInfo?.ExtractedTemplateRev ?? "";
+
+                    // Write each labeled text box with the file's extracted values
+                    foreach (var box in fileGroup)
+                    {
+                        csv.WriteField(fileName);
+                        csv.WriteField(wiNumber);
+                        csv.WriteField(wiTitle);
+                        csv.WriteField(revision);
+                        csv.WriteField(bom);
+                        csv.WriteField(opNo);
+                        csv.WriteField(productLine);
+                        csv.WriteField(subject);
+                        csv.WriteField(pageNo);
+                        csv.WriteField(templateRev);
+                        csv.WriteField(box.Text);
+                        csv.WriteField(box.Left);
+                        csv.WriteField(box.Top);
+                        csv.WriteField(box.Width);
+                        csv.WriteField(box.Height);
+                        csv.WriteField(box.Text.Length);
+                        csv.WriteField(Regex.IsMatch(box.Text, @"\d"));
+                        csv.WriteField(box.Text.Contains("-"));
+                        csv.WriteField(box.Text.StartsWith("WI", StringComparison.OrdinalIgnoreCase));
+                        csv.WriteField(Regex.IsMatch(box.Text, @"^\d+$"));
+                        csv.WriteField(box.RevisionType);
+                        csv.WriteField(box.AssignedLabel);
+                        csv.NextRecord();
+                    }
                 }
             }
+
+            Console.WriteLine($"Combined training/verification CSV exported with labeled boxes");
         }
 
         private void BtnTrainModel_Click(object sender, RoutedEventArgs e)
@@ -749,7 +1143,9 @@ private List<string> CheckRequiredLabelsForFile(string filePath)
             SaveTrainingDataToCSV(tempTrainingFile);
 
             // Check if we have enough data
-            int labeledCount = _allLabeledBoxes.Count(b => !string.IsNullOrEmpty(b.AssignedLabel));
+            int labeledCount = _allLabeledBoxes.Count(b => !string.IsNullOrEmpty(b.AssignedLabel) &&
+                                                           !b.IsHidden &&
+                                                           b.AssignedLabel != "Ignore");
             if (labeledCount < 20)
             {
                 MessageBox.Show($"Not enough training data. You have {labeledCount} labeled examples.\n" +
@@ -800,13 +1196,24 @@ private List<string> CheckRequiredLabelsForFile(string filePath)
         }
     }
 
-    // Helper classes at the bottom of MainWindow.xaml.cs
+    // Helper classes
     public class PowerPointFileInfo
     {
         public string FilePath { get; set; }
         public string FileName { get; set; }
         public bool IsLabeled { get; set; }
         public bool IsCompleted { get; set; }
+
+        // Extracted values
+        public string ExtractedWINumber { get; set; }
+        public string ExtractedTitle { get; set; }
+        public string ExtractedRevision { get; set; }
+        public string ExtractedBOM { get; set; }
+        public string ExtractedOperationNo { get; set; }
+        public string ExtractedProductLine { get; set; }
+        public string ExtractedSubject { get; set; }
+        public string ExtractedPageNo { get; set; }
+        public string ExtractedTemplateRev { get; set; }
     }
 
     public class TextBoxInfo
@@ -818,7 +1225,6 @@ private List<string> CheckRequiredLabelsForFile(string filePath)
         public float Height { get; set; }
     }
 
-    // ADD THIS CLASS:
     public class LabeledTextBox
     {
         public string Text { get; set; }
@@ -833,3 +1239,155 @@ private List<string> CheckRequiredLabelsForFile(string filePath)
         public bool IsHidden { get; set; }
     }
 }
+```
+
+## **2. TrainingDataModels.cs** (Complete File)
+
+```csharp
+using Microsoft.ML.Data;
+
+namespace WorkInstructionLabeler
+{
+    public class TextBoxFeatures
+    {
+        // Skip the first 10 columns (FileName through Template_Rev)
+        [LoadColumn(10)]  // TextBoxText
+        public string TextBoxText { get; set; }
+
+        [LoadColumn(11)]
+        public float Left { get; set; }
+
+        [LoadColumn(12)]
+        public float Top { get; set; }
+
+        [LoadColumn(13)]
+        public float Width { get; set; }
+
+        [LoadColumn(14)]
+        public float Height { get; set; }
+
+        [LoadColumn(15)]
+        public float TextLength { get; set; }
+
+        [LoadColumn(16)]
+        public bool ContainsNumbers { get; set; }
+
+        [LoadColumn(17)]
+        public bool ContainsHyphen { get; set; }
+
+        [LoadColumn(18)]
+        public bool StartsWithWI { get; set; }
+
+        [LoadColumn(19)]
+        public bool IsAllDigits { get; set; }
+
+        [LoadColumn(20)]
+        public string RevisionType { get; set; }
+
+        [LoadColumn(21)]
+        [ColumnName("Label")]
+        public string FieldType { get; set; }
+    }
+
+    public class TextBoxPrediction
+    {
+        [ColumnName("PredictedLabel")]
+        public string FieldType { get; set; }
+
+        public float[] Score { get; set; }
+    }
+}
+```
+
+## **3. ModelTrainer.cs** (Complete File)
+
+```csharp
+using System;
+using System.Linq;
+using Microsoft.ML;
+using Microsoft.ML.Data;
+
+namespace WorkInstructionLabeler
+{
+    public class ModelTrainer
+    {
+        public void TrainModel(string trainingDataPath, string modelPath)
+        {
+            var mlContext = new MLContext(seed: 0);
+
+            Console.WriteLine("Loading training data...");
+
+            // Load training data with the new column structure
+            IDataView dataView = mlContext.Data.LoadFromTextFile<TextBoxFeatures>(
+                trainingDataPath,
+                hasHeader: true,
+                separatorChar: ',');
+
+            // Check data distribution
+            var preview = dataView.Preview(maxRows: 10);
+            Console.WriteLine($"Loaded {preview.RowView.Count} sample rows");
+
+            // Split for training and testing (80/20)
+            var split = mlContext.Data.TrainTestSplit(dataView, testFraction: 0.2);
+
+            Console.WriteLine("Building training pipeline...");
+
+            // Define training pipeline
+            var pipeline = mlContext.Transforms.Conversion.MapValueToKey("Label", "Label")
+                .Append(mlContext.Transforms.Categorical.OneHotEncoding("RevisionTypeEncoded", "RevisionType"))
+                .Append(mlContext.Transforms.Concatenate("Features",
+                    "Left", "Top", "Width", "Height", "TextLength",
+                    "ContainsNumbers", "ContainsHyphen", "StartsWithWI",
+                    "IsAllDigits", "RevisionTypeEncoded"))
+                .Append(mlContext.MulticlassClassification.Trainers.SdcaMaximumEntropy(
+                    labelColumnName: "Label",
+                    featureColumnName: "Features"))
+                .Append(mlContext.Transforms.Conversion.MapKeyToValue("PredictedLabel"));
+
+            Console.WriteLine("Training model...");
+            var model = pipeline.Fit(split.TrainSet);
+
+            Console.WriteLine("Evaluating model...");
+            var predictions = model.Transform(split.TestSet);
+            var metrics = mlContext.MulticlassClassification.Evaluate(predictions, labelColumnName: "Label");
+
+            Console.WriteLine("\n=== Model Evaluation Metrics ===");
+            Console.WriteLine($"Macro Accuracy: {metrics.MacroAccuracy:P2}");
+            Console.WriteLine($"Micro Accuracy: {metrics.MicroAccuracy:P2}");
+            Console.WriteLine($"Log Loss: {metrics.LogLoss:F4}");
+            Console.WriteLine($"Log Loss Reduction: {metrics.LogLossReduction:F4}");
+
+            // Per-class metrics
+            Console.WriteLine("\n=== Per-Class Metrics ===");
+            for (int i = 0; i < metrics.PerClassLogLoss.Count; i++)
+            {
+                Console.WriteLine($"Class {i}: Log Loss = {metrics.PerClassLogLoss[i]:F4}");
+            }
+
+            // Confusion matrix
+            var confusionMatrix = metrics.ConfusionMatrix;
+            Console.WriteLine("\n=== Confusion Matrix ===");
+            Console.WriteLine(confusionMatrix.GetFormattedConfusionTable());
+
+            // Save the model
+            Console.WriteLine($"\nSaving model to {modelPath}...");
+            mlContext.Model.Save(model, dataView.Schema, modelPath);
+
+            Console.WriteLine("Model training complete!");
+        }
+    }
+}
+```
+
+-----
+
+That’s all the complete revised classes! The key changes are:
+
+1. **PowerPointFileInfo** - Added 9 properties to store extracted values
+1. **MainWindow.xaml.cs** - Added value capture, parsing, and combined CSV export
+1. **SaveTrainingDataToCSV** - Now exports both human-readable values AND ML training features
+1. **TextBoxFeatures** - Updated LoadColumn indices to skip first 10 CSV columns
+1. **ParseTemplateRevision** - Extracts just the revision number from template text
+1. **ParsePageNumber** - Extracts page number from various formats
+
+The CSV will now have both verification columns (first 10) and ML training columns (remaining), all in one file!​​​​​​​​​​​​​​​​
