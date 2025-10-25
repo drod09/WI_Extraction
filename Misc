@@ -1,2 +1,365 @@
-Argument 1: cannot convert from 'Microsoft.Office.Interop.PowerPoint.GroupShapes' to 'Microsoft.Office.Interop.PowerPoint.Shapes'
-Argument 1: cannot convert from 'method group' to 'object?'
+Here are the fixes for both errors:
+
+## **Fix 1: MainWindow.xaml.cs - GroupShapes Issue**
+
+The `CollectCandidates` method is being called recursively with `GroupShapes`, but it expects `Shapes`. We need an overload:
+
+Replace the `DetectRevisionType` method with this corrected version:
+
+```csharp
+private string DetectRevisionType(Presentation ppt)
+{
+    if (ppt.Slides.Count > 0)
+    {
+        Slide slide = ppt.Slides[1];
+        var candidateBoxes = new List<(string text, float left, float top)>();
+
+        // Collect text from Shapes
+        void CollectCandidates(Microsoft.Office.Interop.PowerPoint.Shapes shapes, string source)
+        {
+            foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in shapes)
+            {
+                try
+                {
+                    if (shape.Type == MsoShapeType.msoGroup)
+                    {
+                        try
+                        {
+                            CollectCandidatesFromGroup(shape.GroupItems, source + "-Group");
+                        }
+                        catch { }
+                    }
+                    else if (shape.HasTextFrame == MsoTriState.msoTrue)
+                    {
+                        try
+                        {
+                            string text = shape.TextFrame.TextRange.Text.Trim();
+                            if (!string.IsNullOrEmpty(text))
+                            {
+                                candidateBoxes.Add((text, shape.Left, shape.Top));
+                            }
+                        }
+                        catch { }
+                    }
+                }
+                catch { }
+            }
+        }
+
+        // ADD THIS SEPARATE METHOD for GroupShapes
+        void CollectCandidatesFromGroup(Microsoft.Office.Interop.PowerPoint.GroupShapes groupShapes, string source)
+        {
+            foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in groupShapes)
+            {
+                try
+                {
+                    if (shape.Type == MsoShapeType.msoGroup)
+                    {
+                        try
+                        {
+                            CollectCandidatesFromGroup(shape.GroupItems, source + "-Group");
+                        }
+                        catch { }
+                    }
+                    else if (shape.HasTextFrame == MsoTriState.msoTrue)
+                    {
+                        try
+                        {
+                            string text = shape.TextFrame.TextRange.Text.Trim();
+                            if (!string.IsNullOrEmpty(text))
+                            {
+                                candidateBoxes.Add((text, shape.Left, shape.Top));
+                            }
+                        }
+                        catch { }
+                    }
+                }
+                catch { }
+            }
+        }
+
+        Console.WriteLine("\n=== Searching for Template Revision ===");
+
+        // Collect from all sources
+        try { CollectCandidates(slide.Shapes, "Slide"); } catch { }
+        try { CollectCandidates(slide.Master.Shapes, "Master"); } catch { }
+        try { CollectCandidates(slide.Design.SlideMaster.Shapes, "Design"); } catch { }
+        try { CollectCandidates(slide.CustomLayout.Shapes, "CustomLayout"); } catch { }
+
+        Console.WriteLine($"\nTotal text boxes found: {candidateBoxes.Count}");
+
+        // Show ALL boxes sorted by position (for debugging)
+        var sortedBoxes = candidateBoxes
+            .OrderByDescending(b => b.top)
+            .ThenByDescending(b => b.left)
+            .ToList();
+
+        Console.WriteLine("\nAll text boxes (sorted by position, bottom-to-top, right-to-left):");
+        foreach (var box in sortedBoxes.Take(20)) // Show first 20
+        {
+            Console.WriteLine($"  Left:{box.left,7:F1} Top:{box.top,7:F1} | '{box.text.Substring(0, Math.Min(40, box.text.Length))}'");
+        }
+
+        // Filter for bottom-right area
+        var bottomRightBoxes = candidateBoxes
+            .Where(b => b.left > 300 && b.top > 450)
+            .OrderByDescending(b => b.left)
+            .ThenByDescending(b => b.top)
+            .ToList();
+
+        Console.WriteLine($"\n=== Bottom-Right Area (Left > 300, Top > 450) ===");
+        Console.WriteLine($"Found {bottomRightBoxes.Count} text boxes:");
+        foreach (var box in bottomRightBoxes)
+        {
+            Console.WriteLine($"  Left:{box.left,7:F1} Top:{box.top,7:F1} | '{box.text}'");
+        }
+
+        // Search patterns
+        var fmmePatterns = new[]
+        {
+            @"fm[-_\s]*me[-_\s]*\d+",
+            @"fm[-_\s]*\d+",
+            @"fmme",
+        };
+
+        var revPatterns = new[]
+        {
+            @"rev\.?\s*(\d+)",
+            @"revision\s*(\d+)",
+            @"r\.?\s*(\d+)",
+            @"-(\d+)$",
+            @"\b(\d{2})\b",
+        };
+
+        // Strategy 1: Look for FM-ME pattern in bottom-right
+        Console.WriteLine("\n--- Strategy 1: FM-ME text with revision ---");
+        foreach (var box in bottomRightBoxes)
+        {
+            string text = box.text.ToLower();
+            bool hasFMME = fmmePatterns.Any(p => Regex.IsMatch(text, p, RegexOptions.IgnoreCase));
+
+            if (hasFMME)
+            {
+                Console.WriteLine($"✓ Found FM-ME text: '{box.text}'");
+
+                foreach (var pattern in revPatterns)
+                {
+                    var match = Regex.Match(text, pattern, RegexOptions.IgnoreCase);
+                    if (match.Success && match.Groups.Count > 1)
+                    {
+                        string revNum = match.Groups[1].Value;
+                        if (int.TryParse(revNum, out int num) && num >= 10 && num <= 30)
+                        {
+                            Console.WriteLine($"✓✓ FOUND TEMPLATE REVISION: {revNum}");
+                            return revNum;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Strategy 2: Look for separate revision box near FM-ME
+        Console.WriteLine("\n--- Strategy 2: Separate revision box ---");
+        var fmmeBox = bottomRightBoxes.FirstOrDefault(b =>
+            fmmePatterns.Any(p => Regex.IsMatch(b.text.ToLower(), p, RegexOptions.IgnoreCase)));
+
+        if (fmmeBox.text != null)
+        {
+            Console.WriteLine($"✓ Found FM-ME box at Left:{fmmeBox.left:F1}, Top:{fmmeBox.top:F1}");
+            Console.WriteLine($"  Text: '{fmmeBox.text}'");
+            Console.WriteLine("  Looking for nearby revision box...");
+
+            var nearbyBoxes = candidateBoxes
+                .Where(b => b.left < fmmeBox.left &&
+                           b.left > fmmeBox.left - 300 &&
+                           Math.Abs(b.top - fmmeBox.top) < 100)
+                .OrderByDescending(b => b.left)
+                .ToList();
+
+            Console.WriteLine($"  Found {nearbyBoxes.Count} nearby boxes:");
+            foreach (var box in nearbyBoxes)
+            {
+                Console.WriteLine($"    Left:{box.left,7:F1} Top:{box.top,7:F1} | '{box.text}'");
+
+                foreach (var pattern in revPatterns)
+                {
+                    var match = Regex.Match(box.text, pattern, RegexOptions.IgnoreCase);
+                    if (match.Success && match.Groups.Count > 1)
+                    {
+                        string revNum = match.Groups[1].Value;
+                        if (int.TryParse(revNum, out int num) && num >= 10 && num <= 30)
+                        {
+                            Console.WriteLine($"    ✓✓ FOUND TEMPLATE REVISION: {revNum}");
+                            return revNum;
+                        }
+                    }
+                }
+
+                if (Regex.IsMatch(box.text.Trim(), @"^\d{2}$"))
+                {
+                    Console.WriteLine($"    ✓✓ FOUND TEMPLATE REVISION (number): {box.text.Trim()}");
+                    return box.text.Trim();
+                }
+            }
+        }
+
+        // Strategy 3: Broader search in entire bottom area
+        Console.WriteLine("\n--- Strategy 3: Broader bottom area search ---");
+        var bottomBoxes = candidateBoxes.Where(b => b.top > 400).ToList();
+
+        foreach (var box in bottomBoxes)
+        {
+            string text = box.text.ToLower();
+            bool hasFMME = fmmePatterns.Any(p => Regex.IsMatch(text, p, RegexOptions.IgnoreCase));
+            bool hasRev = Regex.IsMatch(text, @"rev", RegexOptions.IgnoreCase);
+
+            if (hasFMME || hasRev)
+            {
+                Console.WriteLine($"  Checking: '{box.text}' at Left:{box.left:F1}, Top:{box.top:F1}");
+
+                foreach (var pattern in revPatterns)
+                {
+                    var match = Regex.Match(text, pattern, RegexOptions.IgnoreCase);
+                    if (match.Success && match.Groups.Count > 1)
+                    {
+                        string revNum = match.Groups[1].Value;
+                        if (int.TryParse(revNum, out int num) && num >= 10 && num <= 30)
+                        {
+                            Console.WriteLine($"  ✓✓ FOUND TEMPLATE REVISION: {revNum}");
+                            return revNum;
+                        }
+                    }
+                }
+            }
+        }
+
+        Console.WriteLine("\n✗✗ Template revision NOT FOUND");
+    }
+
+    return "Unknown";
+}
+```
+
+## **Fix 2: ModelTrainer.cs - Console.WriteLine Issue**
+
+The issue is with `Console.WriteLine(confusionMatrix.GetFormattedConfusionTable());`. The method returns a string, so we need to call it properly:
+
+Replace this line in `ModelTrainer.cs`:
+
+```csharp
+// WRONG
+Console.WriteLine(confusionMatrix.GetFormattedConfusionTable());
+
+// CORRECT
+Console.WriteLine(confusionMatrix.GetFormattedConfusionTable());
+```
+
+Actually, that line looks correct. The issue might be with how you’re calling it. Try this instead:
+
+```csharp
+// Confusion matrix
+Console.WriteLine("\n=== Confusion Matrix ===");
+var confusionMatrixTable = metrics.ConfusionMatrix.GetFormattedConfusionTable();
+Console.WriteLine(confusionMatrixTable);
+```
+
+Or if that still doesn’t work, just remove that line entirely and use this simpler version:
+
+```csharp
+// Confusion matrix
+Console.WriteLine("\n=== Confusion Matrix ===");
+Console.WriteLine($"Number of classes: {metrics.ConfusionMatrix.NumberOfClasses}");
+Console.WriteLine($"Confusion matrix dimensions: {metrics.ConfusionMatrix.Counts.Count}");
+```
+
+## **Complete Fixed ModelTrainer.cs**
+
+```csharp
+using System;
+using System.Linq;
+using Microsoft.ML;
+using Microsoft.ML.Data;
+
+namespace WorkInstructionLabeler
+{
+    public class ModelTrainer
+    {
+        public void TrainModel(string trainingDataPath, string modelPath)
+        {
+            var mlContext = new MLContext(seed: 0);
+
+            Console.WriteLine("Loading training data...");
+
+            // Load training data with the new column structure
+            IDataView dataView = mlContext.Data.LoadFromTextFile<TextBoxFeatures>(
+                trainingDataPath,
+                hasHeader: true,
+                separatorChar: ',');
+
+            // Check data distribution
+            var preview = dataView.Preview(maxRows: 10);
+            Console.WriteLine($"Loaded {preview.RowView.Count} sample rows");
+
+            // Split for training and testing (80/20)
+            var split = mlContext.Data.TrainTestSplit(dataView, testFraction: 0.2);
+
+            Console.WriteLine("Building training pipeline...");
+
+            // Define training pipeline
+            var pipeline = mlContext.Transforms.Conversion.MapValueToKey("Label", "Label")
+                .Append(mlContext.Transforms.Categorical.OneHotEncoding("RevisionTypeEncoded", "RevisionType"))
+                .Append(mlContext.Transforms.Concatenate("Features",
+                    "Left", "Top", "Width", "Height", "TextLength",
+                    "ContainsNumbers", "ContainsHyphen", "StartsWithWI",
+                    "IsAllDigits", "RevisionTypeEncoded"))
+                .Append(mlContext.MulticlassClassification.Trainers.SdcaMaximumEntropy(
+                    labelColumnName: "Label",
+                    featureColumnName: "Features"))
+                .Append(mlContext.Transforms.Conversion.MapKeyToValue("PredictedLabel"));
+
+            Console.WriteLine("Training model...");
+            var model = pipeline.Fit(split.TrainSet);
+
+            Console.WriteLine("Evaluating model...");
+            var predictions = model.Transform(split.TestSet);
+            var metrics = mlContext.MulticlassClassification.Evaluate(predictions, labelColumnName: "Label");
+
+            Console.WriteLine("\n=== Model Evaluation Metrics ===");
+            Console.WriteLine($"Macro Accuracy: {metrics.MacroAccuracy:P2}");
+            Console.WriteLine($"Micro Accuracy: {metrics.MicroAccuracy:P2}");
+            Console.WriteLine($"Log Loss: {metrics.LogLoss:F4}");
+            Console.WriteLine($"Log Loss Reduction: {metrics.LogLossReduction:F4}");
+
+            // Per-class metrics
+            Console.WriteLine("\n=== Per-Class Metrics ===");
+            for (int i = 0; i < metrics.PerClassLogLoss.Count; i++)
+            {
+                Console.WriteLine($"Class {i}: Log Loss = {metrics.PerClassLogLoss[i]:F4}");
+            }
+
+            // Confusion matrix - FIXED
+            Console.WriteLine("\n=== Confusion Matrix ===");
+            try
+            {
+                string confusionTable = metrics.ConfusionMatrix.GetFormattedConfusionTable();
+                Console.WriteLine(confusionTable);
+            }
+            catch
+            {
+                Console.WriteLine($"Number of classes: {metrics.ConfusionMatrix.NumberOfClasses}");
+            }
+
+            // Save the model
+            Console.WriteLine($"\nSaving model to {modelPath}...");
+            mlContext.Model.Save(model, dataView.Schema, modelPath);
+
+            Console.WriteLine("Model training complete!");
+        }
+    }
+}
+```
+
+Both errors should now be resolved! The key fixes were:
+
+1. **MainWindow.xaml.cs**: Added separate `CollectCandidatesFromGroup` method to handle `GroupShapes` type
+1. **ModelTrainer.cs**: Wrapped the confusion matrix printing in a try-catch in case it fails​​​​​​​​​​​​​​​​
