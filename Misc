@@ -1,3 +1,4 @@
-            // Check data distribution
-            var preview = dataView.Preview(maxRows: 10);
-            Console.WriteLine($"Loaded {preview.RowView.Count} sample rows");
+// Check data distribution
+var preview = dataView.Preview(maxRows: 10);
+var rowCount = preview.RowView.Count(); // Use Count() method from LINQ, not Count property
+Console.WriteLine($"Loaded {rowCount} sample rows");
