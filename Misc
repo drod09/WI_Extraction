@@ -1,2096 +1,376 @@
-using CsvHelper;
-using Microsoft.Office.Core;
-using Microsoft.Office.Interop.PowerPoint;
-using Microsoft.Win32;
-using Ookii.Dialogs.Wpf;
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Text.RegularExpressions;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Media;
-using System.Windows.Shapes;
+Excellent plan! Let’s enhance the solution with slide classification and multi-slide labeling. Here’s my implementation strategy:
 
-namespace WorkInstructionLabeler
+## Architecture Changes
+
+```
+Current: File → Slide 1 → Label text boxes on header
+New:     File → All Slides → Label slide type → Label text boxes on each slide
+```
+
+## Implementation Plan
+
+### 1. **New Data Models**
+
+```csharp
+// Add to your existing classes
+public class PowerPointFileInfo
 {
-    public partial class MainWindow : Window
+    // ... existing properties ...
+    public List<SlideInfo> Slides { get; set; } = new List<SlideInfo>();
+}
+
+public class SlideInfo
+{
+    public int SlideNumber { get; set; }
+    public string SlideType { get; set; }  // "TitlePage", "Procedure", etc.
+    public List<LabeledTextBox> TextBoxes { get; set; } = new List<LabeledTextBox>();
+    public string ThumbnailPath { get; set; }  // For visual reference
+}
+
+public enum SlideType
+{
+    TitlePage,
+    PartsAndEquipment,
+    ExplodedView,
+    ReferenceImage,
+    ApprovedSwabs,
+    AcceptGoodChecklist,
+    Procedure,
+    PassGoodChecklist,
+    Appendix,
+    Other
+}
+
+public enum TextBoxType
+{
+    // Title page labels (existing)
+    WI_Number,
+    WI_Title,
+    Revision,
+    BOM_ASSY_DWG_NO,
+    Operation_No,
+    Product_Line,
+    Subject,
+    Template_Revision,
+    
+    // Multi-slide labels (new)
+    SlideTitle,
+    SlideProcedure,
+    Notes,
+    Other,
+    Ignore
+}
+```
+
+### 2. **Updated UI - Add Slide Type Panel**
+
+I’ll modify your XAML to add a slide classification panel:
+
+```xml
+<!-- Add this section to your toolbar area -->
+<Border Grid.Row="0" Background="#37474F" Padding="10">
+    <StackPanel>
+        <!-- Existing toolbar content -->
+        
+        <!-- NEW: Slide Classification -->
+        <Separator Margin="0,10" Background="#666"/>
+        <TextBlock Text="Classify This Slide:" Foreground="White" 
+                   FontSize="12" FontWeight="Bold" Margin="0,5"/>
+        <ComboBox x:Name="cmbSlideType" Width="200" Height="30"
+                  SelectionChanged="CmbSlideType_SelectionChanged">
+            <ComboBoxItem Content="Title Page" Tag="TitlePage"/>
+            <ComboBoxItem Content="Parts and Equipment" Tag="PartsAndEquipment"/>
+            <ComboBoxItem Content="Exploded View" Tag="ExplodedView"/>
+            <ComboBoxItem Content="Reference Image" Tag="ReferenceImage"/>
+            <ComboBoxItem Content="Approved Swabs" Tag="ApprovedSwabs"/>
+            <ComboBoxItem Content="Accept/Good Checklist" Tag="AcceptGoodChecklist"/>
+            <ComboBoxItem Content="Procedure" Tag="Procedure"/>
+            <ComboBoxItem Content="Pass/Good Checklist" Tag="PassGoodChecklist"/>
+            <ComboBoxItem Content="Appendix" Tag="Appendix"/>
+            <ComboBoxItem Content="Other" Tag="Other"/>
+        </ComboBox>
+    </StackPanel>
+</Border>
+```
+
+### 3. **Updated Right Panel - Context-Sensitive Labels**
+
+The label buttons should change based on slide type:
+
+```csharp
+private void UpdateAvailableLabels(string slideType)
+{
+    // Clear existing buttons
+    labelButtonsPanel.Children.Clear();
+    
+    if (slideType == "TitlePage")
     {
-        private List<PowerPointFileInfo> _powerPointFiles = new List<PowerPointFileInfo>();
-        private PowerPointFileInfo _currentFile;
-        private int _currentSlideIndex = 0;
-        private List<LabeledTextBox> _allLabeledBoxes = new List<LabeledTextBox>();
-        private LabeledTextBox _selectedTextBox;
-        private Dictionary<Border, LabeledTextBox> _borderToTextBoxMap = new Dictionary<Border, LabeledTextBox>();
-        private double _zoomLevel = 1.0;
+        // Show title page labels (your existing ones)
+        AddLabelButton("WI Number", "WI_Number", "#2196F3");
+        AddLabelButton("WI Title", "WI_Title", "#4CAF50");
+        // ... etc
+    }
+    else
+    {
+        // Show generic slide labels
+        AddLabelButton("Slide Title", "SlideTitle", "#2196F3");
+        AddLabelButton("Procedure Text", "SlideProcedure", "#4CAF50");
+        AddLabelButton("Notes", "Notes", "#FF9800");
+        AddLabelButton("Other", "Other", "#757575");
+    }
+    
+    // Always show these
+    AddLabelButton("Ignore", "Ignore", "#757575");
+    AddLabelButton("Hide Box", "HideBox", "#607D8B");
+}
+```
 
-        public MainWindow()
+### 4. **Enhanced Navigation**
+
+```csharp
+private void BtnNextSlide_Click(object sender, RoutedEventArgs e)
+{
+    if (_currentFile == null) return;
+    
+    // Save current slide's work
+    SaveCurrentSlideLabels();
+    
+    // Move to next slide
+    if (_currentSlideIndex < _currentFile.Slides.Count - 1)
+    {
+        _currentSlideIndex++;
+        LoadSlide(_currentSlideIndex);
+    }
+    else
+    {
+        MessageBox.Show("This is the last slide.", "Info");
+    }
+}
+
+private void SaveCurrentSlideLabels()
+{
+    var currentSlide = _currentFile.Slides[_currentSlideIndex];
+    currentSlide.SlideType = (cmbSlideType.SelectedItem as ComboBoxItem)?.Tag.ToString();
+    currentSlide.TextBoxes = _allLabeledBoxes
+        .Where(b => b.SourceFile == _currentFile.FilePath && 
+                    b.SlideNumber == _currentSlideIndex + 1)
+        .ToList();
+}
+```
+
+### 5. **Extract All Slides**
+
+```csharp
+private void ExtractAllSlidesFromPowerPoint(string filePath)
+{
+    var pptApp = new Application();
+    
+    try
+    {
+        Presentation ppt = pptApp.Presentations.Open(filePath,
+            MsoTriState.msoFalse, MsoTriState.msoFalse, MsoTriState.msoFalse);
+
+        string revType = DetectRevisionType(ppt);
+        _currentFile.Slides.Clear();
+
+        // Extract ALL slides
+        for (int i = 1; i <= ppt.Slides.Count; i++)
         {
-            InitializeComponent();
-        }
-
-        private void BtnMarkComplete_Click(object sender, RoutedEventArgs e)
-        {
-            if (_currentFile == null)
+            var slideInfo = new SlideInfo
             {
-                MessageBox.Show("No file is currently loaded.", "No File",
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            // Check if required fields are labeled
-            var missingLabels = CheckRequiredLabels();
-
-            if (missingLabels.Count > 0)
-            {
-                var result = MessageBox.Show(
-                    $"The following fields are not labeled:\n\n{string.Join("\n", missingLabels)}\n\n" +
-                    "Do you want to mark this file as complete anyway?",
-                    "Missing Labels",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Warning);
-
-                if (result == MessageBoxResult.No)
-                    return;
-            }
-
-            // Mark as completed
-            _currentFile.IsCompleted = true;
-            _currentFile.IsLabeled = true;
-
-            UpdateProgress();
-
-            // Show success message
-            MessageBox.Show(
-                $"✓ File marked as complete!\n\n{_currentFile.FileName}\n\n" +
-                "You can now move to the next file.",
-                "File Completed",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
-
-            // Auto-select next file
-            int currentIndex = _powerPointFiles.IndexOf(_currentFile);
-            if (currentIndex < _powerPointFiles.Count - 1)
-            {
-                lstFiles.SelectedIndex = currentIndex + 1;
-            }
-        }
-
-        private List<string> CheckRequiredLabels()
-        {
-            var missingLabels = new List<string>();
-            var requiredLabels = new[]
-            {
-                "WI_Number",
-                "WI_Title",
-                "Revision",
-                "BOM_ASSY_DWG_NO",
-                "Operation_No",
-                "Product_Line",
-                "Subject",
-                "Template_Revision"
+                SlideNumber = i,
+                SlideType = i == 1 ? "TitlePage" : "Other",  // Default classification
+                TextBoxes = new List<LabeledTextBox>()
             };
 
-            var labeledFields = _allLabeledBoxes
-                .Where(b => b.SourceFile == _currentFile.FilePath && !b.IsHidden)
-                .Select(b => b.AssignedLabel)
-                .Where(l => !string.IsNullOrEmpty(l) && l != "Ignore")
-                .Distinct()
+            Slide slide = ppt.Slides[i];
+            var textBoxes = new List<TextBoxInfo>();
+
+            // Collect text boxes from all sources
+            CollectTextBoxes(slide.Shapes, textBoxes, "Slide");
+            
+            try { CollectTextBoxes(slide.Master.Shapes, textBoxes, "Master"); } 
+            catch { }
+            
+            try { CollectTextBoxes(slide.Design.SlideMaster.Shapes, textBoxes, "Design"); } 
+            catch { }
+            
+            try { CollectTextBoxes(slide.CustomLayout.Shapes, textBoxes, "CustomLayout"); } 
+            catch { }
+
+            // Remove duplicates
+            var uniqueBoxes = textBoxes
+                .GroupBy(b => new { b.Text, Left = Math.Round(b.Left, 1), Top = Math.Round(b.Top, 1) })
+                .Select(g => g.First())
                 .ToList();
 
-            var labelNameMap = new Dictionary<string, string>
+            // Convert to LabeledTextBox
+            foreach (var box in uniqueBoxes)
             {
-                { "WI_Number", "WI Number" },
-                { "WI_Title", "WI Title" },
-                { "Revision", "Revision" },
-                { "BOM_ASSY_DWG_NO", "BOM/ASSY DWG NO" },
-                { "Operation_No", "Operation No" },
-                { "Product_Line", "Product Line" },
-                { "Subject", "Subject" },
-                { "Template_Revision", "Template Revision" }
-            };
+                if (string.IsNullOrWhiteSpace(box.Text)) continue;
 
-            foreach (var required in requiredLabels)
-            {
-                if (!labeledFields.Contains(required))
-                {
-                    missingLabels.Add("  • " + labelNameMap[required]);
-                }
-            }
-
-            return missingLabels;
-        }
-
-        private void BtnHideBox_Click(object sender, RoutedEventArgs e)
-        {
-            if (_selectedTextBox == null)
-            {
-                MessageBox.Show("Please select a text box first", "No Selection",
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            // Mark as hidden
-            _selectedTextBox.IsHidden = true;
-
-            // Refresh display
-            DisplaySlide(_currentSlideIndex);
-
-            // Clear selection
-            _selectedTextBox = null;
-            txtSelectedText.Text = "Text box hidden";
-            txtPosition.Text = "";
-        }
-
-        private List<string> CheckRequiredLabelsForFile(string filePath)
-        {
-            var missingLabels = new List<string>();
-            var requiredLabels = new[]
-            {
-                "WI_Number",
-                "WI_Title",
-                "Revision",
-                "BOM_ASSY_DWG_NO",
-                "Operation_No",
-                "Product_Line",
-                "Subject",
-                "Template_Revision"
-            };
-
-            var labeledFields = _allLabeledBoxes
-                .Where(b => b.SourceFile == filePath && !b.IsHidden)
-                .Select(b => b.AssignedLabel)
-                .Where(l => !string.IsNullOrEmpty(l) && l != "Ignore")
-                .Distinct()
-                .ToList();
-
-            var labelNameMap = new Dictionary<string, string>
-            {
-                { "WI_Number", "WI Number" },
-                { "WI_Title", "WI Title" },
-                { "Revision", "Revision" },
-                { "BOM_ASSY_DWG_NO", "BOM/ASSY DWG NO" },
-                { "Operation_No", "Operation No" },
-                { "Product_Line", "Product Line" },
-                { "Subject", "Subject" },
-                { "Template_Revision", "Template Revision" }
-            };
-
-            foreach (var required in requiredLabels)
-            {
-                if (!labeledFields.Contains(required))
-                {
-                    missingLabels.Add("  • " + labelNameMap[required]);
-                }
-            }
-
-            return missingLabels;
-        }
-
-        private void BtnLoadFolder_Click(object sender, RoutedEventArgs e)
-        {
-            var dialog = new VistaFolderBrowserDialog
-            {
-                Description = "Select folder containing PowerPoint work instructions",
-                UseDescriptionForTitle = true
-            };
-
-            if (dialog.ShowDialog(this) == true)
-            {
-                LoadPowerPointFiles(dialog.SelectedPath);
-            }
-        }
-
-        private void BtnZoomIn_Click(object sender, RoutedEventArgs e)
-        {
-            _zoomLevel = Math.Min(_zoomLevel + 0.25, 3.0);
-            ApplyZoom();
-        }
-
-        private void BtnZoomOut_Click(object sender, RoutedEventArgs e)
-        {
-            _zoomLevel = Math.Max(_zoomLevel - 0.25, 0.5);
-            ApplyZoom();
-        }
-
-        private void BtnZoomFit_Click(object sender, RoutedEventArgs e)
-        {
-            _zoomLevel = 1.0;
-            ApplyZoom();
-        }
-
-        private void ApplyZoom()
-        {
-            var scaleTransform = new ScaleTransform(_zoomLevel, _zoomLevel);
-            slideCanvas.LayoutTransform = scaleTransform;
-            slideCanvas.Width = 960 * _zoomLevel;
-            slideCanvas.Height = 720 * _zoomLevel;
-            txtZoom.Text = $"{_zoomLevel * 100:F0}%";
-        }
-
-        private void LoadPowerPointFiles(string folderPath)
-        {
-            _powerPointFiles.Clear();
-            lstFiles.Items.Clear();
-
-            var files = Directory.GetFiles(folderPath, "*.pptx")
-                .Where(f => !System.IO.Path.GetFileName(f).StartsWith("~$"))
-                .ToList();
-
-            foreach (var file in files)
-            {
-                var fileInfo = new PowerPointFileInfo
-                {
-                    FilePath = file,
-                    FileName = System.IO.Path.GetFileName(file),
-                    IsLabeled = false,
-                    IsCompleted = false
-                };
-
-                _powerPointFiles.Add(fileInfo);
-                lstFiles.Items.Add(fileInfo);
-            }
-
-            UpdateProgress();
-
-            if (_powerPointFiles.Count > 0)
-            {
-                lstFiles.SelectedIndex = 0;
-            }
-        }
-
-        private void LstFiles_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            // Check if user is leaving a file without completing it
-            if (e.RemovedItems.Count > 0 && e.RemovedItems[0] is PowerPointFileInfo previousFile)
-            {
-                // Check if previous file was completed
-                if (!previousFile.IsCompleted)
-                {
-                    var missingLabels = CheckRequiredLabelsForFile(previousFile.FilePath);
-
-                    if (missingLabels.Count > 0)
-                    {
-                        var result = MessageBox.Show(
-                            $"You haven't completed labeling the previous file:\n{previousFile.FileName}\n\n" +
-                            $"Missing labels:\n{string.Join("\n", missingLabels)}\n\n" +
-                            "Do you want to continue to the next file without completing it?",
-                            "Incomplete File",
-                            MessageBoxButton.YesNo,
-                            MessageBoxImage.Warning);
-
-                        if (result == MessageBoxResult.No)
-                        {
-                            // Prevent changing selection
-                            lstFiles.SelectionChanged -= LstFiles_SelectionChanged;
-                            lstFiles.SelectedItem = previousFile;
-                            lstFiles.SelectionChanged += LstFiles_SelectionChanged;
-                            return;
-                        }
-                    }
-                }
-            }
-
-            // Load the newly selected file
-            if (lstFiles.SelectedItem is PowerPointFileInfo fileInfo)
-            {
-                LoadPowerPointFile(fileInfo);
-            }
-        }
-
-        private void LoadPowerPointFile(PowerPointFileInfo fileInfo)
-        {
-            _currentFile = fileInfo;
-            _currentSlideIndex = 0;
-
-            txtFileName.Text = fileInfo.FileName;
-
-            // Extract text boxes from PowerPoint
-            ExtractTextBoxesFromPowerPoint(fileInfo.FilePath);
-
-            // Display first slide
-            DisplaySlide(_currentSlideIndex);
-        }
-
-        private void ExtractTextBoxesFromPowerPoint(string filePath)
-        {
-            var pptApp = new Microsoft.Office.Interop.PowerPoint.Application();
-
-            try
-            {
-                Presentation ppt = pptApp.Presentations.Open(filePath,
-                    MsoTriState.msoFalse, MsoTriState.msoFalse, MsoTriState.msoFalse);
-
-                // Detect revision type
-                string revType = DetectRevisionType(ppt);
-
-                if (revType == "Unknown")
-                {
-                    txtRevType.Text = "Template: Unknown";
-                    txtRevType.Foreground = new SolidColorBrush(Colors.Orange);
-                }
-                else
-                {
-                    txtRevType.Text = $"Template: Rev {revType}";
-                    txtRevType.Foreground = new SolidColorBrush(Color.FromRgb(76, 175, 80));
-                }
-
-                // Clear previous data for this file
-                _allLabeledBoxes.RemoveAll(b => b.SourceFile == filePath);
-
-                // Extract from first slide only (for header data)
-                if (ppt.Slides.Count > 0)
-                {
-                    Slide slide = ppt.Slides[1];
-                    var textBoxes = new List<TextBoxInfo>();
-
-                    Console.WriteLine($"\n=== Extracting text boxes from {System.IO.Path.GetFileName(filePath)} ===");
-
-                    // 1. Collect from SLIDE SHAPES (directly on slide)
-                    Console.WriteLine("Collecting from Slide Shapes...");
-                    CollectTextBoxes(slide.Shapes, textBoxes, "Slide");
-
-                    // 2. Collect from MASTER SLIDE
-                    try
-                    {
-                        Console.WriteLine("Collecting from Master Slide...");
-                        CollectTextBoxes(slide.Master.Shapes, textBoxes, "Master");
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"  Could not access Master: {ex.Message}");
-                    }
-
-                    // 3. Collect from SLIDE MASTER (Design)
-                    try
-                    {
-                        Console.WriteLine("Collecting from Slide Master (Design)...");
-                        CollectTextBoxes(slide.Design.SlideMaster.Shapes, textBoxes, "Design");
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"  Could not access Design: {ex.Message}");
-                    }
-
-                    // 4. Collect from CUSTOM LAYOUT
-                    try
-                    {
-                        Console.WriteLine("Collecting from Custom Layout...");
-                        CollectTextBoxes(slide.CustomLayout.Shapes, textBoxes, "CustomLayout");
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"  Could not access CustomLayout: {ex.Message}");
-                    }
-
-                    Console.WriteLine($"Total text boxes collected: {textBoxes.Count}");
-
-                    // Remove duplicates (same text at same position)
-                    var uniqueBoxes = textBoxes
-                        .GroupBy(b => new { b.Text, Left = Math.Round(b.Left, 1), Top = Math.Round(b.Top, 1) })
-                        .Select(g => g.First())
-                        .ToList();
-
-                    Console.WriteLine($"After removing duplicates: {uniqueBoxes.Count}");
-
-                    // Convert to LabeledTextBox
-                    foreach (var box in uniqueBoxes)
-                    {
-                        if (string.IsNullOrWhiteSpace(box.Text))
-                            continue;
-
-                        _allLabeledBoxes.Add(new LabeledTextBox
-                        {
-                            Text = box.Text,
-                            Left = box.Left,
-                            Top = box.Top,
-                            Width = box.Width,
-                            Height = box.Height,
-                            RevisionType = revType,
-                            SourceFile = filePath,
-                            SlideNumber = 1,
-                            AssignedLabel = null,
-                            IsHidden = false
-                        });
-
-                        Console.WriteLine($"  Added: '{box.Text.Substring(0, Math.Min(30, box.Text.Length))}' at ({box.Left:F1}, {box.Top:F1})");
-                    }
-                }
-
-                txtSlideInfo.Text = $"Slide 1 of {ppt.Slides.Count}";
-
-                ppt.Close();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error loading PowerPoint:\n{ex.Message}", "Error",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-            finally
-            {
-                pptApp.Quit();
-            }
-        }
-
-        private string DetectRevisionType(Presentation ppt)
-        {
-            if (ppt.Slides.Count > 0)
-            {
-                Slide slide = ppt.Slides[1];
-                var candidateBoxes = new List<(string text, float left, float top)>();
-
-                // Collect text from Shapes
-                void CollectCandidates(Microsoft.Office.Interop.PowerPoint.Shapes shapes, string source)
-                {
-                    foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in shapes)
-                    {
-                        try
-                        {
-                            if (shape.Type == MsoShapeType.msoGroup)
-                            {
-                                try
-                                {
-                                    CollectCandidatesFromGroup(shape.GroupItems, source + "-Group");
-                                }
-                                catch { }
-                            }
-                            else if (shape.HasTextFrame == MsoTriState.msoTrue)
-                            {
-                                try
-                                {
-                                    string text = shape.TextFrame.TextRange.Text.Trim();
-                                    if (!string.IsNullOrEmpty(text))
-                                    {
-                                        candidateBoxes.Add((text, shape.Left, shape.Top));
-                                    }
-                                }
-                                catch { }
-                            }
-                        }
-                        catch { }
-                    }
-                }
-
-                // ADD THIS SEPARATE METHOD for GroupShapes
-                void CollectCandidatesFromGroup(Microsoft.Office.Interop.PowerPoint.GroupShapes groupShapes, string source)
-                {
-                    foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in groupShapes)
-                    {
-                        try
-                        {
-                            if (shape.Type == MsoShapeType.msoGroup)
-                            {
-                                try
-                                {
-                                    CollectCandidatesFromGroup(shape.GroupItems, source + "-Group");
-                                }
-                                catch { }
-                            }
-                            else if (shape.HasTextFrame == MsoTriState.msoTrue)
-                            {
-                                try
-                                {
-                                    string text = shape.TextFrame.TextRange.Text.Trim();
-                                    if (!string.IsNullOrEmpty(text))
-                                    {
-                                        candidateBoxes.Add((text, shape.Left, shape.Top));
-                                    }
-                                }
-                                catch { }
-                            }
-                        }
-                        catch { }
-                    }
-                }
-
-                Console.WriteLine("\n=== Searching for Template Revision ===");
-
-                // Collect from all sources
-                try { CollectCandidates(slide.Shapes, "Slide"); } catch { }
-                try { CollectCandidates(slide.Master.Shapes, "Master"); } catch { }
-                try { CollectCandidates(slide.Design.SlideMaster.Shapes, "Design"); } catch { }
-                try { CollectCandidates(slide.CustomLayout.Shapes, "CustomLayout"); } catch { }
-
-                Console.WriteLine($"\nTotal text boxes found: {candidateBoxes.Count}");
-
-                // Show ALL boxes sorted by position (for debugging)
-                var sortedBoxes = candidateBoxes
-                    .OrderByDescending(b => b.top)
-                    .ThenByDescending(b => b.left)
-                    .ToList();
-
-                Console.WriteLine("\nAll text boxes (sorted by position, bottom-to-top, right-to-left):");
-                foreach (var box in sortedBoxes.Take(20)) // Show first 20
-                {
-                    Console.WriteLine($"  Left:{box.left,7:F1} Top:{box.top,7:F1} | '{box.text.Substring(0, Math.Min(40, box.text.Length))}'");
-                }
-
-                // Filter for bottom-right area
-                var bottomRightBoxes = candidateBoxes
-                    .Where(b => b.left > 300 && b.top > 450)
-                    .OrderByDescending(b => b.left)
-                    .ThenByDescending(b => b.top)
-                    .ToList();
-
-                Console.WriteLine($"\n=== Bottom-Right Area (Left > 300, Top > 450) ===");
-                Console.WriteLine($"Found {bottomRightBoxes.Count} text boxes:");
-                foreach (var box in bottomRightBoxes)
-                {
-                    Console.WriteLine($"  Left:{box.left,7:F1} Top:{box.top,7:F1} | '{box.text}'");
-                }
-
-                // Search patterns
-                var fmmePatterns = new[]
-                {
-            @"fm[-_\s]*me[-_\s]*\d+",
-            @"fm[-_\s]*\d+",
-            @"fmme",
-        };
-
-                var revPatterns = new[]
-                {
-            @"rev\.?\s*(\d+)",
-            @"revision\s*(\d+)",
-            @"r\.?\s*(\d+)",
-            @"-(\d+)$",
-            @"\b(\d{2})\b",
-        };
-
-                // Strategy 1: Look for FM-ME pattern in bottom-right
-                Console.WriteLine("\n--- Strategy 1: FM-ME text with revision ---");
-                foreach (var box in bottomRightBoxes)
-                {
-                    string text = box.text.ToLower();
-                    bool hasFMME = fmmePatterns.Any(p => Regex.IsMatch(text, p, RegexOptions.IgnoreCase));
-
-                    if (hasFMME)
-                    {
-                        Console.WriteLine($"✓ Found FM-ME text: '{box.text}'");
-
-                        foreach (var pattern in revPatterns)
-                        {
-                            var match = Regex.Match(text, pattern, RegexOptions.IgnoreCase);
-                            if (match.Success && match.Groups.Count > 1)
-                            {
-                                string revNum = match.Groups[1].Value;
-                                if (int.TryParse(revNum, out int num) && num >= 10 && num <= 30)
-                                {
-                                    Console.WriteLine($"✓✓ FOUND TEMPLATE REVISION: {revNum}");
-                                    return revNum;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Strategy 2: Look for separate revision box near FM-ME
-                Console.WriteLine("\n--- Strategy 2: Separate revision box ---");
-                var fmmeBox = bottomRightBoxes.FirstOrDefault(b =>
-                    fmmePatterns.Any(p => Regex.IsMatch(b.text.ToLower(), p, RegexOptions.IgnoreCase)));
-
-                if (fmmeBox.text != null)
-                {
-                    Console.WriteLine($"✓ Found FM-ME box at Left:{fmmeBox.left:F1}, Top:{fmmeBox.top:F1}");
-                    Console.WriteLine($"  Text: '{fmmeBox.text}'");
-                    Console.WriteLine("  Looking for nearby revision box...");
-
-                    var nearbyBoxes = candidateBoxes
-                        .Where(b => b.left < fmmeBox.left &&
-                                   b.left > fmmeBox.left - 300 &&
-                                   Math.Abs(b.top - fmmeBox.top) < 100)
-                        .OrderByDescending(b => b.left)
-                        .ToList();
-
-                    Console.WriteLine($"  Found {nearbyBoxes.Count} nearby boxes:");
-                    foreach (var box in nearbyBoxes)
-                    {
-                        Console.WriteLine($"    Left:{box.left,7:F1} Top:{box.top,7:F1} | '{box.text}'");
-
-                        foreach (var pattern in revPatterns)
-                        {
-                            var match = Regex.Match(box.text, pattern, RegexOptions.IgnoreCase);
-                            if (match.Success && match.Groups.Count > 1)
-                            {
-                                string revNum = match.Groups[1].Value;
-                                if (int.TryParse(revNum, out int num) && num >= 10 && num <= 30)
-                                {
-                                    Console.WriteLine($"    ✓✓ FOUND TEMPLATE REVISION: {revNum}");
-                                    return revNum;
-                                }
-                            }
-                        }
-
-                        if (Regex.IsMatch(box.text.Trim(), @"^\d{2}$"))
-                        {
-                            Console.WriteLine($"    ✓✓ FOUND TEMPLATE REVISION (number): {box.text.Trim()}");
-                            return box.text.Trim();
-                        }
-                    }
-                }
-
-                // Strategy 3: Broader search in entire bottom area
-                Console.WriteLine("\n--- Strategy 3: Broader bottom area search ---");
-                var bottomBoxes = candidateBoxes.Where(b => b.top > 400).ToList();
-
-                foreach (var box in bottomBoxes)
-                {
-                    string text = box.text.ToLower();
-                    bool hasFMME = fmmePatterns.Any(p => Regex.IsMatch(text, p, RegexOptions.IgnoreCase));
-                    bool hasRev = Regex.IsMatch(text, @"rev", RegexOptions.IgnoreCase);
-
-                    if (hasFMME || hasRev)
-                    {
-                        Console.WriteLine($"  Checking: '{box.text}' at Left:{box.left:F1}, Top:{box.top:F1}");
-
-                        foreach (var pattern in revPatterns)
-                        {
-                            var match = Regex.Match(text, pattern, RegexOptions.IgnoreCase);
-                            if (match.Success && match.Groups.Count > 1)
-                            {
-                                string revNum = match.Groups[1].Value;
-                                if (int.TryParse(revNum, out int num) && num >= 10 && num <= 30)
-                                {
-                                    Console.WriteLine($"  ✓✓ FOUND TEMPLATE REVISION: {revNum}");
-                                    return revNum;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Console.WriteLine("\n✗✗ Template revision NOT FOUND");
-            }
-
-            return "Unknown";
-        }
-
-        private void CollectTextBoxes(Microsoft.Office.Interop.PowerPoint.Shapes shapes,
-            List<TextBoxInfo> textBoxes, string source = "Unknown")
-        {
-            foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in shapes)
-            {
-                try
-                {
-                    if (shape.Type == MsoShapeType.msoGroup)
-                    {
-                        CollectTextBoxesFromGroup(shape.GroupItems, textBoxes, source);
-                    }
-                    else if (shape.HasTextFrame == MsoTriState.msoTrue)
-                    {
-                        try
-                        {
-                            string text = shape.TextFrame.TextRange.Text.Trim();
-                            if (!string.IsNullOrEmpty(text))
-                            {
-                                textBoxes.Add(new TextBoxInfo
-                                {
-                                    Text = text,
-                                    Left = shape.Left,
-                                    Top = shape.Top,
-                                    Width = shape.Width,
-                                    Height = shape.Height
-                                });
-
-                                Console.WriteLine($"  [{source}] '{text.Substring(0, Math.Min(20, text.Length))}...' at ({shape.Left:F1}, {shape.Top:F1})");
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"  [{source}] Error reading text: {ex.Message}");
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"  [{source}] Error processing shape: {ex.Message}");
-                }
-            }
-        }
-
-        private void CollectTextBoxesFromGroup(Microsoft.Office.Interop.PowerPoint.GroupShapes groupShapes,
-            List<TextBoxInfo> textBoxes, string source = "Unknown")
-        {
-            foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in groupShapes)
-            {
-                try
-                {
-                    if (shape.Type == MsoShapeType.msoGroup)
-                    {
-                        CollectTextBoxesFromGroup(shape.GroupItems, textBoxes, source);
-                    }
-                    else if (shape.HasTextFrame == MsoTriState.msoTrue)
-                    {
-                        try
-                        {
-                            string text = shape.TextFrame.TextRange.Text.Trim();
-                            if (!string.IsNullOrEmpty(text))
-                            {
-                                textBoxes.Add(new TextBoxInfo
-                                {
-                                    Text = text,
-                                    Left = shape.Left,
-                                    Top = shape.Top,
-                                    Width = shape.Width,
-                                    Height = shape.Height
-                                });
-                            }
-                        }
-                        catch { }
-                    }
-                }
-                catch { }
-            }
-        }
-
-        private bool IsLabel(string upperText)
-        {
-            var labels = new[] {
-                "WORK INSTRUCTION TITLE", "WORK INSTRUCTION", "DESCRIPTION", "DESCRIPTION:",
-                "W.I. NUMBER", "WI NUMBER", "BOM/ASSY DWG NO", "BOM DWG NO", "ASSY DWG NO",
-                "OPS (OPTIONAL)", "OPERATION NO", "OPERATION NO.", "PRODUCT LINE",
-                "SUBJECT", "SUBJECT:", "PAGE", "REV", "REV:", "REVISION", "REVISION:"
-            };
-
-            return labels.Any(label => upperText == label || (upperText.Contains(label) && upperText.Length < 40)) ||
-                   (upperText.EndsWith(":") && upperText.Length < 25);
-        }
-
-        private void DisplaySlide(int slideIndex)
-        {
-            slideCanvas.Children.Clear();
-            _borderToTextBoxMap.Clear();
-
-            var slideBoxes = _allLabeledBoxes
-                .Where(b => b.SourceFile == _currentFile.FilePath &&
-                            b.SlideNumber == slideIndex + 1 &&
-                            !b.IsHidden)
-                .ToList();
-
-            Console.WriteLine($"\nDisplaying {slideBoxes.Count} text boxes on canvas (hidden boxes excluded)");
-
-            float scaleFactor = 1.0f;
-
-            foreach (var box in slideBoxes)
-            {
-                var border = new Border
-                {
-                    Width = Math.Max(box.Width * scaleFactor, 50),
-                    Height = Math.Max(box.Height * scaleFactor, 20),
-                    Cursor = System.Windows.Input.Cursors.Hand,
-                    ToolTip = box.Text
-                };
-
-                border.Style = GetStyleForLabel(box.AssignedLabel);
-
-                var textBlock = new TextBlock
+                var labeledBox = new LabeledTextBox
                 {
                     Text = box.Text,
-                    TextWrapping = TextWrapping.Wrap,
-                    Padding = new Thickness(3),
-                    FontSize = 9,
-                    TextTrimming = TextTrimming.CharacterEllipsis,
-                    VerticalAlignment = VerticalAlignment.Center
+                    Left = box.Left,
+                    Top = box.Top,
+                    Width = box.Width,
+                    Height = box.Height,
+                    RevisionType = revType,
+                    SourceFile = filePath,
+                    SlideNumber = i,
+                    AssignedLabel = null,
+                    IsHidden = false
                 };
 
-                border.Child = textBlock;
-
-                Canvas.SetLeft(border, box.Left * scaleFactor);
-                Canvas.SetTop(border, box.Top * scaleFactor);
-
-                border.MouseDown += (s, e) =>
-                {
-                    SelectTextBox(box, border);
-                };
-
-                slideCanvas.Children.Add(border);
-                _borderToTextBoxMap[border] = box;
-
-                Console.WriteLine($"  Displayed '{box.Text.Substring(0, Math.Min(15, box.Text.Length))}' at ({box.Left:F1}, {box.Top:F1})");
+                slideInfo.TextBoxes.Add(labeledBox);
+                _allLabeledBoxes.Add(labeledBox);
             }
 
-            Console.WriteLine($"Canvas updated with {slideCanvas.Children.Count} visual elements");
+            _currentFile.Slides.Add(slideInfo);
         }
 
-        private Style GetStyleForLabel(string label)
-        {
-            if (string.IsNullOrEmpty(label))
-                return (Style)FindResource("UnlabeledBox");
-
-            return label switch
-            {
-                "WI_Number" => (Style)FindResource("WINumberBox"),
-                "WI_Title" => (Style)FindResource("TitleBox"),
-                "Revision" => (Style)FindResource("RevisionBox"),
-                "BOM_ASSY_DWG_NO" => (Style)FindResource("BOMBox"),
-                "Operation_No" => (Style)FindResource("OperationBox"),
-                "Product_Line" => (Style)FindResource("ProductLineBox"),
-                "Subject" => (Style)FindResource("SubjectBox"),
-                "Template_Revision" => (Style)FindResource("TemplateRevisionBox"),
-                _ => (Style)FindResource("UnlabeledBox")
-            };
-        }
-
-        private void SelectTextBox(LabeledTextBox box, Border border)
-        {
-            _selectedTextBox = box;
-
-            foreach (var kvp in _borderToTextBoxMap)
-            {
-                if (kvp.Value == box)
-                    kvp.Key.BorderThickness = new Thickness(4);
-                else
-                    kvp.Key.BorderThickness = new Thickness(2);
-            }
-
-            txtSelectedText.Text = box.Text;
-            txtPosition.Text = $"Left: {box.Left:F1}, Top: {box.Top:F1}, W: {box.Width:F1}, H: {box.Height:F1}";
-        }
-
-        private void BtnLabel_Click(object sender, RoutedEventArgs e)
-        {
-            if (_selectedTextBox == null)
-            {
-                MessageBox.Show("Please select a text box first", "No Selection",
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            var button = sender as Button;
-            string label = button.Tag.ToString();
-
-            _selectedTextBox.AssignedLabel = label;
-
-            // Refresh display
-            DisplaySlide(_currentSlideIndex);
-
-            // Mark file as having changes
-            _currentFile.IsLabeled = true;
-
-            // CAPTURE THE ACTUAL VALUE
-            CaptureExtractedValue(label, _selectedTextBox.Text);
-
-            UpdateProgress();
-        }
-
-        private void CaptureExtractedValue(string label, string value)
-        {
-            if (_currentFile == null) return;
-
-            switch (label)
-            {
-                case "WI_Number":
-                    _currentFile.ExtractedWINumber = value;
-                    break;
-                case "WI_Title":
-                    _currentFile.ExtractedTitle = value;
-                    break;
-                case "Revision":
-                    _currentFile.ExtractedRevision = value;
-                    break;
-                case "BOM_ASSY_DWG_NO":
-                    _currentFile.ExtractedBOM = value;
-                    break;
-                case "Operation_No":
-                    _currentFile.ExtractedOperationNo = value;
-                    break;
-                case "Product_Line":
-                    _currentFile.ExtractedProductLine = value;
-                    break;
-                case "Subject":
-                    _currentFile.ExtractedSubject = value;
-                    break;
-                case "Page_No":
-                    _currentFile.ExtractedPageNo = ParsePageNumber(value);
-                    break;
-                case "Template_Revision":
-                    _currentFile.ExtractedTemplateRev = ParseTemplateRevision(value);
-                    break;
-            }
-
-            Console.WriteLine($"Captured: {label} = '{value}'");
-        }
-
-        private string ParseTemplateRevision(string templateText)
-        {
-            if (string.IsNullOrWhiteSpace(templateText))
-                return "";
-
-            Console.WriteLine($"\n=== Parsing Template Revision ===");
-            Console.WriteLine($"Input: '{templateText}'");
-
-            // Pattern: FM-ME-07revX or FM-ME-07 revX or FM-ME-07 rev X
-            var revMatch = Regex.Match(templateText,
-                @"fm[-_\s]*me[-_\s]*\d+\s*rev\.?\s*(\d+)",
-                RegexOptions.IgnoreCase);
-
-            if (revMatch.Success && revMatch.Groups.Count > 1)
-            {
-                string revision = revMatch.Groups[1].Value;
-                Console.WriteLine($"✓ Extracted revision: {revision}");
-                return revision;
-            }
-
-            // Fallback: Look for any 2-digit number after "rev"
-            revMatch = Regex.Match(templateText, @"rev\.?\s*(\d{1,2})", RegexOptions.IgnoreCase);
-            if (revMatch.Success && revMatch.Groups.Count > 1)
-            {
-                string revision = revMatch.Groups[1].Value;
-                Console.WriteLine($"✓ Extracted revision (fallback): {revision}");
-                return revision;
-            }
-
-            // If no pattern found, just return first 2-digit number
-            revMatch = Regex.Match(templateText, @"\b(\d{2})\b");
-            if (revMatch.Success)
-            {
-                Console.WriteLine($"✓ Extracted revision (number only): {revMatch.Groups[1].Value}");
-                return revMatch.Groups[1].Value;
-            }
-
-            Console.WriteLine($"✗ Could not parse revision");
-            return templateText; // Return original if can't parse
-        }
-
-        private string ParsePageNumber(string pageText)
-        {
-            if (string.IsNullOrWhiteSpace(pageText))
-                return "";
-
-            // Pattern: "Page X of Y" or "Page X"
-            var match = Regex.Match(pageText, @"page\s*(\d+)", RegexOptions.IgnoreCase);
-            if (match.Success)
-                return match.Groups[1].Value;
-
-            // Pattern: "X of Y" or "X/Y"
-            match = Regex.Match(pageText, @"(\d+)\s*(?:of|/)\s*\d+", RegexOptions.IgnoreCase);
-            if (match.Success)
-                return match.Groups[1].Value;
-
-            // Just return the text if no pattern
-            return pageText;
-        }
-
-        private void BtnClearLabel_Click(object sender, RoutedEventArgs e)
-        {
-            if (_selectedTextBox == null) return;
-
-            string previousLabel = _selectedTextBox.AssignedLabel;
-            _selectedTextBox.AssignedLabel = null;
-
-            // Clear the extracted value
-            if (!string.IsNullOrEmpty(previousLabel))
-            {
-                ClearExtractedValue(previousLabel);
-            }
-
-            DisplaySlide(_currentSlideIndex);
-        }
-
-        private void ClearExtractedValue(string label)
-        {
-            if (_currentFile == null) return;
-
-            switch (label)
-            {
-                case "WI_Number":
-                    _currentFile.ExtractedWINumber = null;
-                    break;
-                case "WI_Title":
-                    _currentFile.ExtractedTitle = null;
-                    break;
-                case "Revision":
-                    _currentFile.ExtractedRevision = null;
-                    break;
-                case "BOM_ASSY_DWG_NO":
-                    _currentFile.ExtractedBOM = null;
-                    break;
-                case "Operation_No":
-                    _currentFile.ExtractedOperationNo = null;
-                    break;
-                case "Product_Line":
-                    _currentFile.ExtractedProductLine = null;
-                    break;
-                case "Subject":
-                    _currentFile.ExtractedSubject = null;
-                    break;
-                case "Page_No":
-                    _currentFile.ExtractedPageNo = null;
-                    break;
-                case "Template_Revision":
-                    _currentFile.ExtractedTemplateRev = null;
-                    break;
-            }
-        }
-
-        private void BtnPrevSlide_Click(object sender, RoutedEventArgs e)
-        {
-            if (_currentSlideIndex > 0)
-            {
-                _currentSlideIndex--;
-                DisplaySlide(_currentSlideIndex);
-                txtSlideInfo.Text = $"Slide {_currentSlideIndex + 1}";
-            }
-        }
-
-        private void BtnNextSlide_Click(object sender, RoutedEventArgs e)
-        {
-            MessageBox.Show("Currently only labeling slide 1 (header data)", "Info");
-        }
-
-        private void BtnSaveTrainingData_Click(object sender, RoutedEventArgs e)
-        {
-            var dialog = new SaveFileDialog
-            {
-                Filter = "CSV Files (*.csv)|*.csv",
-                FileName = "training_data_with_values.csv"
-            };
-
-            if (dialog.ShowDialog() == true)
-            {
-                SaveTrainingDataToCSV(dialog.FileName);
-
-                int filesWithData = _powerPointFiles.Count(f =>
-                    !string.IsNullOrEmpty(f.ExtractedWINumber) ||
-                    !string.IsNullOrEmpty(f.ExtractedTitle));
-
-                int labeledBoxes = _allLabeledBoxes.Count(b =>
-                    !string.IsNullOrEmpty(b.AssignedLabel) &&
-                    !b.IsHidden &&
-                    b.AssignedLabel != "Ignore");
-
-                MessageBox.Show(
-                    $"Training data saved!\n\n" +
-                    $"File: {dialog.FileName}\n\n" +
-                    $"Files with extracted values: {filesWithData}\n" +
-                    $"Total labeled text boxes: {labeledBoxes}\n\n" +
-                    $"This file contains:\n" +
-                    $"• Extracted values (for human review)\n" +
-                    $"• Text box positions (for ML training)",
-                    "Success",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
-            }
-        }
-
-        private void SaveTrainingDataToCSV(string filePath)
-        {
-            using (var writer = new StreamWriter(filePath))
-            {
-                // Write headers manually
-                writer.WriteLine("FileName,WI_Number,WI_Title,Revision,BOM_ASSY_DWG_NO,Operation_No,Product_Line,Subject,Page_No,Template_Rev,TextBoxText,Left,Top,Width,Height,TextLength,ContainsNumbers,ContainsHyphen,StartsWithWI,IsAllDigits,RevisionType,Label");
-
-                // Group labeled boxes by file
-                var fileGroups = _allLabeledBoxes
-                    .Where(b => !string.IsNullOrEmpty(b.AssignedLabel) &&
-                               !b.IsHidden &&
-                               b.AssignedLabel != "Ignore")
-                    .GroupBy(b => b.SourceFile);
-
-                foreach (var fileGroup in fileGroups)
-                {
-                    // Find the file info for this group
-                    var fileInfo = _powerPointFiles.FirstOrDefault(f => f.FilePath == fileGroup.Key);
-
-                    string fileName = fileInfo?.FileName ?? System.IO.Path.GetFileName(fileGroup.Key);
-                    string wiNumber = fileInfo?.ExtractedWINumber ?? "";
-                    string wiTitle = fileInfo?.ExtractedTitle ?? "";
-                    string revision = fileInfo?.ExtractedRevision ?? "";
-                    string bom = fileInfo?.ExtractedBOM ?? "";
-                    string opNo = fileInfo?.ExtractedOperationNo ?? "";
-                    string productLine = fileInfo?.ExtractedProductLine ?? "";
-                    string subject = fileInfo?.ExtractedSubject ?? "";
-                    string pageNo = fileInfo?.ExtractedPageNo ?? "";
-                    string templateRev = fileInfo?.ExtractedTemplateRev ?? "";
-
-                    // Write each labeled text box with the file's extracted values
-                    foreach (var box in fileGroup)
-                    {
-                        // Escape CSV fields properly
-                        string line = string.Join(",",
-                            EscapeCSV(fileName),
-                            EscapeCSV(wiNumber),
-                            EscapeCSV(wiTitle),
-                            EscapeCSV(revision),
-                            EscapeCSV(bom),
-                            EscapeCSV(opNo),
-                            EscapeCSV(productLine),
-                            EscapeCSV(subject),
-                            EscapeCSV(pageNo),
-                            EscapeCSV(templateRev),
-                            EscapeCSV(CleanTextForCSV(box.Text)),
-                            box.Left.ToString(CultureInfo.InvariantCulture),
-                            box.Top.ToString(CultureInfo.InvariantCulture),
-                            box.Width.ToString(CultureInfo.InvariantCulture),
-                            box.Height.ToString(CultureInfo.InvariantCulture),
-                            box.Text.Length.ToString(),
-                            Regex.IsMatch(box.Text, @"\d") ? "true" : "false",
-                            box.Text.Contains("-") ? "true" : "false",
-                            box.Text.StartsWith("WI", StringComparison.OrdinalIgnoreCase) ? "true" : "false",
-                            Regex.IsMatch(box.Text, @"^\d+$") ? "true" : "false",
-                            EscapeCSV(box.RevisionType),
-                            EscapeCSV(box.AssignedLabel)
-                        );
-
-                        writer.WriteLine(line);
-                    }
-                }
-            }
-
-            Console.WriteLine($"Combined training/verification CSV exported");
-        }
-
-        // ADD THESE TWO HELPER METHODS
-        private string CleanTextForCSV(string text)
-        {
-            if (string.IsNullOrEmpty(text))
-                return "";
-
-            // Remove newlines and carriage returns
-            text = text.Replace("\r", " ").Replace("\n", " ");
-
-            // Replace tabs with spaces
-            text = text.Replace("\t", " ");
-
-            // Remove control characters
-            text = new string(text.Where(c => !char.IsControl(c) || c == ' ').ToArray());
-
-            // Collapse multiple spaces
-            text = Regex.Replace(text, @"\s+", " ");
-
-            return text.Trim();
-        }
-
-        private string EscapeCSV(string field)
-        {
-            if (string.IsNullOrEmpty(field))
-                return "";
-
-            // If field contains comma, quote, or newline, wrap it in quotes and escape internal quotes
-            if (field.Contains(",") || field.Contains("\"") || field.Contains("\n") || field.Contains("\r"))
-            {
-                return "\"" + field.Replace("\"", "\"\"") + "\"";
-            }
-
-            return field;
-        }
-
-        private void BtnTrainModel_Click(object sender, RoutedEventArgs e)
-        {
-            // Ask user if they want to use existing CSV or create new one
-            var result = MessageBox.Show(
-                "Do you want to use an existing training CSV file?\n\n" +
-                "Click 'Yes' to select an existing CSV\n" +
-                "Click 'No' to generate a new one from current labels",
-                "Training Data Source",
-                MessageBoxButton.YesNoCancel,
-                MessageBoxImage.Question);
-
-            if (result == MessageBoxResult.Cancel)
-                return;
-
-            string trainingFile;
-
-            if (result == MessageBoxResult.Yes)
-            {
-                // Select existing CSV
-                var openDialog = new OpenFileDialog
-                {
-                    Filter = "CSV Files (*.csv)|*.csv",
-                    Title = "Select Training Data CSV"
-                };
-
-                if (openDialog.ShowDialog() != true)
-                    return;
-
-                trainingFile = openDialog.FileName;
-
-                Console.WriteLine($"Using existing CSV: {trainingFile}");
-            }
-            else
-            {
-                // Generate new CSV from current labels
-                trainingFile = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "temp_training.csv");
-                SaveTrainingDataToCSV(trainingFile);
-
-                // Check if we have enough data
-                int labeledCount = _allLabeledBoxes.Count(b => !string.IsNullOrEmpty(b.AssignedLabel) &&
-                                                               !b.IsHidden &&
-                                                               b.AssignedLabel != "Ignore");
-                if (labeledCount < 20)
-                {
-                    MessageBox.Show($"Not enough training data. You have {labeledCount} labeled examples.\n" +
-                        "Please label at least 20 text boxes before training.",
-                        "Insufficient Data", MessageBoxButton.OK, MessageBoxImage.Warning);
-
-                    try { File.Delete(trainingFile); } catch { }
-                    return;
-                }
-
-                Console.WriteLine($"Generated new CSV: {trainingFile}");
-            }
-
-            // Select output model path
-            var saveDialog = new SaveFileDialog
-            {
-                Filter = "Model Files (*.zip)|*.zip",
-                FileName = "wi_extractor_model.zip"
-            };
-
-            if (saveDialog.ShowDialog() == true)
-            {
-                try
-                {
-                    Console.WriteLine($"Training model...");
-
-                    var trainer = new ModelTrainer();
-                    trainer.TrainModel(trainingFile, saveDialog.FileName);
-
-                    MessageBox.Show($"Model trained successfully!\n\n" +
-                        $"Model saved to:\n{saveDialog.FileName}\n\n" +
-                        "You can now use this model in your PowerPointExtractor.",
-                        "Training Complete",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Information);
-
-                    Console.WriteLine($"✓ Model saved successfully");
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Error training model:\n{ex.Message}\n\n" +
-                        "Check the Output window for details.",
-                        "Training Error",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Error);
-
-                    Console.WriteLine($"✗ Training error: {ex.Message}");
-                    Console.WriteLine($"Stack trace: {ex.StackTrace}");
-                }
-                finally
-                {
-                    // Only delete temp file if we created it
-                    if (result == MessageBoxResult.No)
-                    {
-                        try { File.Delete(trainingFile); } catch { }
-                    }
-                }
-            }
-        }
-
-        private void UpdateProgress()
-        {
-            int completed = _powerPointFiles.Count(f => f.IsCompleted);
-            int labeled = _powerPointFiles.Count(f => f.IsLabeled);
-            int total = _powerPointFiles.Count;
-
-            txtProgress.Text = $"{completed} completed, {labeled} labeled of {total} files";
-            progressBar.Maximum = total;
-            progressBar.Value = completed;
-        }
-
-        private void BtnLoadTrainingData_Click(object sender, RoutedEventArgs e)
-        {
-            var dialog = new OpenFileDialog
-            {
-                Filter = "CSV Files (*.csv)|*.csv",
-                Title = "Select Training Data CSV to Load"
-            };
-
-            if (dialog.ShowDialog() == true)
-            {
-                try
-                {
-                    LoadTrainingDataFromCSV(dialog.FileName);
-                    MessageBox.Show(
-                        $"Training data loaded successfully!\n\n" +
-                        $"Loaded {_allLabeledBoxes.Count} labeled text boxes",
-                        "Success",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Information);
-
-                    // Refresh display if a file is loaded
-                    if (_currentFile != null)
-                    {
-                        DisplaySlide(_currentSlideIndex);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(
-                        $"Error loading training data:\n{ex.Message}",
-                        "Error",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Error);
-                }
-            }
-        }
-
-        private void LoadTrainingDataFromCSV(string filePath)
-        {
-            _allLabeledBoxes.Clear();
-            _powerPointFiles.Clear();
-
-            var fileInfoDict = new Dictionary<string, PowerPointFileInfo>();
-
-            using (var reader = new StreamReader(filePath))
-            using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
-            {
-                csv.Read();
-                csv.ReadHeader();
-
-                while (csv.Read())
-                {
-                    try
-                    {
-                        string fileName = csv.GetField<string>("FileName");
-                        string wiNumber = csv.GetField<string>("WI_Number");
-                        string wiTitle = csv.GetField<string>("WI_Title");
-                        string revision = csv.GetField<string>("Revision");
-                        string bom = csv.GetField<string>("BOM_ASSY_DWG_NO");
-                        string opNo = csv.GetField<string>("Operation_No");
-                        string productLine = csv.GetField<string>("Product_Line");
-                        string subject = csv.GetField<string>("Subject");
-                        string pageNo = csv.GetField<string>("Page_No");
-                        string templateRev = csv.GetField<string>("Template_Rev");
-                        string textBoxText = csv.GetField<string>("TextBoxText");
-                        float left = csv.GetField<float>("Left");
-                        float top = csv.GetField<float>("Top");
-                        float width = csv.GetField<float>("Width");
-                        float height = csv.GetField<float>("Height");
-                        string revisionType = csv.GetField<string>("RevisionType");
-                        string label = csv.GetField<string>("Label");
-
-                        // Create or get file info
-                        if (!fileInfoDict.ContainsKey(fileName))
-                        {
-                            fileInfoDict[fileName] = new PowerPointFileInfo
-                            {
-                                FileName = fileName,
-                                FilePath = "", // We don't have the full path from CSV
-                                IsLabeled = true,
-                                IsCompleted = true,
-                                ExtractedWINumber = wiNumber,
-                                ExtractedTitle = wiTitle,
-                                ExtractedRevision = revision,
-                                ExtractedBOM = bom,
-                                ExtractedOperationNo = opNo,
-                                ExtractedProductLine = productLine,
-                                ExtractedSubject = subject,
-                                ExtractedPageNo = pageNo,
-                                ExtractedTemplateRev = templateRev
-                            };
-                        }
-
-                        // Create labeled text box
-                        _allLabeledBoxes.Add(new LabeledTextBox
-                        {
-                            Text = textBoxText,
-                            Left = left,
-                            Top = top,
-                            Width = width,
-                            Height = height,
-                            RevisionType = revisionType,
-                            SourceFile = fileName, // Use filename as identifier
-                            SlideNumber = 1,
-                            AssignedLabel = label,
-                            IsHidden = false
-                        });
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Error reading CSV row: {ex.Message}");
-                    }
-                }
-            }
-
-            // Add all file infos to the list
-            _powerPointFiles.AddRange(fileInfoDict.Values);
-
-            // Update the file list
-            lstFiles.Items.Clear();
-            foreach (var file in _powerPointFiles)
-            {
-                lstFiles.Items.Add(file);
-            }
-
-            UpdateProgress();
-
-            Console.WriteLine($"Loaded {_allLabeledBoxes.Count} labeled boxes from {_powerPointFiles.Count} files");
-        }
+        txtSlideInfo.Text = $"Slide 1 of {ppt.Slides.Count}";
+        ppt.Close();
     }
-
-    // Helper classes
-    public class PowerPointFileInfo
+    finally
     {
-        public string FilePath { get; set; }
-        public string FileName { get; set; }
-        public bool IsLabeled { get; set; }
-        public bool IsCompleted { get; set; }
-
-        // Extracted values
-        public string ExtractedWINumber { get; set; }
-        public string ExtractedTitle { get; set; }
-        public string ExtractedRevision { get; set; }
-        public string ExtractedBOM { get; set; }
-        public string ExtractedOperationNo { get; set; }
-        public string ExtractedProductLine { get; set; }
-        public string ExtractedSubject { get; set; }
-        public string ExtractedPageNo { get; set; }
-        public string ExtractedTemplateRev { get; set; }
-    }
-
-    public class TextBoxInfo
-    {
-        public string Text { get; set; }
-        public float Left { get; set; }
-        public float Top { get; set; }
-        public float Width { get; set; }
-        public float Height { get; set; }
-    }
-
-    public class LabeledTextBox
-    {
-        public string Text { get; set; }
-        public float Left { get; set; }
-        public float Top { get; set; }
-        public float Width { get; set; }
-        public float Height { get; set; }
-        public string AssignedLabel { get; set; }
-        public string RevisionType { get; set; }
-        public string SourceFile { get; set; }
-        public int SlideNumber { get; set; }
-        public bool IsHidden { get; set; }
+        pptApp.Quit();
     }
 }
------------------------------
+```
 
-<Window x:Class="WorkInstructionLabeler.MainWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Work Instruction Training Data Labeler" 
-        Height="800" Width="1400"
-        WindowState="Maximized">
-    <Window.Resources>
-        <!-- Text Box Styles for Different Labels -->
-        <Style x:Key="WINumberBox" TargetType="Border">
-            <Setter Property="BorderBrush" Value="#2196F3"/>
-            <Setter Property="BorderThickness" Value="3"/>
-            <Setter Property="Background" Value="#E3F2FD"/>
-        </Style>
-        <Style x:Key="TitleBox" TargetType="Border">
-            <Setter Property="BorderBrush" Value="#4CAF50"/>
-            <Setter Property="BorderThickness" Value="3"/>
-            <Setter Property="Background" Value="#E8F5E9"/>
-        </Style>
-        <Style x:Key="RevisionBox" TargetType="Border">
-            <Setter Property="BorderBrush" Value="#FF9800"/>
-            <Setter Property="BorderThickness" Value="3"/>
-            <Setter Property="Background" Value="#FFF3E0"/>
-        </Style>
-        <Style x:Key="BOMBox" TargetType="Border">
-            <Setter Property="BorderBrush" Value="#9C27B0"/>
-            <Setter Property="BorderThickness" Value="3"/>
-            <Setter Property="Background" Value="#F3E5F5"/>
-        </Style>
-        <Style x:Key="OperationBox" TargetType="Border">
-            <Setter Property="BorderBrush" Value="#00BCD4"/>
-            <Setter Property="BorderThickness" Value="3"/>
-            <Setter Property="Background" Value="#E0F7FA"/>
-        </Style>
-        <Style x:Key="ProductLineBox" TargetType="Border">
-            <Setter Property="BorderBrush" Value="#FF5722"/>
-            <Setter Property="BorderThickness" Value="3"/>
-            <Setter Property="Background" Value="#FBE9E7"/>
-        </Style>
-        <Style x:Key="SubjectBox" TargetType="Border">
-            <Setter Property="BorderBrush" Value="#795548"/>
-            <Setter Property="BorderThickness" Value="3"/>
-            <Setter Property="Background" Value="#EFEBE9"/>
-        </Style>
+### 6. **ML Prediction Integration**
 
-        <!-- ADD THIS NEW STYLE -->
-        <Style x:Key="TemplateRevisionBox" TargetType="Border">
-            <Setter Property="BorderBrush" Value="#3F51B5"/>
-            <Setter Property="BorderThickness" Value="3"/>
-            <Setter Property="Background" Value="#E8EAF6"/>
-        </Style>
-
-        <Style x:Key="UnlabeledBox" TargetType="Border">
-            <Setter Property="BorderBrush" Value="#CCCCCC"/>
-            <Setter Property="BorderThickness" Value="2"/>
-            <Setter Property="Background" Value="#F5F5F5"/>
-        </Style>
-    </Window.Resources>
-
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="300"/>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="250"/>
-        </Grid.ColumnDefinitions>
-
-        <!-- Left Panel - File List -->
-        <Border Grid.Column="0" Background="#FAFAFA" BorderBrush="#E0E0E0" BorderThickness="0,0,1,0">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-
-                <StackPanel Grid.Row="0" Margin="10">
-                    <TextBlock Text="PowerPoint Files" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
-                    <Button x:Name="btnLoadFolder" Content="Load Folder..." Click="BtnLoadFolder_Click" 
-                            Height="35" Background="#2196F3" Foreground="White" FontWeight="Bold"/>
-                </StackPanel>
-
-                <ListBox Grid.Row="1" x:Name="lstFiles" Margin="10,0,10,10" 
-         SelectionChanged="LstFiles_SelectionChanged"
-         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Orientation="Horizontal" Margin="5">
-                                <TextBlock x:Name="StatusIcon" FontSize="16" Margin="0,0,5,0"/>
-                                <TextBlock Text="{Binding FileName}" TextWrapping="Wrap"/>
-                            </StackPanel>
-                            <DataTemplate.Triggers>
-                                <DataTrigger Binding="{Binding IsCompleted}" Value="True">
-                                    <Setter TargetName="StatusIcon" Property="Text" Value="✓"/>
-                                    <Setter TargetName="StatusIcon" Property="Foreground" Value="#4CAF50"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding IsCompleted}" Value="False">
-                                    <Setter TargetName="StatusIcon" Property="Text" Value="○"/>
-                                    <Setter TargetName="StatusIcon" Property="Foreground" Value="#999"/>
-                                </DataTrigger>
-                            </DataTemplate.Triggers>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-
-                <StackPanel Grid.Row="2" Margin="10">
-                    <TextBlock x:Name="txtProgress" Text="0 of 0 files labeled" 
-                               FontSize="12" Foreground="#666" HorizontalAlignment="Center"/>
-                    <ProgressBar x:Name="progressBar" Height="8" Margin="0,5,0,0"/>
-                </StackPanel>
-            </Grid>
-        </Border>
-
-        <!-- Center Panel - Slide Visualization -->
-        <Border Grid.Column="1" Background="White">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-
-                <!-- Toolbar -->
-                <Border Grid.Row="0" Background="#263238" Padding="10">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock x:Name="txtFileName" Text="No file loaded" 
-                   Foreground="White" FontSize="14" FontWeight="Bold" 
-                   VerticalAlignment="Center" Margin="0,0,20,0"/>
-                        <TextBlock x:Name="txtRevType" Text="Rev: Unknown" 
-                   Foreground="#4CAF50" FontSize="12" 
-                   VerticalAlignment="Center" Margin="0,0,20,0"/>
-
-                        <!-- ADD ZOOM CONTROLS -->
-                        <Separator Margin="10,0" Background="#666" Width="1"/>
-                        <TextBlock Text="Zoom:" Foreground="White" VerticalAlignment="Center" Margin="5,0"/>
-                        <Button x:Name="btnZoomOut" Content="−" Click="BtnZoomOut_Click" 
-                Width="30" Height="30" Margin="5" FontSize="16" FontWeight="Bold"/>
-                        <TextBlock x:Name="txtZoom" Text="100%" Foreground="White" 
-                   VerticalAlignment="Center" MinWidth="50" TextAlignment="Center"/>
-                        <Button x:Name="btnZoomIn" Content="+" Click="BtnZoomIn_Click" 
-                Width="30" Height="30" Margin="5" FontSize="16" FontWeight="Bold"/>
-                        <Button x:Name="btnZoomFit" Content="Fit" Click="BtnZoomFit_Click" 
-                Width="50" Height="30" Margin="5"/>
-
-                        <Separator Margin="10,0" Background="#666" Width="1"/>
-
-                        <Button x:Name="btnPrevSlide" Content="◀ Previous" Click="BtnPrevSlide_Click" 
-                Margin="5" Padding="10,5"/>
-                        <TextBlock x:Name="txtSlideInfo" Text="Slide 1 of 1" 
-                   Foreground="White" FontSize="12" 
-                   VerticalAlignment="Center" Margin="10,0"/>
-                        <Button x:Name="btnNextSlide" Content="Next ▶" Click="BtnNextSlide_Click" 
-                Margin="5" Padding="10,5"/>
-                    </StackPanel>
-                </Border>
-
-
-
-                <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" 
-              VerticalScrollBarVisibility="Auto" Background="#E0E0E0"
-              Padding="20">
-                    <Canvas x:Name="slideCanvas" Width="960" Height="720" Background="White">
-                        <!-- Text boxes will be drawn here dynamically -->
-                    </Canvas>
-                </ScrollViewer>
-
-                <!-- Bottom Navigation -->
-                <Border Grid.Row="2" Background="#FAFAFA" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0" Padding="10">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <!-- ADD MARK COMPLETE BUTTON -->
-                        <Button x:Name="btnMarkComplete" Content="✓ Mark File Complete" 
-                Click="BtnMarkComplete_Click" 
-                Height="40" Width="200" Margin="5"
-                Background="#4CAF50" Foreground="White" FontWeight="Bold" FontSize="14"/>
-
-                        <Button x:Name="btnSaveTrainingData" Content="💾 Save Training Data" 
-                Click="BtnSaveTrainingData_Click" 
-                Height="40" Width="200" Margin="5"
-                Background="#2196F3" Foreground="White" FontWeight="Bold" FontSize="14"/>
-
-                        <!-- Add this button next to your other buttons -->
-                        <Button x:Name="btnLoadTrainingData" Content="📂 Load Training Data" 
-        Click="BtnLoadTrainingData_Click" 
-        Height="40" Width="200" Margin="5"
-        Background="#673AB7" Foreground="White" FontWeight="Bold" FontSize="14"/>
-
-                        <Button x:Name="btnExportModel" Content="🎓 Train Model" 
-                Click="BtnTrainModel_Click" 
-                Height="40" Width="200" Margin="5"
-                Background="#FF9800" Foreground="White" FontWeight="Bold" FontSize="14"/>
-                    </StackPanel>
-                </Border>
-            </Grid>
-        </Border>
-
-        <!-- Right Panel - Labeling Controls -->
-        <Border Grid.Column="2" Background="#FAFAFA" BorderBrush="#E0E0E0" BorderThickness="1,0,0,0">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-
-                <StackPanel Grid.Row="0" Margin="10">
-                    <TextBlock Text="Selected Text Box" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
-                    <Border Background="White" BorderBrush="#E0E0E0" BorderThickness="1" 
-                            Padding="10" Margin="0,0,0,10">
-                        <TextBlock x:Name="txtSelectedText" Text="Click a text box to select" 
-                                   TextWrapping="Wrap" FontSize="12"/>
-                    </Border>
-
-                    <TextBlock Text="Position Info" FontSize="12" Foreground="#666" Margin="0,0,0,5"/>
-                    <TextBlock x:Name="txtPosition" Text="Left: -, Top: -" 
-                               FontSize="11" Foreground="#999" Margin="0,0,0,15"/>
-
-                    <TextBlock Text="Assign Label:" FontSize="14" FontWeight="Bold" Margin="0,0,0,10"/>
-                </StackPanel>
-
-                <!-- Label Buttons -->
-                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                    <StackPanel Margin="10,0,10,10">
-                        <Button x:Name="btnLabelWI" Content="WI Number" Click="BtnLabel_Click" Tag="WI_Number"
-                Height="50" Margin="0,0,0,10" Background="#2196F3" Foreground="White" 
-                FontSize="14" FontWeight="Bold"/>
-
-                        <Button x:Name="btnLabelTitle" Content="WI Title" Click="BtnLabel_Click" Tag="WI_Title"
-                Height="50" Margin="0,0,0,10" Background="#4CAF50" Foreground="White" 
-                FontSize="14" FontWeight="Bold"/>
-
-                        <Button x:Name="btnLabelRevision" Content="Revision" Click="BtnLabel_Click" Tag="Revision"
-                Height="50" Margin="0,0,0,10" Background="#FF9800" Foreground="White" 
-                FontSize="14" FontWeight="Bold"/>
-
-                        <Button x:Name="btnLabelBOM" Content="BOM/ASSY DWG NO" Click="BtnLabel_Click" Tag="BOM_ASSY_DWG_NO"
-                Height="50" Margin="0,0,0,10" Background="#9C27B0" Foreground="White" 
-                FontSize="14" FontWeight="Bold"/>
-
-                        <Button x:Name="btnLabelOperation" Content="Operation No" Click="BtnLabel_Click" Tag="Operation_No"
-                Height="50" Margin="0,0,0,10" Background="#00BCD4" Foreground="White" 
-                FontSize="14" FontWeight="Bold"/>
-
-                        <Button x:Name="btnLabelProductLine" Content="Product Line" Click="BtnLabel_Click" Tag="Product_Line"
-                Height="50" Margin="0,0,0,10" Background="#FF5722" Foreground="White" 
-                FontSize="14" FontWeight="Bold"/>
-
-                        <Button x:Name="btnLabelSubject" Content="Subject" Click="BtnLabel_Click" Tag="Subject"
-                Height="50" Margin="0,0,0,10" Background="#795548" Foreground="White" 
-                FontSize="14" FontWeight="Bold"/>
-
-                        <Button x:Name="btnLabelTemplateRev" Content="Template Revision" Click="BtnLabel_Click" Tag="Template_Revision"
-                Height="50" Margin="0,0,0,10" Background="#3F51B5" Foreground="White" 
-                FontSize="14" FontWeight="Bold"/>
-
-                        <Separator Margin="0,10"/>
-
-                        <Button x:Name="btnLabelIgnore" Content="❌ Ignore (Label)" Click="BtnLabel_Click" Tag="Ignore"
-                Height="40" Margin="0,0,0,10" Background="#757575" Foreground="White" 
-                FontSize="12"/>
-
-                        <!-- ADD HIDE BOX BUTTON -->
-                        <Button x:Name="btnHideBox" Content="👁️ Hide Box" Click="BtnHideBox_Click"
-                Height="40" Margin="0,0,0,10" Background="#607D8B" Foreground="White" 
-                FontSize="12" ToolTip="Hides this text box from view (won't be used for training)"/>
-
-                        <Button x:Name="btnClearLabel" Content="Clear Label" Click="BtnClearLabel_Click"
-                Height="40" Margin="0,0,0,10" Background="#F44336" Foreground="White" 
-                FontSize="12"/>
-                    </StackPanel>
-                </ScrollViewer>
-
-                <!-- Legend -->
-                <Border Grid.Row="2" Background="White" BorderBrush="#E0E0E0" 
-        BorderThickness="0,1,0,0" Padding="10">
-                    <StackPanel>
-                        <TextBlock Text="Color Legend:" FontSize="12" FontWeight="Bold" Margin="0,0,0,5"/>
-                        <StackPanel Orientation="Horizontal" Margin="0,2">
-                            <Border Width="20" Height="15" Background="#E3F2FD" BorderBrush="#2196F3" BorderThickness="2"/>
-                            <TextBlock Text="WI Number" FontSize="10" Margin="5,0"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,2">
-                            <Border Width="20" Height="15" Background="#E8F5E9" BorderBrush="#4CAF50" BorderThickness="2"/>
-                            <TextBlock Text="Title" FontSize="10" Margin="5,0"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,2">
-                            <Border Width="20" Height="15" Background="#FFF3E0" BorderBrush="#FF9800" BorderThickness="2"/>
-                            <TextBlock Text="Revision" FontSize="10" Margin="5,0"/>
-                        </StackPanel>
-
-                        <!-- ADD THIS -->
-                        <StackPanel Orientation="Horizontal" Margin="0,2">
-                            <Border Width="20" Height="15" Background="#E8EAF6" BorderBrush="#3F51B5" BorderThickness="2"/>
-                            <TextBlock Text="Template Rev" FontSize="10" Margin="5,0"/>
-                        </StackPanel>
-
-                        <StackPanel Orientation="Horizontal" Margin="0,2">
-                            <Border Width="20" Height="15" Background="#F5F5F5" BorderBrush="#CCCCCC" BorderThickness="2"/>
-                            <TextBlock Text="Unlabeled" FontSize="10" Margin="5,0"/>
-                        </StackPanel>
-                    </StackPanel>
-                </Border>
-            </Grid>
-        </Border>
-    </Grid>
-</Window>
-------------------------------------
-
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using CsvHelper;
-using Microsoft.ML;
-using Microsoft.ML.Data;
-
-namespace WorkInstructionLabeler
+```csharp
+private void BtnPredictLabels_Click(object sender, RoutedEventArgs e)
 {
-    public class ModelTrainer
+    if (_currentFile == null)
     {
-        public void TrainModel(string trainingDataPath, string modelPath)
+        MessageBox.Show("Please load a file first.", "No File");
+        return;
+    }
+
+    var openDialog = new OpenFileDialog
+    {
+        Filter = "Model Files (*.zip)|*.zip",
+        Title = "Select Trained Model"
+    };
+
+    if (openDialog.ShowDialog() == true)
+    {
+        try
         {
-            var mlContext = new MLContext(seed: 0);
-
-            Console.WriteLine("Loading training data manually...");
-
-            // Load data manually using CsvHelper (more forgiving)
-            var trainingData = LoadTrainingDataManually(trainingDataPath);
-
-            if (trainingData.Count == 0)
-            {
-                throw new Exception("No training data loaded from CSV!");
-            }
-
-            Console.WriteLine($"Loaded {trainingData.Count} training samples");
-
-            // Convert to IDataView
-            var dataView = mlContext.Data.LoadFromEnumerable(trainingData);
-
-            // Split for training and testing (80/20)
-            var split = mlContext.Data.TrainTestSplit(dataView, testFraction: 0.2);
-
-            Console.WriteLine("Building training pipeline...");
-
-            // Define training pipeline
-            var pipeline = mlContext.Transforms.Conversion.MapValueToKey("Label", "Label")
-                .Append(mlContext.Transforms.Categorical.OneHotEncoding("RevisionTypeEncoded", "RevisionType"))
-                .Append(mlContext.Transforms.Concatenate("Features",
-                    "Left", "Top", "Width", "Height", "TextLength",
-                    "ContainsNumbers", "ContainsHyphen", "StartsWithWI",
-                    "IsAllDigits", "RevisionTypeEncoded"))
-                .Append(mlContext.MulticlassClassification.Trainers.SdcaMaximumEntropy(
-                    labelColumnName: "Label",
-                    featureColumnName: "Features"))
-                .Append(mlContext.Transforms.Conversion.MapKeyToValue("PredictedLabel"));
-
-            Console.WriteLine("Training model...");
-            var model = pipeline.Fit(split.TrainSet);
-
-            Console.WriteLine("Evaluating model...");
-            var predictions = model.Transform(split.TestSet);
-            var metrics = mlContext.MulticlassClassification.Evaluate(predictions, labelColumnName: "Label");
-
-            Console.WriteLine("\n=== Model Evaluation Metrics ===");
-            Console.WriteLine($"Macro Accuracy: {metrics.MacroAccuracy:P2}");
-            Console.WriteLine($"Micro Accuracy: {metrics.MicroAccuracy:P2}");
-            Console.WriteLine($"Log Loss: {metrics.LogLoss:F4}");
-            Console.WriteLine($"Log Loss Reduction: {metrics.LogLossReduction:F4}");
-
-            // Per-class metrics
-            Console.WriteLine("\n=== Per-Class Metrics ===");
-            for (int i = 0; i < metrics.PerClassLogLoss.Count; i++)
-            {
-                Console.WriteLine($"Class {i}: Log Loss = {metrics.PerClassLogLoss[i]:F4}");
-            }
-
-            // Confusion matrix
-            Console.WriteLine("\n=== Confusion Matrix ===");
-            try
-            {
-                string confusionTable = metrics.ConfusionMatrix.GetFormattedConfusionTable();
-                Console.WriteLine(confusionTable);
-            }
-            catch
-            {
-                Console.WriteLine($"Number of classes: {metrics.ConfusionMatrix.NumberOfClasses}");
-            }
-
-            // Save the model
-            Console.WriteLine($"\nSaving model to {modelPath}...");
-            mlContext.Model.Save(model, dataView.Schema, modelPath);
-
-            Console.WriteLine("Model training complete!");
+            PredictLabelsForCurrentSlide(openDialog.FileName);
+            MessageBox.Show("Labels predicted! Review and correct as needed.", 
+                "Prediction Complete");
         }
-
-        private List<TextBoxFeatures> LoadTrainingDataManually(string csvPath)
+        catch (Exception ex)
         {
-            var features = new List<TextBoxFeatures>();
+            MessageBox.Show($"Prediction error: {ex.Message}", "Error");
+        }
+    }
+}
 
-            using (var reader = new StreamReader(csvPath))
-            using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+private void PredictLabelsForCurrentSlide(string modelPath)
+{
+    var mlContext = new MLContext();
+    
+    // Load the trained model
+    ITransformer trainedModel = mlContext.Model.Load(modelPath, out var modelSchema);
+    var predictionEngine = mlContext.Model.CreatePredictionEngine<TextBoxFeatures, TextBoxPrediction>(trainedModel);
+
+    // Get current slide's text boxes
+    var currentSlide = _currentFile.Slides[_currentSlideIndex];
+    
+    foreach (var box in currentSlide.TextBoxes)
+    {
+        if (box.IsHidden || !string.IsNullOrEmpty(box.AssignedLabel))
+            continue;  // Skip already labeled or hidden boxes
+
+        // Create features
+        var features = new TextBoxFeatures
+        {
+            Left = box.Left,
+            Top = box.Top,
+            Width = box.Width,
+            Height = box.Height,
+            TextLength = box.Text.Length,
+            ContainsNumbers = Regex.IsMatch(box.Text, @"\d") ? 1f : 0f,
+            ContainsHyphen = box.Text.Contains("-") ? 1f : 0f,
+            StartsWithWI = box.Text.StartsWith("WI", StringComparison.OrdinalIgnoreCase) ? 1f : 0f,
+            IsAllDigits = Regex.IsMatch(box.Text, @"^\d+$") ? 1f : 0f,
+            RevisionType = box.RevisionType
+        };
+
+        // Predict
+        var prediction = predictionEngine.Predict(features);
+        
+        // Apply prediction with confidence threshold
+        float maxScore = prediction.Score.Max();
+        if (maxScore > 0.7f)  // Only apply if >70% confident
+        {
+            box.AssignedLabel = prediction.FieldType;
+            Console.WriteLine($"Predicted '{prediction.FieldType}' for '{box.Text}' (confidence: {maxScore:P0})");
+        }
+    }
+
+    // Refresh display
+    DisplaySlide(_currentSlideIndex);
+}
+```
+
+### 7. **Updated CSV Export**
+
+```csharp
+private void SaveTrainingDataToCSV(string filePath)
+{
+    using (var writer = new StreamWriter(filePath))
+    {
+        // New headers including slide classification
+        writer.WriteLine("FileName,SlideNumber,SlideType,WI_Number,WI_Title,Revision,BOM_ASSY_DWG_NO,Operation_No,Product_Line,Subject,Template_Rev,TextBoxText,Left,Top,Width,Height,TextLength,ContainsNumbers,ContainsHyphen,StartsWithWI,IsAllDigits,RevisionType,Label");
+
+        foreach (var file in _powerPointFiles)
+        {
+            foreach (var slide in file.Slides)
             {
-                // Configure CsvHelper to be more forgiving
-                csv.Context.Configuration.BadDataFound = null;
-                csv.Context.Configuration.MissingFieldFound = null;
-
-                csv.Read();
-                csv.ReadHeader();
-
-                int lineNumber = 1;
-                while (csv.Read())
+                foreach (var box in slide.TextBoxes.Where(b => !b.IsHidden && !string.IsNullOrEmpty(b.AssignedLabel)))
                 {
-                    lineNumber++;
-                    try
-                    {
-                        var left = ParseFloat(csv.GetField("Left"));
-                        var top = ParseFloat(csv.GetField("Top"));
-                        var width = ParseFloat(csv.GetField("Width"));
-                        var height = ParseFloat(csv.GetField("Height"));
-                        var textLength = ParseFloat(csv.GetField("TextLength"));
-                        var containsNumbers = ParseBool(csv.GetField("ContainsNumbers"));
-                        var containsHyphen = ParseBool(csv.GetField("ContainsHyphen"));
-                        var startsWithWI = ParseBool(csv.GetField("StartsWithWI"));
-                        var isAllDigits = ParseBool(csv.GetField("IsAllDigits"));
-                        var revisionType = csv.GetField("RevisionType") ?? "Unknown";
-                        var label = csv.GetField("Label");
+                    string line = string.Join(",",
+                        EscapeCSV(file.FileName),
+                        slide.SlideNumber,
+                        EscapeCSV(slide.SlideType ?? "Other"),
+                        // Extract values only for title page
+                        slide.SlideType == "TitlePage" ? EscapeCSV(file.ExtractedWINumber) : "",
+                        slide.SlideType == "TitlePage" ? EscapeCSV(file.ExtractedTitle) : "",
+                        // ... etc for other fields
+                        EscapeCSV(CleanTextForCSV(box.Text)),
+                        box.Left.ToString(CultureInfo.InvariantCulture),
+                        box.Top.ToString(CultureInfo.InvariantCulture),
+                        box.Width.ToString(CultureInfo.InvariantCulture),
+                        box.Height.ToString(CultureInfo.InvariantCulture),
+                        box.Text.Length.ToString(),
+                        Regex.IsMatch(box.Text, @"\d") ? "true" : "false",
+                        box.Text.Contains("-") ? "true" : "false",
+                        box.Text.StartsWith("WI", StringComparison.OrdinalIgnoreCase) ? "true" : "false",
+                        Regex.IsMatch(box.Text, @"^\d+$") ? "true" : "false",
+                        EscapeCSV(box.RevisionType),
+                        EscapeCSV(box.AssignedLabel)
+                    );
 
-                        if (string.IsNullOrEmpty(label))
-                        {
-                            Console.WriteLine($"Skipping line {lineNumber}: Empty label");
-                            continue;
-                        }
-
-                        features.Add(new TextBoxFeatures
-                        {
-                            Left = left,
-                            Top = top,
-                            Width = width,
-                            Height = height,
-                            TextLength = textLength,
-                            ContainsNumbers = containsNumbers ? 1f : 0f,  // Convert bool to float
-                            ContainsHyphen = containsHyphen ? 1f : 0f,    // Convert bool to float
-                            StartsWithWI = startsWithWI ? 1f : 0f,        // Convert bool to float
-                            IsAllDigits = isAllDigits ? 1f : 0f,          // Convert bool to float
-                            RevisionType = revisionType,
-                            Label = label
-                        });
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Error parsing line {lineNumber}: {ex.Message}");
-                    }
+                    writer.WriteLine(line);
                 }
             }
-
-            return features;
-        }
-
-        private float ParseFloat(string value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                return 0f;
-
-            if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float result))
-                return result;
-
-            return 0f;
-        }
-
-        private bool ParseBool(string value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                return false;
-
-            value = value.ToLower().Trim();
-            return value == "true" || value == "1" || value == "yes";
         }
     }
-
-    // TextBoxFeatures class - booleans changed to floats
-    public class TextBoxFeatures
-    {
-        public float Left { get; set; }
-        public float Top { get; set; }
-        public float Width { get; set; }
-        public float Height { get; set; }
-        public float TextLength { get; set; }
-        public float ContainsNumbers { get; set; }     // Changed from bool to float
-        public float ContainsHyphen { get; set; }      // Changed from bool to float
-        public float StartsWithWI { get; set; }        // Changed from bool to float
-        public float IsAllDigits { get; set; }         // Changed from bool to float
-        public string RevisionType { get; set; }
-
-        [ColumnName("Label")]
-        public string Label { get; set; }
-    }
 }
----------------------------------------
+```
 
-using Microsoft.ML.Data;
+## Would you like me to:
 
-namespace WorkInstructionLabeler
-{
-    /*public class TextBoxFeatures
-    {
-        // Skip the first 10 columns (FileName through Template_Rev)
-        [LoadColumn(10)]  // TextBoxText
-        public string TextBoxText { get; set; }
+1. **Provide the complete modified code files** with all these changes integrated?
+1. **Create separate classification models** - one for slide types, one for text boxes?
+1. **Add a progress indicator** showing which slides have been labeled in each file?
+1. **Implement slide thumbnails** so you can see what each slide looks like while labeling?
 
-        [LoadColumn(11)]
-        public float Left { get; set; }
-
-        [LoadColumn(12)]
-        public float Top { get; set; }
-
-        [LoadColumn(13)]
-        public float Width { get; set; }
-
-        [LoadColumn(14)]
-        public float Height { get; set; }
-
-        [LoadColumn(15)]
-        public float TextLength { get; set; }
-
-        [LoadColumn(16)]
-        public bool ContainsNumbers { get; set; }
-
-        [LoadColumn(17)]
-        public bool ContainsHyphen { get; set; }
-
-        [LoadColumn(18)]
-        public bool StartsWithWI { get; set; }
-
-        [LoadColumn(19)]
-        public bool IsAllDigits { get; set; }
-
-        [LoadColumn(20)]
-        public string RevisionType { get; set; }
-
-        [LoadColumn(21)]
-        [ColumnName("Label")]
-        public string FieldType { get; set; }
-    }
-    */
-    public class TextBoxPrediction
-    {
-        [ColumnName("PredictedLabel")]
-        public string FieldType { get; set; }
-
-        public float[] Score { get; set; }
-    }
-}
----------------------------------
-
-<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <UseWPF>true</UseWPF>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <COMReference Include="Microsoft.Office.Core">
-      <WrapperTool>tlbimp</WrapperTool>
-      <VersionMinor>8</VersionMinor>
-      <VersionMajor>2</VersionMajor>
-      <Guid>2df8d04c-5bfa-101b-bde5-00aa0044de52</Guid>
-      <Lcid>0</Lcid>
-      <Isolated>false</Isolated>
-      <EmbedInteropTypes>true</EmbedInteropTypes>
-    </COMReference>
-    <COMReference Include="Microsoft.Office.Interop.PowerPoint">
-      <WrapperTool>tlbimp</WrapperTool>
-      <VersionMinor>12</VersionMinor>
-      <VersionMajor>2</VersionMajor>
-      <Guid>91493440-5a91-11cf-8700-00aa0060263b</Guid>
-      <Lcid>0</Lcid>
-      <Isolated>false</Isolated>
-      <EmbedInteropTypes>true</EmbedInteropTypes>
-    </COMReference>
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="CsvHelper" Version="33.1.0" />
-    <PackageReference Include="Microsoft.ML" Version="4.0.2" />
-    <PackageReference Include="Ookii.Dialogs.Wpf" Version="5.0.1" />
-  </ItemGroup>
-
-</Project>
-------------------------------------
-
-<Application x:Class="WorkInstructionLabeler.App"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:WorkInstructionLabeler"
-             StartupUri="MainWindow.xaml">
-    <Application.Resources>
-         
-    </Application.Resources>
-</Application>
---------------------------------------
-
-using System.Configuration;
-using System.Data;
-using System.Windows;
-
-namespace WorkInstructionLabeler
-{
-    /// <summary>
-    /// Interaction logic for App.xaml
-    /// </summary>
-    public partial class App : Application
-    {
-    }
-
-}
--------------------------------------
-
-using System.Windows;
-
-[assembly: ThemeInfo(
-    ResourceDictionaryLocation.None,            //where theme specific resource dictionaries are located
-                                                //(used if a resource is not found in the page,
-                                                // or application resource dictionaries)
-    ResourceDictionaryLocation.SourceAssembly   //where the generic resource dictionary is located
-                                                //(used if a resource is not found in the page,
-                                                // app, or any theme specific resource dictionaries)
-)]
+Which would be most helpful for your workflow?​​​​​​​​​​​​​​​​
