@@ -1,10 +1,239 @@
-Ambiguity between 'TextBoxFeatures.Width' and 'TextBoxFeatures.Width'
-Ambiguity between 'TextBoxFeatures.Left' and 'TextBoxFeatures.Left'
-Ambiguity between 'TextBoxFeatures.Top' and 'TextBoxFeatures.Top'
-Ambiguity between 'TextBoxFeatures.Height' and 'TextBoxFeatures.Height'
-Ambiguity between 'TextBoxFeatures.TextLength' and 'TextBoxFeatures.TextLength'
-Ambiguity between 'TextBoxFeatures.ContainsNumbers' and 'TextBoxFeatures.ContainsNumbers'
-Ambiguity between 'TextBoxFeatures.ContainsHyphen' and 'TextBoxFeatures.ContainsHyphen'
-Ambiguity between 'TextBoxFeatures.StartsWithWI' and 'TextBoxFeatures.StartsWithWI'
-Ambiguity between 'TextBoxFeatures.IsAllDigits' and 'TextBoxFeatures.IsAllDigits'
-Ambiguity between 'TextBoxFeatures.RevisionType' and 'TextBoxFeatures.RevisionType'
+You have **two definitions** of `TextBoxFeatures` - one in `ModelTrainer.cs` and one in `TrainingDataModels.cs`. We need to remove the duplicate.
+
+## **Fix: Delete TrainingDataModels.cs Entirely**
+
+Since we moved the class into `ModelTrainer.cs`, we don’t need `TrainingDataModels.cs` anymore.
+
+**Option 1: Delete the File**
+
+1. In Solution Explorer, find `TrainingDataModels.cs`
+1. Right-click → **Delete**
+1. Rebuild
+
+**Option 2: Or Just Remove the Duplicate Class**
+
+If you want to keep the file, open `TrainingDataModels.cs` and delete everything, leaving just this:
+
+```csharp
+using Microsoft.ML.Data;
+
+namespace WorkInstructionLabeler
+{
+    public class TextBoxPrediction
+    {
+        [ColumnName("PredictedLabel")]
+        public string FieldType { get; set; }
+
+        public float[] Score { get; set; }
+    }
+}
+```
+
+(Keep only `TextBoxPrediction`, remove `TextBoxFeatures`)
+
+-----
+
+## **Complete ModelTrainer.cs** (make sure yours matches this):
+
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using CsvHelper;
+using Microsoft.ML;
+using Microsoft.ML.Data;
+
+namespace WorkInstructionLabeler
+{
+    public class ModelTrainer
+    {
+        public void TrainModel(string trainingDataPath, string modelPath)
+        {
+            var mlContext = new MLContext(seed: 0);
+
+            Console.WriteLine("Loading training data manually...");
+
+            // Load data manually using CsvHelper (more forgiving)
+            var trainingData = LoadTrainingDataManually(trainingDataPath);
+
+            if (trainingData.Count == 0)
+            {
+                throw new Exception("No training data loaded from CSV!");
+            }
+
+            Console.WriteLine($"Loaded {trainingData.Count} training samples");
+
+            // Convert to IDataView
+            var dataView = mlContext.Data.LoadFromEnumerable(trainingData);
+
+            // Split for training and testing (80/20)
+            var split = mlContext.Data.TrainTestSplit(dataView, testFraction: 0.2);
+
+            Console.WriteLine("Building training pipeline...");
+
+            // Define training pipeline
+            var pipeline = mlContext.Transforms.Conversion.MapValueToKey("Label", "Label")
+                .Append(mlContext.Transforms.Categorical.OneHotEncoding("RevisionTypeEncoded", "RevisionType"))
+                .Append(mlContext.Transforms.Concatenate("Features",
+                    "Left", "Top", "Width", "Height", "TextLength",
+                    "ContainsNumbers", "ContainsHyphen", "StartsWithWI",
+                    "IsAllDigits", "RevisionTypeEncoded"))
+                .Append(mlContext.MulticlassClassification.Trainers.SdcaMaximumEntropy(
+                    labelColumnName: "Label",
+                    featureColumnName: "Features"))
+                .Append(mlContext.Transforms.Conversion.MapKeyToValue("PredictedLabel"));
+
+            Console.WriteLine("Training model...");
+            var model = pipeline.Fit(split.TrainSet);
+
+            Console.WriteLine("Evaluating model...");
+            var predictions = model.Transform(split.TestSet);
+            var metrics = mlContext.MulticlassClassification.Evaluate(predictions, labelColumnName: "Label");
+
+            Console.WriteLine("\n=== Model Evaluation Metrics ===");
+            Console.WriteLine($"Macro Accuracy: {metrics.MacroAccuracy:P2}");
+            Console.WriteLine($"Micro Accuracy: {metrics.MicroAccuracy:P2}");
+            Console.WriteLine($"Log Loss: {metrics.LogLoss:F4}");
+            Console.WriteLine($"Log Loss Reduction: {metrics.LogLossReduction:F4}");
+
+            // Per-class metrics
+            Console.WriteLine("\n=== Per-Class Metrics ===");
+            for (int i = 0; i < metrics.PerClassLogLoss.Count; i++)
+            {
+                Console.WriteLine($"Class {i}: Log Loss = {metrics.PerClassLogLoss[i]:F4}");
+            }
+
+            // Confusion matrix
+            Console.WriteLine("\n=== Confusion Matrix ===");
+            try
+            {
+                string confusionTable = metrics.ConfusionMatrix.GetFormattedConfusionTable();
+                Console.WriteLine(confusionTable);
+            }
+            catch
+            {
+                Console.WriteLine($"Number of classes: {metrics.ConfusionMatrix.NumberOfClasses}");
+            }
+
+            // Save the model
+            Console.WriteLine($"\nSaving model to {modelPath}...");
+            mlContext.Model.Save(model, dataView.Schema, modelPath);
+
+            Console.WriteLine("Model training complete!");
+        }
+
+        private List<TextBoxFeatures> LoadTrainingDataManually(string csvPath)
+        {
+            var features = new List<TextBoxFeatures>();
+
+            using (var reader = new StreamReader(csvPath))
+            using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+            {
+                // Configure CsvHelper to be more forgiving
+                csv.Context.Configuration.BadDataFound = null;
+                csv.Context.Configuration.MissingFieldFound = null;
+
+                csv.Read();
+                csv.ReadHeader();
+
+                int lineNumber = 1;
+                while (csv.Read())
+                {
+                    lineNumber++;
+                    try
+                    {
+                        var left = ParseFloat(csv.GetField("Left"));
+                        var top = ParseFloat(csv.GetField("Top"));
+                        var width = ParseFloat(csv.GetField("Width"));
+                        var height = ParseFloat(csv.GetField("Height"));
+                        var textLength = ParseFloat(csv.GetField("TextLength"));
+                        var containsNumbers = ParseBool(csv.GetField("ContainsNumbers"));
+                        var containsHyphen = ParseBool(csv.GetField("ContainsHyphen"));
+                        var startsWithWI = ParseBool(csv.GetField("StartsWithWI"));
+                        var isAllDigits = ParseBool(csv.GetField("IsAllDigits"));
+                        var revisionType = csv.GetField("RevisionType") ?? "Unknown";
+                        var label = csv.GetField("Label");
+
+                        if (string.IsNullOrEmpty(label))
+                        {
+                            Console.WriteLine($"Skipping line {lineNumber}: Empty label");
+                            continue;
+                        }
+
+                        features.Add(new TextBoxFeatures
+                        {
+                            Left = left,
+                            Top = top,
+                            Width = width,
+                            Height = height,
+                            TextLength = textLength,
+                            ContainsNumbers = containsNumbers,
+                            ContainsHyphen = containsHyphen,
+                            StartsWithWI = startsWithWI,
+                            IsAllDigits = isAllDigits,
+                            RevisionType = revisionType,
+                            Label = label
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error parsing line {lineNumber}: {ex.Message}");
+                    }
+                }
+            }
+
+            return features;
+        }
+
+        private float ParseFloat(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return 0f;
+
+            if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float result))
+                return result;
+
+            return 0f;
+        }
+
+        private bool ParseBool(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+
+            value = value.ToLower().Trim();
+            return value == "true" || value == "1" || value == "yes";
+        }
+    }
+
+    // TextBoxFeatures class - ONLY ONE DEFINITION
+    public class TextBoxFeatures
+    {
+        public float Left { get; set; }
+        public float Top { get; set; }
+        public float Width { get; set; }
+        public float Height { get; set; }
+        public float TextLength { get; set; }
+        public bool ContainsNumbers { get; set; }
+        public bool ContainsHyphen { get; set; }
+        public bool StartsWithWI { get; set; }
+        public bool IsAllDigits { get; set; }
+        public string RevisionType { get; set; }
+
+        [ColumnName("Label")]
+        public string Label { get; set; }
+    }
+}
+```
+
+-----
+
+**After fixing, your project should have:**
+
+- ✅ `ModelTrainer.cs` - Contains `ModelTrainer` class AND `TextBoxFeatures` class
+- ✅ `TrainingDataModels.cs` - Contains ONLY `TextBoxPrediction` class (or delete this file entirely)
+- ✅ No duplicate `TextBoxFeatures` definitions
+
+Rebuild and try training again! 🎯​​​​​​​​​​​​​​​​
