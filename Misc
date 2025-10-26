@@ -1,179 +1,112 @@
-Perfect! Here’s how to implement Option 3:
-
-## **Replace Your BtnTrainModel_Click Method**
-
-Open `MainWindow.xaml.cs` and find the `BtnTrainModel_Click` method. Replace it entirely with this:
-
-```csharp
-private void BtnTrainModel_Click(object sender, RoutedEventArgs e)
+private void SaveTrainingDataToCSV(string filePath)
 {
-    // Ask user if they want to use existing CSV or create new one
-    var result = MessageBox.Show(
-        "Do you want to use an existing training CSV file?\n\n" +
-        "Click 'Yes' to select an existing CSV\n" +
-        "Click 'No' to generate a new one from current labels",
-        "Training Data Source",
-        MessageBoxButton.YesNoCancel,
-        MessageBoxImage.Question);
-
-    if (result == MessageBoxResult.Cancel)
-        return;
-
-    string trainingFile;
-
-    if (result == MessageBoxResult.Yes)
+    using (var writer = new StreamWriter(filePath))
+    using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
     {
-        // Select existing CSV
-        var openDialog = new OpenFileDialog
-        {
-            Filter = "CSV Files (*.csv)|*.csv",
-            Title = "Select Training Data CSV"
-        };
-
-        if (openDialog.ShowDialog() != true)
-            return;
-
-        trainingFile = openDialog.FileName;
+        // Configure CsvWriter to handle special characters properly
+        csv.Context.TypeConverterOptionsCache.GetOptions<string>().NullValues.Add("");
         
-        Console.WriteLine($"Using existing CSV: {trainingFile}");
-    }
-    else
-    {
-        // Generate new CSV from current labels
-        trainingFile = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "temp_training.csv");
-        SaveTrainingDataToCSV(trainingFile);
+        // Write comprehensive headers
+        csv.WriteField("FileName");
+        csv.WriteField("WI_Number");
+        csv.WriteField("WI_Title");
+        csv.WriteField("Revision");
+        csv.WriteField("BOM_ASSY_DWG_NO");
+        csv.WriteField("Operation_No");
+        csv.WriteField("Product_Line");
+        csv.WriteField("Subject");
+        csv.WriteField("Page_No");
+        csv.WriteField("Template_Rev");
+        csv.WriteField("TextBoxText");
+        csv.WriteField("Left");
+        csv.WriteField("Top");
+        csv.WriteField("Width");
+        csv.WriteField("Height");
+        csv.WriteField("TextLength");
+        csv.WriteField("ContainsNumbers");
+        csv.WriteField("ContainsHyphen");
+        csv.WriteField("StartsWithWI");
+        csv.WriteField("IsAllDigits");
+        csv.WriteField("RevisionType");
+        csv.WriteField("Label");
+        csv.NextRecord();
 
-        // Check if we have enough data
-        int labeledCount = _allLabeledBoxes.Count(b => !string.IsNullOrEmpty(b.AssignedLabel) &&
-                                                       !b.IsHidden &&
-                                                       b.AssignedLabel != "Ignore");
-        if (labeledCount < 20)
-        {
-            MessageBox.Show($"Not enough training data. You have {labeledCount} labeled examples.\n" +
-                "Please label at least 20 text boxes before training.",
-                "Insufficient Data", MessageBoxButton.OK, MessageBoxImage.Warning);
-            
-            try { File.Delete(trainingFile); } catch { }
-            return;
-        }
-        
-        Console.WriteLine($"Generated new CSV: {trainingFile}");
-    }
+        // Group labeled boxes by file
+        var fileGroups = _allLabeledBoxes
+            .Where(b => !string.IsNullOrEmpty(b.AssignedLabel) &&
+                       !b.IsHidden &&
+                       b.AssignedLabel != "Ignore")
+            .GroupBy(b => b.SourceFile);
 
-    // Select output model path
-    var saveDialog = new SaveFileDialog
-    {
-        Filter = "Model Files (*.zip)|*.zip",
-        FileName = "wi_extractor_model.zip"
-    };
+        foreach (var fileGroup in fileGroups)
+        {
+            // Find the file info for this group
+            var fileInfo = _powerPointFiles.FirstOrDefault(f => f.FilePath == fileGroup.Key);
 
-    if (saveDialog.ShowDialog() == true)
-    {
-        try
-        {
-            Console.WriteLine($"Training model...");
-            
-            var trainer = new ModelTrainer();
-            trainer.TrainModel(trainingFile, saveDialog.FileName);
+            string fileName = fileInfo?.FileName ?? System.IO.Path.GetFileName(fileGroup.Key);
+            string wiNumber = fileInfo?.ExtractedWINumber ?? "";
+            string wiTitle = fileInfo?.ExtractedTitle ?? "";
+            string revision = fileInfo?.ExtractedRevision ?? "";
+            string bom = fileInfo?.ExtractedBOM ?? "";
+            string opNo = fileInfo?.ExtractedOperationNo ?? "";
+            string productLine = fileInfo?.ExtractedProductLine ?? "";
+            string subject = fileInfo?.ExtractedSubject ?? "";
+            string pageNo = fileInfo?.ExtractedPageNo ?? "";
+            string templateRev = fileInfo?.ExtractedTemplateRev ?? "";
 
-            MessageBox.Show($"Model trained successfully!\n\n" +
-                $"Model saved to:\n{saveDialog.FileName}\n\n" +
-                "You can now use this model in your PowerPointExtractor.",
-                "Training Complete", 
-                MessageBoxButton.OK, 
-                MessageBoxImage.Information);
-                
-            Console.WriteLine($"✓ Model saved successfully");
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"Error training model:\n{ex.Message}\n\n" +
-                "Check the Output window for details.",
-                "Training Error", 
-                MessageBoxButton.OK, 
-                MessageBoxImage.Error);
-                
-            Console.WriteLine($"✗ Training error: {ex.Message}");
-            Console.WriteLine($"Stack trace: {ex.StackTrace}");
-        }
-        finally
-        {
-            // Only delete temp file if we created it
-            if (result == MessageBoxResult.No)
+            // Write each labeled text box with the file's extracted values
+            foreach (var box in fileGroup)
             {
-                try { File.Delete(trainingFile); } catch { }
+                // Clean text to remove problematic characters
+                string cleanText = CleanTextForCSV(box.Text);
+                
+                csv.WriteField(fileName);
+                csv.WriteField(wiNumber);
+                csv.WriteField(wiTitle);
+                csv.WriteField(revision);
+                csv.WriteField(bom);
+                csv.WriteField(opNo);
+                csv.WriteField(productLine);
+                csv.WriteField(subject);
+                csv.WriteField(pageNo);
+                csv.WriteField(templateRev);
+                csv.WriteField(cleanText);  // Use cleaned text
+                csv.WriteField(box.Left);
+                csv.WriteField(box.Top);
+                csv.WriteField(box.Width);
+                csv.WriteField(box.Height);
+                csv.WriteField(box.Text.Length);
+                csv.WriteField(Regex.IsMatch(box.Text, @"\d") ? "true" : "false");  // Explicit true/false
+                csv.WriteField(box.Text.Contains("-") ? "true" : "false");
+                csv.WriteField(box.Text.StartsWith("WI", StringComparison.OrdinalIgnoreCase) ? "true" : "false");
+                csv.WriteField(Regex.IsMatch(box.Text, @"^\d+$") ? "true" : "false");
+                csv.WriteField(box.RevisionType);
+                csv.WriteField(box.AssignedLabel);
+                csv.NextRecord();
             }
         }
     }
+
+    Console.WriteLine($"Combined training/verification CSV exported");
 }
-```
 
-## **Now Train Your Model:**
-
-1. **Run** your **WorkInstructionLabeler** app
-1. Click the **“🎓 Train Model”** button
-1. A dialog appears asking about the training data source
-1. Click **“Yes”** (to use existing CSV)
-1. Browse to your saved training CSV file (e.g., `training_data_with_values.csv`)
-1. Click **Open**
-1. Choose where to save the model (e.g., `wi_extractor_model.zip`)
-1. Click **Save**
-1. Wait 10-30 seconds for training to complete
-1. You’ll see a success message with the model location
-
-## **What You’ll See:**
-
-**Dialog 1:**
-
-```
-Do you want to use an existing training CSV file?
-
-Click 'Yes' to select an existing CSV
-Click 'No' to generate a new one from current labels
-
-[Yes] [No] [Cancel]
-```
-
-**After Training:**
-
-```
-Model trained successfully!
-
-Model saved to: C:\Users\...\wi_extractor_model.zip
-
-You can now use this model in your PowerPointExtractor.
-
-[OK]
-```
-
-## **Check the Output Window:**
-
-In Visual Studio, go to **View → Output** to see detailed training metrics:
-
-```
-Using existing CSV: C:\Users\...\training_data_with_values.csv
-Training model...
-Loading training data...
-Loaded 10 sample rows from preview
-Building training pipeline...
-Training model...
-Evaluating model...
-
-=== Model Evaluation Metrics ===
-Macro Accuracy: 87.50%
-Micro Accuracy: 89.23%
-Log Loss: 0.3421
-
-✓ Model saved successfully
-```
-
-## **Next Steps:**
-
-Once you see “Model trained successfully!”:
-
-1. **Copy** `wi_extractor_model.zip`
-1. **Paste** it into your `WorkInstructionExtractor\bin\Debug\net6.0-windows\` folder
-1. **Run** your extractor on a PowerPoint file
-1. **Check** if the ML model is being used (look for “✓ ML Model loaded” in the output)
-
-Let me know what accuracy percentage you get! 🎯​​​​​​​​​​​​​​​​
+// ADD THIS NEW METHOD
+private string CleanTextForCSV(string text)
+{
+    if (string.IsNullOrEmpty(text))
+        return "";
+    
+    // Remove newlines and carriage returns
+    text = text.Replace("\r", " ").Replace("\n", " ");
+    
+    // Replace tabs with spaces
+    text = text.Replace("\t", " ");
+    
+    // Remove control characters
+    text = new string(text.Where(c => !char.IsControl(c) || c == ' ').ToArray());
+    
+    // Collapse multiple spaces
+    text = Regex.Replace(text, @"\s+", " ");
+    
+    return text.Trim();
+}
