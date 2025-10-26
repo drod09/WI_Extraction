@@ -1,39 +1,101 @@
-You have **two definitions** of `TextBoxFeatures` - one in `ModelTrainer.cs` and one in `TrainingDataModels.cs`. We need to remove the duplicate.
+The issue is that [ML.NET](http://ML.NET)’s `Concatenate` transform expects all features to be numeric (`float`/`Single`), but we’re passing boolean values. We need to convert booleans to floats.
 
-## **Fix: Delete TrainingDataModels.cs Entirely**
+## **Fix: Convert Booleans to Floats in ModelTrainer.cs**
 
-Since we moved the class into `ModelTrainer.cs`, we don’t need `TrainingDataModels.cs` anymore.
-
-**Option 1: Delete the File**
-
-1. In Solution Explorer, find `TrainingDataModels.cs`
-1. Right-click → **Delete**
-1. Rebuild
-
-**Option 2: Or Just Remove the Duplicate Class**
-
-If you want to keep the file, open `TrainingDataModels.cs` and delete everything, leaving just this:
+Replace the `LoadTrainingDataManually` method in `ModelTrainer.cs`:
 
 ```csharp
-using Microsoft.ML.Data;
-
-namespace WorkInstructionLabeler
+private List<TextBoxFeatures> LoadTrainingDataManually(string csvPath)
 {
-    public class TextBoxPrediction
-    {
-        [ColumnName("PredictedLabel")]
-        public string FieldType { get; set; }
+    var features = new List<TextBoxFeatures>();
 
-        public float[] Score { get; set; }
+    using (var reader = new StreamReader(csvPath))
+    using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+    {
+        // Configure CsvHelper to be more forgiving
+        csv.Context.Configuration.BadDataFound = null;
+        csv.Context.Configuration.MissingFieldFound = null;
+
+        csv.Read();
+        csv.ReadHeader();
+
+        int lineNumber = 1;
+        while (csv.Read())
+        {
+            lineNumber++;
+            try
+            {
+                var left = ParseFloat(csv.GetField("Left"));
+                var top = ParseFloat(csv.GetField("Top"));
+                var width = ParseFloat(csv.GetField("Width"));
+                var height = ParseFloat(csv.GetField("Height"));
+                var textLength = ParseFloat(csv.GetField("TextLength"));
+                var containsNumbers = ParseBool(csv.GetField("ContainsNumbers"));
+                var containsHyphen = ParseBool(csv.GetField("ContainsHyphen"));
+                var startsWithWI = ParseBool(csv.GetField("StartsWithWI"));
+                var isAllDigits = ParseBool(csv.GetField("IsAllDigits"));
+                var revisionType = csv.GetField("RevisionType") ?? "Unknown";
+                var label = csv.GetField("Label");
+
+                if (string.IsNullOrEmpty(label))
+                {
+                    Console.WriteLine($"Skipping line {lineNumber}: Empty label");
+                    continue;
+                }
+
+                features.Add(new TextBoxFeatures
+                {
+                    Left = left,
+                    Top = top,
+                    Width = width,
+                    Height = height,
+                    TextLength = textLength,
+                    ContainsNumbers = containsNumbers ? 1f : 0f,  // Convert bool to float
+                    ContainsHyphen = containsHyphen ? 1f : 0f,    // Convert bool to float
+                    StartsWithWI = startsWithWI ? 1f : 0f,        // Convert bool to float
+                    IsAllDigits = isAllDigits ? 1f : 0f,          // Convert bool to float
+                    RevisionType = revisionType,
+                    Label = label
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error parsing line {lineNumber}: {ex.Message}");
+            }
+        }
     }
+
+    return features;
 }
 ```
 
-(Keep only `TextBoxPrediction`, remove `TextBoxFeatures`)
+## **And Update TextBoxFeatures Class**
 
------
+Replace the `TextBoxFeatures` class at the bottom of `ModelTrainer.cs`:
 
-## **Complete ModelTrainer.cs** (make sure yours matches this):
+```csharp
+// TextBoxFeatures class - ONLY ONE DEFINITION
+public class TextBoxFeatures
+{
+    public float Left { get; set; }
+    public float Top { get; set; }
+    public float Width { get; set; }
+    public float Height { get; set; }
+    public float TextLength { get; set; }
+    public float ContainsNumbers { get; set; }     // Changed from bool to float
+    public float ContainsHyphen { get; set; }      // Changed from bool to float
+    public float StartsWithWI { get; set; }        // Changed from bool to float
+    public float IsAllDigits { get; set; }         // Changed from bool to float
+    public string RevisionType { get; set; }
+
+    [ColumnName("Label")]
+    public string Label { get; set; }
+}
+```
+
+## **Complete Updated ModelTrainer.cs**
+
+Here’s the full corrected file:
 
 ```csharp
 using System;
@@ -169,10 +231,10 @@ namespace WorkInstructionLabeler
                             Width = width,
                             Height = height,
                             TextLength = textLength,
-                            ContainsNumbers = containsNumbers,
-                            ContainsHyphen = containsHyphen,
-                            StartsWithWI = startsWithWI,
-                            IsAllDigits = isAllDigits,
+                            ContainsNumbers = containsNumbers ? 1f : 0f,  // Convert bool to float
+                            ContainsHyphen = containsHyphen ? 1f : 0f,    // Convert bool to float
+                            StartsWithWI = startsWithWI ? 1f : 0f,        // Convert bool to float
+                            IsAllDigits = isAllDigits ? 1f : 0f,          // Convert bool to float
                             RevisionType = revisionType,
                             Label = label
                         });
@@ -208,7 +270,7 @@ namespace WorkInstructionLabeler
         }
     }
 
-    // TextBoxFeatures class - ONLY ONE DEFINITION
+    // TextBoxFeatures class - booleans changed to floats
     public class TextBoxFeatures
     {
         public float Left { get; set; }
@@ -216,10 +278,10 @@ namespace WorkInstructionLabeler
         public float Width { get; set; }
         public float Height { get; set; }
         public float TextLength { get; set; }
-        public bool ContainsNumbers { get; set; }
-        public bool ContainsHyphen { get; set; }
-        public bool StartsWithWI { get; set; }
-        public bool IsAllDigits { get; set; }
+        public float ContainsNumbers { get; set; }     // Changed from bool to float
+        public float ContainsHyphen { get; set; }      // Changed from bool to float
+        public float StartsWithWI { get; set; }        // Changed from bool to float
+        public float IsAllDigits { get; set; }         // Changed from bool to float
         public string RevisionType { get; set; }
 
         [ColumnName("Label")]
@@ -230,10 +292,10 @@ namespace WorkInstructionLabeler
 
 -----
 
-**After fixing, your project should have:**
+**What Changed:**
 
-- ✅ `ModelTrainer.cs` - Contains `ModelTrainer` class AND `TextBoxFeatures` class
-- ✅ `TrainingDataModels.cs` - Contains ONLY `TextBoxPrediction` class (or delete this file entirely)
-- ✅ No duplicate `TextBoxFeatures` definitions
+- ✅ Boolean fields converted to `float` (0.0 or 1.0)
+- ✅ [ML.NET](http://ML.NET) can now concatenate all numeric features properly
+- ✅ Booleans are parsed as bool, then converted to float (0f or 1f)
 
-Rebuild and try training again! 🎯​​​​​​​​​​​​​​​​
+Rebuild and try training again! This should work now. 🎯​​​​​​​​​​​​​​​​
