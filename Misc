@@ -1,4 +1,179 @@
-// Check data distribution
-var preview = dataView.Preview(maxRows: 10);
-var rowCount = preview.RowView.Count(); // Use Count() method from LINQ, not Count property
-Console.WriteLine($"Loaded {rowCount} sample rows");
+Perfect! Here’s how to implement Option 3:
+
+## **Replace Your BtnTrainModel_Click Method**
+
+Open `MainWindow.xaml.cs` and find the `BtnTrainModel_Click` method. Replace it entirely with this:
+
+```csharp
+private void BtnTrainModel_Click(object sender, RoutedEventArgs e)
+{
+    // Ask user if they want to use existing CSV or create new one
+    var result = MessageBox.Show(
+        "Do you want to use an existing training CSV file?\n\n" +
+        "Click 'Yes' to select an existing CSV\n" +
+        "Click 'No' to generate a new one from current labels",
+        "Training Data Source",
+        MessageBoxButton.YesNoCancel,
+        MessageBoxImage.Question);
+
+    if (result == MessageBoxResult.Cancel)
+        return;
+
+    string trainingFile;
+
+    if (result == MessageBoxResult.Yes)
+    {
+        // Select existing CSV
+        var openDialog = new OpenFileDialog
+        {
+            Filter = "CSV Files (*.csv)|*.csv",
+            Title = "Select Training Data CSV"
+        };
+
+        if (openDialog.ShowDialog() != true)
+            return;
+
+        trainingFile = openDialog.FileName;
+        
+        Console.WriteLine($"Using existing CSV: {trainingFile}");
+    }
+    else
+    {
+        // Generate new CSV from current labels
+        trainingFile = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "temp_training.csv");
+        SaveTrainingDataToCSV(trainingFile);
+
+        // Check if we have enough data
+        int labeledCount = _allLabeledBoxes.Count(b => !string.IsNullOrEmpty(b.AssignedLabel) &&
+                                                       !b.IsHidden &&
+                                                       b.AssignedLabel != "Ignore");
+        if (labeledCount < 20)
+        {
+            MessageBox.Show($"Not enough training data. You have {labeledCount} labeled examples.\n" +
+                "Please label at least 20 text boxes before training.",
+                "Insufficient Data", MessageBoxButton.OK, MessageBoxImage.Warning);
+            
+            try { File.Delete(trainingFile); } catch { }
+            return;
+        }
+        
+        Console.WriteLine($"Generated new CSV: {trainingFile}");
+    }
+
+    // Select output model path
+    var saveDialog = new SaveFileDialog
+    {
+        Filter = "Model Files (*.zip)|*.zip",
+        FileName = "wi_extractor_model.zip"
+    };
+
+    if (saveDialog.ShowDialog() == true)
+    {
+        try
+        {
+            Console.WriteLine($"Training model...");
+            
+            var trainer = new ModelTrainer();
+            trainer.TrainModel(trainingFile, saveDialog.FileName);
+
+            MessageBox.Show($"Model trained successfully!\n\n" +
+                $"Model saved to:\n{saveDialog.FileName}\n\n" +
+                "You can now use this model in your PowerPointExtractor.",
+                "Training Complete", 
+                MessageBoxButton.OK, 
+                MessageBoxImage.Information);
+                
+            Console.WriteLine($"✓ Model saved successfully");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error training model:\n{ex.Message}\n\n" +
+                "Check the Output window for details.",
+                "Training Error", 
+                MessageBoxButton.OK, 
+                MessageBoxImage.Error);
+                
+            Console.WriteLine($"✗ Training error: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+        }
+        finally
+        {
+            // Only delete temp file if we created it
+            if (result == MessageBoxResult.No)
+            {
+                try { File.Delete(trainingFile); } catch { }
+            }
+        }
+    }
+}
+```
+
+## **Now Train Your Model:**
+
+1. **Run** your **WorkInstructionLabeler** app
+1. Click the **“🎓 Train Model”** button
+1. A dialog appears asking about the training data source
+1. Click **“Yes”** (to use existing CSV)
+1. Browse to your saved training CSV file (e.g., `training_data_with_values.csv`)
+1. Click **Open**
+1. Choose where to save the model (e.g., `wi_extractor_model.zip`)
+1. Click **Save**
+1. Wait 10-30 seconds for training to complete
+1. You’ll see a success message with the model location
+
+## **What You’ll See:**
+
+**Dialog 1:**
+
+```
+Do you want to use an existing training CSV file?
+
+Click 'Yes' to select an existing CSV
+Click 'No' to generate a new one from current labels
+
+[Yes] [No] [Cancel]
+```
+
+**After Training:**
+
+```
+Model trained successfully!
+
+Model saved to: C:\Users\...\wi_extractor_model.zip
+
+You can now use this model in your PowerPointExtractor.
+
+[OK]
+```
+
+## **Check the Output Window:**
+
+In Visual Studio, go to **View → Output** to see detailed training metrics:
+
+```
+Using existing CSV: C:\Users\...\training_data_with_values.csv
+Training model...
+Loading training data...
+Loaded 10 sample rows from preview
+Building training pipeline...
+Training model...
+Evaluating model...
+
+=== Model Evaluation Metrics ===
+Macro Accuracy: 87.50%
+Micro Accuracy: 89.23%
+Log Loss: 0.3421
+
+✓ Model saved successfully
+```
+
+## **Next Steps:**
+
+Once you see “Model trained successfully!”:
+
+1. **Copy** `wi_extractor_model.zip`
+1. **Paste** it into your `WorkInstructionExtractor\bin\Debug\net6.0-windows\` folder
+1. **Run** your extractor on a PowerPoint file
+1. **Check** if the ML model is being used (look for “✓ ML Model loaded” in the output)
+
+Let me know what accuracy percentage you get! 🎯​​​​​​​​​​​​​​​​
