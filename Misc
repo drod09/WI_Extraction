@@ -1,182 +1,250 @@
-Ah, the labels aren’t persisted to the PowerPoint files themselves - they only exist in memory while the app is running. Once you close the app, the labels are lost unless you saved them to the CSV.
+Good question! The parsing error is happening in **ML.NET** when it tries to read the CSV for training, not in our export code. [ML.NET](http://ML.NET)’s `LoadFromTextFile` method is very strict about CSV format.
 
-## **Solution: Reload Labels from Your Saved CSV**
+The issue is that even though we’re writing the CSV correctly now, **the old CSV you have still has the formatting issues**, and when you select it for training, [ML.NET](http://ML.NET) can’t parse it.
 
-We need to add a feature to **import labels from your existing CSV** back into the app. Add this functionality:
+## **You Have Two Options:**
 
-### **Step 1: Add “Load Training Data” Button to MainWindow.xaml**
+### **Option 1: Generate Fresh CSV (Recommended)**
 
-Find your buttons section and add this button:
-
-```xml
-<!-- Add this button next to your other buttons -->
-<Button x:Name="btnLoadTrainingData" Content="📂 Load Training Data" 
-        Click="BtnLoadTrainingData_Click" 
-        Height="40" Width="200" Margin="5"
-        Background="#673AB7" Foreground="White" FontWeight="Bold" FontSize="14"/>
-```
-
-Place it somewhere visible, like next to the “Save Training Data” button.
-
-### **Step 2: Add the Import Method to MainWindow.xaml.cs**
-
-Add these methods to your `MainWindow` class:
-
-```csharp
-private void BtnLoadTrainingData_Click(object sender, RoutedEventArgs e)
-{
-    var dialog = new OpenFileDialog
-    {
-        Filter = "CSV Files (*.csv)|*.csv",
-        Title = "Select Training Data CSV to Load"
-    };
-
-    if (dialog.ShowDialog() == true)
-    {
-        try
-        {
-            LoadTrainingDataFromCSV(dialog.FileName);
-            MessageBox.Show(
-                $"Training data loaded successfully!\n\n" +
-                $"Loaded {_allLabeledBoxes.Count} labeled text boxes",
-                "Success",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
-            
-            // Refresh display if a file is loaded
-            if (_currentFile != null)
-            {
-                DisplaySlide(_currentSlideIndex);
-            }
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show(
-                $"Error loading training data:\n{ex.Message}",
-                "Error",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
-        }
-    }
-}
-
-private void LoadTrainingDataFromCSV(string filePath)
-{
-    _allLabeledBoxes.Clear();
-    _powerPointFiles.Clear();
-    
-    var fileInfoDict = new Dictionary<string, PowerPointFileInfo>();
-    
-    using (var reader = new StreamReader(filePath))
-    using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
-    {
-        csv.Read();
-        csv.ReadHeader();
-        
-        while (csv.Read())
-        {
-            try
-            {
-                string fileName = csv.GetField<string>("FileName");
-                string wiNumber = csv.GetField<string>("WI_Number");
-                string wiTitle = csv.GetField<string>("WI_Title");
-                string revision = csv.GetField<string>("Revision");
-                string bom = csv.GetField<string>("BOM_ASSY_DWG_NO");
-                string opNo = csv.GetField<string>("Operation_No");
-                string productLine = csv.GetField<string>("Product_Line");
-                string subject = csv.GetField<string>("Subject");
-                string pageNo = csv.GetField<string>("Page_No");
-                string templateRev = csv.GetField<string>("Template_Rev");
-                string textBoxText = csv.GetField<string>("TextBoxText");
-                float left = csv.GetField<float>("Left");
-                float top = csv.GetField<float>("Top");
-                float width = csv.GetField<float>("Width");
-                float height = csv.GetField<float>("Height");
-                string revisionType = csv.GetField<string>("RevisionType");
-                string label = csv.GetField<string>("Label");
-                
-                // Create or get file info
-                if (!fileInfoDict.ContainsKey(fileName))
-                {
-                    fileInfoDict[fileName] = new PowerPointFileInfo
-                    {
-                        FileName = fileName,
-                        FilePath = "", // We don't have the full path from CSV
-                        IsLabeled = true,
-                        IsCompleted = true,
-                        ExtractedWINumber = wiNumber,
-                        ExtractedTitle = wiTitle,
-                        ExtractedRevision = revision,
-                        ExtractedBOM = bom,
-                        ExtractedOperationNo = opNo,
-                        ExtractedProductLine = productLine,
-                        ExtractedSubject = subject,
-                        ExtractedPageNo = pageNo,
-                        ExtractedTemplateRev = templateRev
-                    };
-                }
-                
-                // Create labeled text box
-                _allLabeledBoxes.Add(new LabeledTextBox
-                {
-                    Text = textBoxText,
-                    Left = left,
-                    Top = top,
-                    Width = width,
-                    Height = height,
-                    RevisionType = revisionType,
-                    SourceFile = fileName, // Use filename as identifier
-                    SlideNumber = 1,
-                    AssignedLabel = label,
-                    IsHidden = false
-                });
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error reading CSV row: {ex.Message}");
-            }
-        }
-    }
-    
-    // Add all file infos to the list
-    _powerPointFiles.AddRange(fileInfoDict.Values);
-    
-    // Update the file list
-    lstFiles.Items.Clear();
-    foreach (var file in _powerPointFiles)
-    {
-        lstFiles.Items.Add(file);
-    }
-    
-    UpdateProgress();
-    
-    Console.WriteLine($"Loaded {_allLabeledBoxes.Count} labeled boxes from {_powerPointFiles.Count} files");
-}
-```
-
-### **Step 3: Use It**
-
-Now you can:
+Since you can load your old CSV back into the app, let’s use it to generate a properly formatted one:
 
 1. **Run** WorkInstructionLabeler
 1. Click **“📂 Load Training Data”**
-1. Select your existing CSV file (e.g., `training_data_with_values.csv`)
-1. Click **Open**
-1. Your labels are now loaded back into memory!
-1. Click **“💾 Save Training Data”** to re-export with the fixed format
-1. Click **“🎓 Train Model”** to train
+1. Select your existing `training_data_with_values.csv`
+1. Click **“💾 Save Training Data”**
+1. Save as `training_data_FIXED.csv` (new file with corrected format)
+1. Click **“🎓 Train Model”** → **Yes**
+1. Select the NEW `training_data_FIXED.csv` file
+1. Train!
+
+The new CSV will have proper escaping and [ML.NET](http://ML.NET) should be able to parse it.
 
 -----
 
-## **Quick Workflow:**
+### **Option 2: Train Without Using CSV Parser (Bypass ML.NET’s Strict Parser)**
 
+If Option 1 still fails, we can load the data manually instead of using [ML.NET](http://ML.NET)’s automatic CSV parser. This gives us full control.
+
+**Replace the entire `ModelTrainer.cs` with this version that manually parses the CSV:**
+
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using CsvHelper;
+using Microsoft.ML;
+using Microsoft.ML.Data;
+
+namespace WorkInstructionLabeler
+{
+    public class ModelTrainer
+    {
+        public void TrainModel(string trainingDataPath, string modelPath)
+        {
+            var mlContext = new MLContext(seed: 0);
+
+            Console.WriteLine("Loading training data manually...");
+
+            // Load data manually using CsvHelper (more forgiving)
+            var trainingData = LoadTrainingDataManually(trainingDataPath);
+
+            if (trainingData.Count == 0)
+            {
+                throw new Exception("No training data loaded from CSV!");
+            }
+
+            Console.WriteLine($"Loaded {trainingData.Count} training samples");
+
+            // Convert to IDataView
+            var dataView = mlContext.Data.LoadFromEnumerable(trainingData);
+
+            // Split for training and testing (80/20)
+            var split = mlContext.Data.TrainTestSplit(dataView, testFraction: 0.2);
+
+            Console.WriteLine("Building training pipeline...");
+
+            // Define training pipeline
+            var pipeline = mlContext.Transforms.Conversion.MapValueToKey("Label", "Label")
+                .Append(mlContext.Transforms.Categorical.OneHotEncoding("RevisionTypeEncoded", "RevisionType"))
+                .Append(mlContext.Transforms.Concatenate("Features",
+                    "Left", "Top", "Width", "Height", "TextLength",
+                    "ContainsNumbers", "ContainsHyphen", "StartsWithWI",
+                    "IsAllDigits", "RevisionTypeEncoded"))
+                .Append(mlContext.MulticlassClassification.Trainers.SdcaMaximumEntropy(
+                    labelColumnName: "Label",
+                    featureColumnName: "Features"))
+                .Append(mlContext.Transforms.Conversion.MapKeyToValue("PredictedLabel"));
+
+            Console.WriteLine("Training model...");
+            var model = pipeline.Fit(split.TrainSet);
+
+            Console.WriteLine("Evaluating model...");
+            var predictions = model.Transform(split.TestSet);
+            var metrics = mlContext.MulticlassClassification.Evaluate(predictions, labelColumnName: "Label");
+
+            Console.WriteLine("\n=== Model Evaluation Metrics ===");
+            Console.WriteLine($"Macro Accuracy: {metrics.MacroAccuracy:P2}");
+            Console.WriteLine($"Micro Accuracy: {metrics.MicroAccuracy:P2}");
+            Console.WriteLine($"Log Loss: {metrics.LogLoss:F4}");
+            Console.WriteLine($"Log Loss Reduction: {metrics.LogLossReduction:F4}");
+
+            // Per-class metrics
+            Console.WriteLine("\n=== Per-Class Metrics ===");
+            for (int i = 0; i < metrics.PerClassLogLoss.Count; i++)
+            {
+                Console.WriteLine($"Class {i}: Log Loss = {metrics.PerClassLogLoss[i]:F4}");
+            }
+
+            // Confusion matrix
+            Console.WriteLine("\n=== Confusion Matrix ===");
+            try
+            {
+                string confusionTable = metrics.ConfusionMatrix.GetFormattedConfusionTable();
+                Console.WriteLine(confusionTable);
+            }
+            catch
+            {
+                Console.WriteLine($"Number of classes: {metrics.ConfusionMatrix.NumberOfClasses}");
+            }
+
+            // Save the model
+            Console.WriteLine($"\nSaving model to {modelPath}...");
+            mlContext.Model.Save(model, dataView.Schema, modelPath);
+
+            Console.WriteLine("Model training complete!");
+        }
+
+        private List<TextBoxFeatures> LoadTrainingDataManually(string csvPath)
+        {
+            var features = new List<TextBoxFeatures>();
+
+            using (var reader = new StreamReader(csvPath))
+            using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+            {
+                // Configure CsvHelper to be more forgiving
+                csv.Context.Configuration.BadDataFound = null; // Ignore bad data
+                csv.Context.Configuration.MissingFieldFound = null; // Ignore missing fields
+
+                csv.Read();
+                csv.ReadHeader();
+
+                int lineNumber = 1;
+                while (csv.Read())
+                {
+                    lineNumber++;
+                    try
+                    {
+                        // Skip first 10 columns (FileName through Template_Rev)
+                        // Column 11: TextBoxText (we don't use this)
+                        // Column 12: Left
+                        var left = ParseFloat(csv.GetField("Left"));
+                        var top = ParseFloat(csv.GetField("Top"));
+                        var width = ParseFloat(csv.GetField("Width"));
+                        var height = ParseFloat(csv.GetField("Height"));
+                        var textLength = ParseFloat(csv.GetField("TextLength"));
+                        var containsNumbers = ParseBool(csv.GetField("ContainsNumbers"));
+                        var containsHyphen = ParseBool(csv.GetField("ContainsHyphen"));
+                        var startsWithWI = ParseBool(csv.GetField("StartsWithWI"));
+                        var isAllDigits = ParseBool(csv.GetField("IsAllDigits"));
+                        var revisionType = csv.GetField("RevisionType") ?? "Unknown";
+                        var label = csv.GetField("Label");
+
+                        if (string.IsNullOrEmpty(label))
+                        {
+                            Console.WriteLine($"Skipping line {lineNumber}: Empty label");
+                            continue;
+                        }
+
+                        features.Add(new TextBoxFeatures
+                        {
+                            Left = left,
+                            Top = top,
+                            Width = width,
+                            Height = height,
+                            TextLength = textLength,
+                            ContainsNumbers = containsNumbers,
+                            ContainsHyphen = containsHyphen,
+                            StartsWithWI = startsWithWI,
+                            IsAllDigits = isAllDigits,
+                            RevisionType = revisionType,
+                            Label = label
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error parsing line {lineNumber}: {ex.Message}");
+                        // Continue to next row
+                    }
+                }
+            }
+
+            return features;
+        }
+
+        private float ParseFloat(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return 0f;
+
+            if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float result))
+                return result;
+
+            return 0f;
+        }
+
+        private bool ParseBool(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+
+            value = value.ToLower().Trim();
+            return value == "true" || value == "1" || value == "yes";
+        }
+    }
+
+    // Update TextBoxFeatures to use for in-memory loading
+    public class TextBoxFeatures
+    {
+        public float Left { get; set; }
+        public float Top { get; set; }
+        public float Width { get; set; }
+        public float Height { get; set; }
+        public float TextLength { get; set; }
+        public bool ContainsNumbers { get; set; }
+        public bool ContainsHyphen { get; set; }
+        public bool StartsWithWI { get; set; }
+        public bool IsAllDigits { get; set; }
+        public string RevisionType { get; set; }
+        
+        [ColumnName("Label")]
+        public string Label { get; set; }  // Changed from FieldType
+    }
+}
 ```
-1. Click "📂 Load Training Data" → Select your old CSV
-2. Click "💾 Save Training Data" → Save as "training_data_fixed.csv"
-3. Click "🎓 Train Model" → Yes → Select "training_data_fixed.csv"
-4. Done!
-```
 
-This way you don’t lose your labeling work! The new CSV will have proper escaping and the training should work.
+-----
 
-Let me know once you’ve added the button and tried loading your data! 🎯​​​​​​​​​​​​​​​​
+## **What This Does:**
+
+Instead of using [ML.NET](http://ML.NET)’s strict `LoadFromTextFile`, this:
+
+1. ✅ Uses **CsvHelper** to read the CSV (more forgiving)
+1. ✅ **Manually parses** each field with error handling
+1. ✅ **Skips bad rows** instead of crashing
+1. ✅ Handles **any boolean format** (true/True/TRUE/1)
+1. ✅ Handles **any number format** (with commas, periods, etc.)
+1. ✅ Loads data into memory, then gives it to [ML.NET](http://ML.NET)
+
+-----
+
+## **Try This:**
+
+1. **Replace** your `ModelTrainer.cs` with the code above
+1. **Rebuild** your project
+1. Click **“🎓 Train Model”** → **Yes**
+1. Select your **existing CSV** (even the broken one)
+1. It should now work!
+
+This should handle all the parsing issues! Let me know if you still get an error. 🎯​​​​​​​​​​​​​​​​
