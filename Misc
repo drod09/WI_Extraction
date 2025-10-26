@@ -1,35 +1,20 @@
+Actually, the issue is deeper than just commas. The problem is that **CsvHelper is writing boolean values incorrectly** (as `True/False` instead of `true/false` strings), which is causing the parser to fail.
+
+## **Better Solution: Re-export with the Fixed Code**
+
+Instead of manually fixing the CSV (which will take forever), let’s re-export it properly:
+
+### **Step 1: Update the Code (Complete Fixed Method)**
+
+Replace `SaveTrainingDataToCSV` in `MainWindow.xaml.cs` with this version that forces proper string output:
+
+```csharp
 private void SaveTrainingDataToCSV(string filePath)
 {
     using (var writer = new StreamWriter(filePath))
-    using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
     {
-        // Configure CsvWriter to handle special characters properly
-        csv.Context.TypeConverterOptionsCache.GetOptions<string>().NullValues.Add("");
-        
-        // Write comprehensive headers
-        csv.WriteField("FileName");
-        csv.WriteField("WI_Number");
-        csv.WriteField("WI_Title");
-        csv.WriteField("Revision");
-        csv.WriteField("BOM_ASSY_DWG_NO");
-        csv.WriteField("Operation_No");
-        csv.WriteField("Product_Line");
-        csv.WriteField("Subject");
-        csv.WriteField("Page_No");
-        csv.WriteField("Template_Rev");
-        csv.WriteField("TextBoxText");
-        csv.WriteField("Left");
-        csv.WriteField("Top");
-        csv.WriteField("Width");
-        csv.WriteField("Height");
-        csv.WriteField("TextLength");
-        csv.WriteField("ContainsNumbers");
-        csv.WriteField("ContainsHyphen");
-        csv.WriteField("StartsWithWI");
-        csv.WriteField("IsAllDigits");
-        csv.WriteField("RevisionType");
-        csv.WriteField("Label");
-        csv.NextRecord();
+        // Write headers manually
+        writer.WriteLine("FileName,WI_Number,WI_Title,Revision,BOM_ASSY_DWG_NO,Operation_No,Product_Line,Subject,Page_No,Template_Rev,TextBoxText,Left,Top,Width,Height,TextLength,ContainsNumbers,ContainsHyphen,StartsWithWI,IsAllDigits,RevisionType,Label");
 
         // Group labeled boxes by file
         var fileGroups = _allLabeledBoxes
@@ -57,32 +42,33 @@ private void SaveTrainingDataToCSV(string filePath)
             // Write each labeled text box with the file's extracted values
             foreach (var box in fileGroup)
             {
-                // Clean text to remove problematic characters
-                string cleanText = CleanTextForCSV(box.Text);
-                
-                csv.WriteField(fileName);
-                csv.WriteField(wiNumber);
-                csv.WriteField(wiTitle);
-                csv.WriteField(revision);
-                csv.WriteField(bom);
-                csv.WriteField(opNo);
-                csv.WriteField(productLine);
-                csv.WriteField(subject);
-                csv.WriteField(pageNo);
-                csv.WriteField(templateRev);
-                csv.WriteField(cleanText);  // Use cleaned text
-                csv.WriteField(box.Left);
-                csv.WriteField(box.Top);
-                csv.WriteField(box.Width);
-                csv.WriteField(box.Height);
-                csv.WriteField(box.Text.Length);
-                csv.WriteField(Regex.IsMatch(box.Text, @"\d") ? "true" : "false");  // Explicit true/false
-                csv.WriteField(box.Text.Contains("-") ? "true" : "false");
-                csv.WriteField(box.Text.StartsWith("WI", StringComparison.OrdinalIgnoreCase) ? "true" : "false");
-                csv.WriteField(Regex.IsMatch(box.Text, @"^\d+$") ? "true" : "false");
-                csv.WriteField(box.RevisionType);
-                csv.WriteField(box.AssignedLabel);
-                csv.NextRecord();
+                // Escape CSV fields properly
+                string line = string.Join(",",
+                    EscapeCSV(fileName),
+                    EscapeCSV(wiNumber),
+                    EscapeCSV(wiTitle),
+                    EscapeCSV(revision),
+                    EscapeCSV(bom),
+                    EscapeCSV(opNo),
+                    EscapeCSV(productLine),
+                    EscapeCSV(subject),
+                    EscapeCSV(pageNo),
+                    EscapeCSV(templateRev),
+                    EscapeCSV(CleanTextForCSV(box.Text)),
+                    box.Left.ToString(CultureInfo.InvariantCulture),
+                    box.Top.ToString(CultureInfo.InvariantCulture),
+                    box.Width.ToString(CultureInfo.InvariantCulture),
+                    box.Height.ToString(CultureInfo.InvariantCulture),
+                    box.Text.Length.ToString(),
+                    Regex.IsMatch(box.Text, @"\d") ? "true" : "false",
+                    box.Text.Contains("-") ? "true" : "false",
+                    box.Text.StartsWith("WI", StringComparison.OrdinalIgnoreCase) ? "true" : "false",
+                    Regex.IsMatch(box.Text, @"^\d+$") ? "true" : "false",
+                    EscapeCSV(box.RevisionType),
+                    EscapeCSV(box.AssignedLabel)
+                );
+
+                writer.WriteLine(line);
             }
         }
     }
@@ -90,23 +76,69 @@ private void SaveTrainingDataToCSV(string filePath)
     Console.WriteLine($"Combined training/verification CSV exported");
 }
 
-// ADD THIS NEW METHOD
+// ADD THESE TWO HELPER METHODS
 private string CleanTextForCSV(string text)
 {
     if (string.IsNullOrEmpty(text))
         return "";
-    
+
     // Remove newlines and carriage returns
     text = text.Replace("\r", " ").Replace("\n", " ");
-    
+
     // Replace tabs with spaces
     text = text.Replace("\t", " ");
-    
+
     // Remove control characters
     text = new string(text.Where(c => !char.IsControl(c) || c == ' ').ToArray());
-    
+
     // Collapse multiple spaces
     text = Regex.Replace(text, @"\s+", " ");
-    
+
     return text.Trim();
 }
+
+private string EscapeCSV(string field)
+{
+    if (string.IsNullOrEmpty(field))
+        return "";
+
+    // If field contains comma, quote, or newline, wrap it in quotes and escape internal quotes
+    if (field.Contains(",") || field.Contains("\"") || field.Contains("\n") || field.Contains("\r"))
+    {
+        return "\"" + field.Replace("\"", "\"\"") + "\"";
+    }
+
+    return field;
+}
+```
+
+### **Step 2: Re-export Your Training Data**
+
+1. **Rebuild** your project (Build → Rebuild Solution)
+1. **Run** WorkInstructionLabeler
+1. Click **“Load Folder…”** and select your PowerPoint folder
+1. Your labels should still be there (stored in the files)
+1. Click **“💾 Save Training Data”**
+1. Save as `training_data_fixed.csv`
+
+### **Step 3: Train with the New CSV**
+
+1. Click **“🎓 Train Model”**
+1. Click **“Yes”** (use existing CSV)
+1. Select `training_data_fixed.csv`
+1. Choose where to save the model
+1. Click **Save**
+
+-----
+
+## **Why This Works:**
+
+The new code:
+
+- ✅ Writes CSV **manually** without CsvHelper’s automatic conversion
+- ✅ Uses explicit `"true"/"false"` strings for booleans
+- ✅ Properly **escapes** fields with commas, quotes, or newlines
+- ✅ Uses `InvariantCulture` for numbers (always uses `.` not `,` for decimals)
+- ✅ Cleans text to remove control characters
+
+This should eliminate all CSV parsing errors! Let me know if you still get an error after re-exporting with this fixed code. 🎯​​​​​​​​​​​​​​​​
