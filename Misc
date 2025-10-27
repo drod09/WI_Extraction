@@ -1,854 +1,25 @@
-program.cs
-using System;
-using System.Windows.Forms;
-
-namespace WorkInstructionExtractor
-{
-    static class Program
-    {
-        [STAThread]
-        static void Main()
-        {
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new MainForm());
-        }
-    }
-}
--------
-
-WorkInstructionExtractor.cs
-using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Wordprocessing;
-using DocumentFormat.OpenXml;
-using ClosedXML.Excel;
+Form1.cs
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
 using System.IO;
 using System.Linq;
-using A = DocumentFormat.OpenXml.Drawing;
-using DW = DocumentFormat.OpenXml.Drawing.Wordprocessing;
-using PIC = DocumentFormat.OpenXml.Drawing.Pictures;
-using W = DocumentFormat.OpenXml.Wordprocessing;
-
-namespace WorkInstructionExtractor
-{
-    public class WorkInstructionData
-    {
-        // Header data
-        public string WINumber { get; set; } = string.Empty;
-        public string Title { get; set; } = string.Empty;
-        public string Revision { get; set; } = string.Empty;
-        public string BomAssyDwgNo { get; set; } = string.Empty;
-        public string OperationNo { get; set; } = string.Empty;
-        public string ProductLine { get; set; } = string.Empty;
-        public string Subject { get; set; } = string.Empty;
-
-        // Tables
-        public List<Dictionary<string, string>> BomTable { get; set; } = new List<Dictionary<string, string>>();
-        public List<Dictionary<string, string>> EquipmentRequired { get; set; } = new List<Dictionary<string, string>>();
-        public List<Dictionary<string, string>> PartsRequired { get; set; } = new List<Dictionary<string, string>>();
-        public List<Dictionary<string, string>> RevisionHistory { get; set; } = new List<Dictionary<string, string>>();
-        public List<Dictionary<string, string>> DraftingSignatures { get; set; } = new List<Dictionary<string, string>>();
-        public List<Dictionary<string, string>> Approvals { get; set; } = new List<Dictionary<string, string>>();
-
-        // Content slides data
-        public List<SlideContent> ContentSlides { get; set; } = new List<SlideContent>();
-
-        // Image paths
-        public string? FrontPageImagePath { get; set; }
-        public Dictionary<int, string> SlideImages { get; set; } = new Dictionary<int, string>();
-    }
-
-    public class SlideContent
-    {
-        public int SlideNumber { get; set; }
-        public string SlideTitle { get; set; } = string.Empty;
-        public string TextContent { get; set; } = string.Empty;
-        public string? ImagePath { get; set; }
-    }
-
-    public class WordTemplatePopulator
-    {
-        public static void PopulateTemplate(string templatePath, string outputPath, WorkInstructionData data)
-        {
-            // Copy template to output location
-            File.Copy(templatePath, outputPath, true);
-
-            using (WordprocessingDocument doc = WordprocessingDocument.Open(outputPath, true))
-            {
-                var body = doc.MainDocumentPart?.Document?.Body;
-                if (body == null) return;
-
-                // Populate header/footer data
-                PopulateHeaderFooter(doc, data);
-
-                // Populate Page 1 tables
-                PopulatePage1Tables(body, data);
-
-                // Insert front page image
-                if (!string.IsNullOrEmpty(data.FrontPageImagePath) && File.Exists(data.FrontPageImagePath))
-                {
-                    InsertFrontPageImage(doc, body, data.FrontPageImagePath);
-                }
-
-                // Populate content slides (Page 2)
-                PopulateContentSlides(doc, body, data);
-
-                doc.Save();
-            }
-        }
-
-        private static void PopulateHeaderFooter(WordprocessingDocument doc, WorkInstructionData data)
-        {
-            if (doc.MainDocumentPart == null) return;
-
-            // Update all header parts
-            foreach (var headerPart in doc.MainDocumentPart.HeaderParts)
-            {
-                ReplaceTextInPart(headerPart.Header, "[WI_NUMBER]", data.WINumber);
-                ReplaceTextInPart(headerPart.Header, "[TITLE]", data.Title);
-            }
-
-            // Update all footer parts
-            foreach (var footerPart in doc.MainDocumentPart.FooterParts)
-            {
-                var footer = footerPart.Footer;
-                ReplaceTextInPart(footer, "[WI_NUMBER]", data.WINumber);
-                ReplaceTextInPart(footer, "[TITLE]", data.Title);
-                ReplaceTextInPart(footer, "[REVISION]", data.Revision);
-                ReplaceTextInPart(footer, "[BOM_ASSY]", data.BomAssyDwgNo);
-                ReplaceTextInPart(footer, "[OPERATION]", data.OperationNo);
-                ReplaceTextInPart(footer, "[PRODUCT_LINE]", data.ProductLine);
-                ReplaceTextInPart(footer, "[SUBJECT]", data.Subject);
-            }
-        }
-
-        private static void PopulatePage1Tables(W.Body body, WorkInstructionData data)
-        {
-            var tables = body.Elements<W.Table>().ToList();
-
-            if (tables.Count == 0) return;
-
-            // Table 0: Revision History (has 2-row header: title + columns)
-            if (tables.Count > 0 && data.RevisionHistory != null && data.RevisionHistory.Count > 0)
-            {
-                PopulateTableWithTitleRow(tables[0], data.RevisionHistory);
-            }
-
-            // Table 1: BOM/Configuration (has 2-row header: title + columns)
-            if (tables.Count > 1 && data.BomTable != null && data.BomTable.Count > 0)
-            {
-                PopulateTableWithTitleRow(tables[1], data.BomTable);
-            }
-
-            // Table 2: Drafting (fixed structure - don't populate)
-            // Skip - this has fixed labels (Author, Updated by)
-
-            // Table 3: Approvals (fixed structure - don't populate)
-            // Skip - this has fixed labels (Mfg. Engineering, Operations, etc.)
-
-            // Table 4: Equipment Required (has 2-row header: title + columns)
-            if (tables.Count > 4 && data.EquipmentRequired != null && data.EquipmentRequired.Count > 0)
-            {
-                PopulateTableWithTitleRow(tables[4], data.EquipmentRequired);
-            }
-
-            // Table 5: Parts Required (has 2-row header: title + columns)
-            if (tables.Count > 5 && data.PartsRequired != null && data.PartsRequired.Count > 0)
-            {
-                PopulateTableWithTitleRow(tables[5], data.PartsRequired);
-            }
-
-            // Tables 6-7: Training Logs (leave as-is)
-        }
-
-        private static void PopulateTableWithTitleRow(W.Table table, List<Dictionary<string, string>> data)
-        {
-            if (data == null || data.Count == 0) return;
-
-            var rows = table.Elements<W.TableRow>().ToList();
-            if (rows.Count < 3) return; // Need title row + column header + at least 1 data row
-
-            // Row 0 is the title (e.g., "BOM / CONFIGURATION TABLE")
-            // Row 1 is the column headers (e.g., "Part Number", "Description")
-            // Row 2+ are data rows
-
-            var columnHeaderRow = rows[1];
-            var headerCells = columnHeaderRow.Elements<W.TableCell>().ToList();
-            var columnNames = headerCells.Select(c => GetCellText(c).Trim()).ToList();
-
-            // Get template row (row 2) for cloning
-            var templateRow = rows[2];
-
-            // Remove all data rows (keep title row 0 and column header row 1)
-            for (int i = rows.Count - 1; i >= 2; i--)
-            {
-                rows[i].Remove();
-            }
-
-            // Add new rows with data
-            foreach (var rowData in data)
-            {
-                var newRow = (W.TableRow)templateRow.CloneNode(true);
-                var cells = newRow.Elements<W.TableCell>().ToList();
-
-                for (int i = 0; i < cells.Count && i < columnNames.Count; i++)
-                {
-                    string columnName = columnNames[i];
-                    if (rowData.ContainsKey(columnName))
-                    {
-                        SetCellText(cells[i], rowData[columnName]);
-                    }
-                    else
-                    {
-                        SetCellText(cells[i], "");
-                    }
-                }
-
-                table.Append(newRow);
-            }
-        }
-
-        private static void PopulateContentSlides(WordprocessingDocument doc, W.Body body, WorkInstructionData data)
-        {
-            if (data.ContentSlides == null || data.ContentSlides.Count == 0) return;
-
-            // Find the "FOR REFERENCE ONLY" section (Page 3)
-            int insertIndex = FindContentSlidesInsertionPoint(body);
-
-            if (insertIndex == -1) return;
-
-            foreach (var slide in data.ContentSlides.OrderBy(s => s.SlideNumber))
-            {
-                // Add page break before each slide (except first)
-                if (slide.SlideNumber > data.ContentSlides.Min(s => s.SlideNumber))
-                {
-                    InsertPageBreak(body, insertIndex++);
-                }
-
-                // Add slide title
-                var titlePara = CreateFormattedParagraph(slide.SlideTitle, true, 14);
-                body.InsertAt(titlePara, insertIndex++);
-
-                // Add text content
-                if (!string.IsNullOrEmpty(slide.TextContent))
-                {
-                    var contentPara = CreateFormattedParagraph(slide.TextContent, false, 11);
-                    body.InsertAt(contentPara, insertIndex++);
-                }
-
-                // Add image
-                if (!string.IsNullOrEmpty(slide.ImagePath) && File.Exists(slide.ImagePath))
-                {
-                    var imagePara = InsertImage(doc, body, slide.ImagePath, insertIndex);
-                    if (imagePara != null)
-                    {
-                        body.InsertAt(imagePara, insertIndex++);
-                    }
-                }
-
-                // Add spacing
-                body.InsertAt(new W.Paragraph(), insertIndex++);
-            }
-        }
-
-        private static int FindContentSlidesInsertionPoint(W.Body body)
-        {
-            var elements = body.ChildElements.ToList();
-
-            // Look for "FOR REFERENCE ONLY" text
-            for (int i = 0; i < elements.Count; i++)
-            {
-                if (elements[i] is W.Paragraph para)
-                {
-                    string text = para.InnerText;
-                    if (text.Contains("FOR REFERENCE ONLY"))
-                    {
-                        // Insert after this paragraph
-                        return i + 1;
-                    }
-                }
-            }
-
-            // If not found, insert before last page (Training Log)
-            // Look for page breaks and insert before the last one
-            for (int i = elements.Count - 1; i >= 0; i--)
-            {
-                if (elements[i] is W.Paragraph para)
-                {
-                    if (para.Descendants<W.Break>().Any(b => b.Type != null && b.Type == BreakValues.Page))
-                    {
-                        return i;
-                    }
-                }
-            }
-
-            return -1;
-        }
-
-        private static void InsertFrontPageImage(WordprocessingDocument doc, W.Body body, string imagePath)
-        {
-            // Find the BOM table and insert image after it
-            var tables = body.Elements<W.Table>().ToList();
-            if (tables.Count == 0) return;
-
-            var bomTable = tables[0];
-            var insertionPoint = body.ChildElements.ToList().IndexOf(bomTable) + 1;
-
-            var imagePara = InsertImage(doc, body, imagePath, insertionPoint);
-            if (imagePara != null)
-            {
-                body.InsertAt(imagePara, insertionPoint);
-            }
-        }
-
-        private static W.Paragraph? InsertImage(WordprocessingDocument doc, W.Body body, string imagePath, int index)
-        {
-            if (!File.Exists(imagePath) || doc.MainDocumentPart == null) return null;
-
-            MainDocumentPart mainPart = doc.MainDocumentPart;
-
-            // Determine image part type
-            string extension = Path.GetExtension(imagePath).ToLower();
-            ImagePart imagePart;
-
-            switch (extension)
-            {
-                case ".png":
-                    imagePart = mainPart.AddImagePart(ImagePartType.Png);
-                    break;
-                case ".jpg":
-                case ".jpeg":
-                    imagePart = mainPart.AddImagePart(ImagePartType.Jpeg);
-                    break;
-                case ".bmp":
-                    imagePart = mainPart.AddImagePart(ImagePartType.Bmp);
-                    break;
-                case ".gif":
-                    imagePart = mainPart.AddImagePart(ImagePartType.Gif);
-                    break;
-                default:
-                    imagePart = mainPart.AddImagePart(ImagePartType.Png);
-                    break;
-            }
-
-            using (FileStream stream = new FileStream(imagePath, FileMode.Open))
-            {
-                imagePart.FeedData(stream);
-            }
-
-            // Get image dimensions
-            var (width, height) = GetImageDimensions(imagePath);
-
-            // Scale to fit page width (landscape: ~14 inches = 9144000 EMUs)
-            long maxWidth = 9144000;
-            long maxHeight = 6858000;
-
-            double scale = Math.Min((double)maxWidth / width, (double)maxHeight / height);
-            if (scale > 1) scale = 1; // Don't enlarge
-
-            long finalWidth = (long)(width * scale);
-            long finalHeight = (long)(height * scale);
-
-            string relationshipId = mainPart.GetIdOfPart(imagePart);
-
-            var element = new W.Drawing(
-                new DW.Inline(
-                    new DW.Extent() { Cx = finalWidth, Cy = finalHeight },
-                    new DW.EffectExtent() { LeftEdge = 0L, TopEdge = 0L, RightEdge = 0L, BottomEdge = 0L },
-                    new DW.DocProperties() { Id = (UInt32Value)1U, Name = "Picture" },
-                    new DW.NonVisualGraphicFrameDrawingProperties(
-                        new A.GraphicFrameLocks() { NoChangeAspect = true }),
-                    new A.Graphic(
-                        new A.GraphicData(
-                            new PIC.Picture(
-                                new PIC.NonVisualPictureProperties(
-                                    new PIC.NonVisualDrawingProperties() { Id = (UInt32Value)0U, Name = "Image" },
-                                    new PIC.NonVisualPictureDrawingProperties()),
-                                new PIC.BlipFill(
-                                    new A.Blip() { Embed = relationshipId },
-                                    new A.Stretch(new A.FillRectangle())),
-                                new PIC.ShapeProperties(
-                                    new A.Transform2D(
-                                        new A.Offset() { X = 0L, Y = 0L },
-                                        new A.Extents() { Cx = finalWidth, Cy = finalHeight }),
-                                    new A.PresetGeometry(new A.AdjustValueList()) { Preset = A.ShapeTypeValues.Rectangle }))
-                        )
-                        { Uri = "http://schemas.openxmlformats.org/drawingml/2006/picture" })
-                )
-                { DistanceFromTop = (UInt32Value)0U, DistanceFromBottom = (UInt32Value)0U, DistanceFromLeft = (UInt32Value)0U, DistanceFromRight = (UInt32Value)0U }
-            );
-
-            return new W.Paragraph(new W.Run(element));
-        }
-
-        private static (long width, long height) GetImageDimensions(string imagePath)
-        {
-            try
-            {
-                using (var image = System.Drawing.Image.FromFile(imagePath))
-                {
-                    // Convert pixels to EMUs (914400 EMUs per inch, assuming 96 DPI)
-                    long width = (long)(image.Width * 914400.0 / 96.0);
-                    long height = (long)(image.Height * 914400.0 / 96.0);
-                    return (width, height);
-                }
-            }
-            catch
-            {
-                // Default size if image can't be read
-                return (5486400, 4114800); // 6" x 4.5"
-            }
-        }
-
-        private static W.Paragraph CreateFormattedParagraph(string text, bool isBold, int fontSize)
-        {
-            var run = new W.Run(new W.Text(text));
-            var runProperties = new W.RunProperties();
-            runProperties.Append(new W.RunFonts() { Ascii = "Arial", HighAnsi = "Arial" });
-            runProperties.Append(new W.FontSize() { Val = (fontSize * 2).ToString() }); // Half-points
-
-            if (isBold)
-            {
-                runProperties.Append(new W.Bold());
-            }
-
-            run.PrependChild(runProperties);
-
-            return new W.Paragraph(run);
-        }
-
-        private static void InsertPageBreak(W.Body body, int index)
-        {
-            var para = new W.Paragraph(
-                new W.Run(
-                    new W.Break() { Type = BreakValues.Page }
-                )
-            );
-            body.InsertAt(para, index);
-        }
-
-        private static void ReplaceTextInPart(OpenXmlElement element, string placeholder, string value)
-        {
-            foreach (var text in element.Descendants<W.Text>())
-            {
-                if (text.Text.Contains(placeholder))
-                {
-                    text.Text = text.Text.Replace(placeholder, value);
-                }
-            }
-        }
-
-        private static string GetCellText(W.TableCell cell)
-        {
-            return string.Join(" ", cell.Descendants<W.Text>().Select(t => t.Text));
-        }
-
-        private static void SetCellText(W.TableCell cell, string text)
-        {
-            var paragraph = cell.Elements<W.Paragraph>().FirstOrDefault();
-            if (paragraph == null)
-            {
-                paragraph = new W.Paragraph();
-                cell.Append(paragraph);
-            }
-
-            paragraph.RemoveAllChildren<W.Run>();
-            paragraph.Append(new W.Run(new W.Text(text ?? "")));
-        }
-
-        // Method to load data from Excel file
-        public static WorkInstructionData LoadFromExcel(string excelPath, string composedImagesFolder)
-        {
-            var data = new WorkInstructionData();
-
-            using (var workbook = new XLWorkbook(excelPath))
-            {
-                // Load header data from "Header Data" sheet (note the space!)
-                if (workbook.Worksheets.Contains("Header Data"))
-                {
-                    var headerSheet = workbook.Worksheet("Header Data");
-                    var rows = headerSheet.RowsUsed().ToList();
-
-                    if (rows.Count > 1) // Need at least header + 1 data row
-                    {
-                        var dataRow = rows[1]; // Second row contains data
-
-                        // Read based on column positions
-                        data.WINumber = dataRow.Cell(3).GetString(); // Column C: WI Number
-                        data.Title = dataRow.Cell(4).GetString(); // Column D: WI Title
-                        data.Revision = dataRow.Cell(5).GetString(); // Column E: Revision
-                        data.BomAssyDwgNo = dataRow.Cell(6).GetString(); // Column F: BOM/ASSY DWG NO
-                        data.OperationNo = dataRow.Cell(7).GetString(); // Column G: Operation No
-                        data.ProductLine = dataRow.Cell(8).GetString(); // Column H: Product Line
-                        data.Subject = dataRow.Cell(9).GetString(); // Column I: Subject
-                    }
-                }
-
-                // Load tables from Python-generated sheets
-                LoadTableFromSheet(workbook, "BOM", data.BomTable);
-                LoadTableFromSheet(workbook, "EquipmentRequired", data.EquipmentRequired);
-                LoadTableFromSheet(workbook, "PartsRequired", data.PartsRequired);
-                LoadTableFromSheet(workbook, "RevisionHistory", data.RevisionHistory);
-                LoadTableFromSheet(workbook, "Drafting", data.DraftingSignatures);
-                LoadTableFromSheet(workbook, "Approvals", data.Approvals);
-
-                // Load content slides from "Text Content" sheet
-                if (workbook.Worksheets.Contains("Text Content"))
-                {
-                    var slideSheet = workbook.Worksheet("Text Content");
-                    var rows = slideSheet.RowsUsed().Skip(1); // Skip header
-
-                    // Group by slide number to combine text boxes
-                    var slideGroups = new Dictionary<int, List<string>>();
-                    var slideTitles = new Dictionary<int, string>();
-
-                    foreach (var row in rows)
-                    {
-                        var slideNumberStr = row.Cell(4).GetString(); // Column D: Slide Number
-                        if (!int.TryParse(slideNumberStr, out int slideNumber))
-                            continue;
-
-                        var slideTitle = row.Cell(5).GetString(); // Column E: Slide Subject
-                        var textContent = row.Cell(7).GetString(); // Column G: Text Content
-
-                        if (!slideGroups.ContainsKey(slideNumber))
-                        {
-                            slideGroups[slideNumber] = new List<string>();
-                            slideTitles[slideNumber] = slideTitle;
-                        }
-
-                        if (!string.IsNullOrWhiteSpace(textContent))
-                        {
-                            slideGroups[slideNumber].Add(textContent);
-                        }
-                    }
-
-                    // Create slide content objects
-                    foreach (var slideNum in slideGroups.Keys.OrderBy(k => k))
-                    {
-                        var slideContent = new SlideContent
-                        {
-                            SlideNumber = slideNum,
-                            SlideTitle = slideTitles[slideNum],
-                            TextContent = string.Join("\n\n", slideGroups[slideNum])
-                        };
-
-                        // Find corresponding composed image
-                        string imageName = $"{data.WINumber}_Slide{slideNum:D2}_Composed01.png";
-                        string imagePath = Path.Combine(composedImagesFolder, data.WINumber, imageName);
-
-                        if (File.Exists(imagePath))
-                        {
-                            slideContent.ImagePath = imagePath;
-                        }
-
-                        data.ContentSlides.Add(slideContent);
-                    }
-                }
-
-                // Set front page image
-                string frontImagePath = Path.Combine(composedImagesFolder, data.WINumber, $"{data.WINumber}_Slide01_Composed01.png");
-                if (File.Exists(frontImagePath))
-                {
-                    data.FrontPageImagePath = frontImagePath;
-                }
-            }
-
-            return data;
-        }
-
-        private static void LoadTableFromSheet(XLWorkbook workbook, string sheetName, List<Dictionary<string, string>> targetList)
-        {
-            if (!workbook.Worksheets.Contains(sheetName)) return;
-
-            var sheet = workbook.Worksheet(sheetName);
-            var rows = sheet.RowsUsed().ToList();
-
-            if (rows.Count < 2) return; // Need header + data
-
-            // Get column names from first row
-            var headerRow = rows[0];
-            var columnNames = headerRow.Cells().Select(c => c.GetString()).ToList();
-
-            // Read data rows
-            foreach (var row in rows.Skip(1))
-            {
-                var rowData = new Dictionary<string, string>();
-                var cells = row.Cells().ToList();
-
-                for (int i = 0; i < cells.Count && i < columnNames.Count; i++)
-                {
-                    rowData[columnNames[i]] = cells[i].GetString();
-                }
-
-                targetList.Add(rowData);
-            }
-        }
-    }
-}
-----------
-
-WorkInstructionExtractor.csproj
-<Project Sdk="Microsoft.NET.Sdk">
-
-	<PropertyGroup>
-		<OutputType>WinExe</OutputType> <!-- Changed from Exe to WinExe -->
-		<TargetFramework>net8.0-windows</TargetFramework>
-		<UseWindowsForms>true</UseWindowsForms>
-	</PropertyGroup>
-
-	<ItemGroup>
-		<COMReference Include="Microsoft.Office.Interop.PowerPoint">
-			<WrapperTool>tlbimp</WrapperTool>
-			<VersionMinor>12</VersionMinor>
-			<VersionMajor>2</VersionMajor>
-			<Guid>91493440-5a91-11cf-8700-00aa0060263b</Guid>
-			<Lcid>0</Lcid>
-			<Isolated>false</Isolated>
-			<EmbedInteropTypes>true</EmbedInteropTypes>
-		</COMReference>
-		<COMReference Include="Microsoft.Office.Core">
-			<WrapperTool>tlbimp</WrapperTool>
-			<VersionMinor>8</VersionMinor>
-			<VersionMajor>2</VersionMajor>
-			<Guid>2df8d04c-5bfa-101b-bde5-00aa0044de52</Guid>
-			<Lcid>0</Lcid>
-			<Isolated>false</Isolated>
-			<EmbedInteropTypes>true</EmbedInteropTypes>
-		</COMReference>
-	</ItemGroup>
-
-	<ItemGroup>
-		<PackageReference Include="DocX" Version="5.0.0" />
-		<PackageReference Include="EPPlus" Version="8.2.1" /> <!-- Add these new packages for Word template population -->
-		<PackageReference Include="DocumentFormat.OpenXml" Version="2.20.0" />
-		<PackageReference Include="ClosedXML" Version="0.102.0" />
-		<PackageReference Include="System.Drawing.Common" Version="8.0.0" />
-	</ItemGroup>
-
-</Project>
------------
-
-MainForm
-using System;
-using System.IO;
+using System.Text;
+using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Drawing;
-using System.ComponentModel;
 
 namespace WorkInstructionExtractor
 {
-    public partial class MainForm : Form
+    public partial class Form1 : Form
     {
-        private TextBox txtPowerPointPath;
-        private TextBox txtWordTemplatePath;
-        private TextBox txtOutputFolder;
-        private Button btnBrowsePowerPoint;
-        private Button btnBrowseTemplate;
-        private Button btnBrowseOutput;
-        private Button btnConvert;
-        private ProgressBar progressBar;
-        private RichTextBox txtLog;
-        private CheckBox chkExtractOnly;
-        private Label lblStatus;
         private BackgroundWorker backgroundWorker;
 
-        public MainForm()
+        public Form1()
         {
             InitializeComponent();
             InitializeBackgroundWorker();
-        }
-
-        private void InitializeComponent()
-        {
-            this.Text = "Work Instruction Converter";
-            this.Size = new Size(900, 700);
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.MinimumSize = new Size(800, 600);
-
-            // Create main panel
-            var mainPanel = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                ColumnCount = 1,
-                RowCount = 5,
-                Padding = new Padding(20)
-            };
-
-            // Title Label
-            var lblTitle = new Label
-            {
-                Text = "Work Instruction Converter",
-                Font = new Font("Segoe UI", 16, FontStyle.Bold),
-                Dock = DockStyle.Top,
-                Height = 40,
-                TextAlign = ContentAlignment.MiddleCenter
-            };
-
-            // Input Section
-            var inputPanel = CreateInputSection();
-
-            // Options Section
-            var optionsPanel = CreateOptionsSection();
-
-            // Action Section
-            var actionPanel = CreateActionSection();
-
-            // Log Section
-            var logPanel = CreateLogSection();
-
-            // Add all sections to main panel
-            mainPanel.Controls.Add(lblTitle, 0, 0);
-            mainPanel.Controls.Add(inputPanel, 0, 1);
-            mainPanel.Controls.Add(optionsPanel, 0, 2);
-            mainPanel.Controls.Add(actionPanel, 0, 3);
-            mainPanel.Controls.Add(logPanel, 0, 4);
-
-            mainPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 50));
-            mainPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 150));
-            mainPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 60));
-            mainPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 100));
-            mainPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-
-            this.Controls.Add(mainPanel);
-        }
-
-        private GroupBox CreateInputSection()
-        {
-            var panel = new GroupBox
-            {
-                Text = "Input Files",
-                Dock = DockStyle.Fill,
-                Padding = new Padding(10)
-            };
-
-            var layout = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                ColumnCount = 3,
-                RowCount = 3,
-                Padding = new Padding(5)
-            };
-
-            // PowerPoint File
-            var lblPowerPoint = new Label { Text = "PowerPoint File:", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft };
-            txtPowerPointPath = new TextBox { Dock = DockStyle.Fill, ReadOnly = true };
-            btnBrowsePowerPoint = new Button { Text = "Browse...", Width = 100, Dock = DockStyle.Fill };
-            btnBrowsePowerPoint.Click += BtnBrowsePowerPoint_Click;
-
-            // Word Template
-            var lblTemplate = new Label { Text = "Word Template:", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft };
-            txtWordTemplatePath = new TextBox { Dock = DockStyle.Fill, ReadOnly = true };
-            btnBrowseTemplate = new Button { Text = "Browse...", Width = 100, Dock = DockStyle.Fill };
-            btnBrowseTemplate.Click += BtnBrowseTemplate_Click;
-
-            // Output Folder
-            var lblOutput = new Label { Text = "Output Folder:", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft };
-            txtOutputFolder = new TextBox { Dock = DockStyle.Fill, ReadOnly = true };
-            btnBrowseOutput = new Button { Text = "Browse...", Width = 100, Dock = DockStyle.Fill };
-            btnBrowseOutput.Click += BtnBrowseOutput_Click;
-
-            // Add controls to layout
-            layout.Controls.Add(lblPowerPoint, 0, 0);
-            layout.Controls.Add(txtPowerPointPath, 1, 0);
-            layout.Controls.Add(btnBrowsePowerPoint, 2, 0);
-
-            layout.Controls.Add(lblTemplate, 0, 1);
-            layout.Controls.Add(txtWordTemplatePath, 1, 1);
-            layout.Controls.Add(btnBrowseTemplate, 2, 1);
-
-            layout.Controls.Add(lblOutput, 0, 2);
-            layout.Controls.Add(txtOutputFolder, 1, 2);
-            layout.Controls.Add(btnBrowseOutput, 2, 2);
-
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 120));
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
-
-            panel.Controls.Add(layout);
-            return panel;
-        }
-
-        private GroupBox CreateOptionsSection()
-        {
-            var panel = new GroupBox
-            {
-                Text = "Options",
-                Dock = DockStyle.Fill,
-                Padding = new Padding(10)
-            };
-
-            chkExtractOnly = new CheckBox
-            {
-                Text = "Extract data only (don't populate Word template)",
-                AutoSize = true,
-                Location = new Point(10, 25)
-            };
-
-            panel.Controls.Add(chkExtractOnly);
-            return panel;
-        }
-
-        private Panel CreateActionSection()
-        {
-            var panel = new Panel { Dock = DockStyle.Fill };
-
-            btnConvert = new Button
-            {
-                Text = "Convert Work Instruction",
-                Size = new Size(200, 40),
-                Location = new Point(10, 10),
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                BackColor = Color.FromArgb(0, 120, 215),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
-            };
-            btnConvert.FlatAppearance.BorderSize = 0;
-            btnConvert.Click += BtnConvert_Click;
-
-            progressBar = new ProgressBar
-            {
-                Location = new Point(220, 15),
-                Size = new Size(400, 30),
-                Style = ProgressBarStyle.Continuous
-            };
-
-            lblStatus = new Label
-            {
-                Text = "Ready",
-                Location = new Point(630, 20),
-                Size = new Size(200, 20),
-                Font = new Font("Segoe UI", 9)
-            };
-
-            panel.Controls.Add(btnConvert);
-            panel.Controls.Add(progressBar);
-            panel.Controls.Add(lblStatus);
-
-            return panel;
-        }
-
-        private GroupBox CreateLogSection()
-        {
-            var panel = new GroupBox
-            {
-                Text = "Activity Log",
-                Dock = DockStyle.Fill,
-                Padding = new Padding(10)
-            };
-
-            txtLog = new RichTextBox
-            {
-                Dock = DockStyle.Fill,
-                ReadOnly = true,
-                Font = new Font("Consolas", 9),
-                BackColor = Color.White
-            };
-
-            panel.Controls.Add(txtLog);
-            return panel;
         }
 
         private void InitializeBackgroundWorker()
@@ -864,63 +35,239 @@ namespace WorkInstructionExtractor
             backgroundWorker.RunWorkerCompleted += BackgroundWorker_RunWorkerCompleted;
         }
 
-        private void BtnBrowsePowerPoint_Click(object sender, EventArgs e)
+        private void btnSelectFile_Click(object sender, EventArgs e)
         {
-            using (var dialog = new OpenFileDialog())
+            using (OpenFileDialog openFileDialog = new OpenFileDialog())
             {
-                dialog.Filter = "PowerPoint Files (*.pptx)|*.pptx|All Files (*.*)|*.*";
-                dialog.Title = "Select PowerPoint Work Instruction";
+                openFileDialog.Filter = "PowerPoint Files (*.pptx)|*.pptx|All Files (*.*)|*.*";
+                openFileDialog.Title = "Select PowerPoint Work Instruction";
 
-                if (dialog.ShowDialog() == DialogResult.OK)
+                if (openFileDialog.ShowDialog() == DialogResult.OK)
                 {
-                    txtPowerPointPath.Text = dialog.FileName;
-                    LogMessage($"Selected PowerPoint: {Path.GetFileName(dialog.FileName)}");
+                    txtPowerPointPath.Text = openFileDialog.FileName;
+                    LogMessage($"Selected PowerPoint: {Path.GetFileName(openFileDialog.FileName)}");
                 }
             }
         }
 
-        private void BtnBrowseTemplate_Click(object sender, EventArgs e)
+        private void btnSelectOutputFolder_Click(object sender, EventArgs e)
         {
-            using (var dialog = new OpenFileDialog())
+            using (FolderBrowserDialog folderDialog = new FolderBrowserDialog())
             {
-                dialog.Filter = "Word Templates (*.docx;*.dotx)|*.docx;*.dotx|All Files (*.*)|*.*";
-                dialog.Title = "Select Word Template";
+                folderDialog.Description = "Select Output Folder";
 
-                if (dialog.ShowDialog() == DialogResult.OK)
+                if (folderDialog.ShowDialog() == DialogResult.OK)
                 {
-                    txtWordTemplatePath.Text = dialog.FileName;
-                    LogMessage($"Selected Template: {Path.GetFileName(dialog.FileName)}");
+                    txtOutputFolder.Text = folderDialog.SelectedPath;
+                    LogMessage($"Output folder: {folderDialog.SelectedPath}");
                 }
             }
         }
 
-        private void BtnBrowseOutput_Click(object sender, EventArgs e)
+        private void BtnConfigureMapping_Click(object sender, EventArgs e)
         {
-            using (var dialog = new FolderBrowserDialog())
+            // Check if PowerPoint file is selected
+            if (string.IsNullOrWhiteSpace(txtPowerPointPath.Text))
             {
-                dialog.Description = "Select Output Folder";
+                MessageBox.Show("Please select a PowerPoint file first.", "No File Selected",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
 
-                if (dialog.ShowDialog() == DialogResult.OK)
+            if (!File.Exists(txtPowerPointPath.Text))
+            {
+                MessageBox.Show("The selected PowerPoint file does not exist.", "File Not Found",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // Extract text boxes from the PowerPoint
+            LogMessage("Opening PowerPoint to detect fields...");
+
+            try
+            {
+                var textBoxes = ExtractTextBoxesFromPowerPoint(txtPowerPointPath.Text);
+
+                if (textBoxes.Count == 0)
                 {
-                    txtOutputFolder.Text = dialog.SelectedPath;
-                    LogMessage($"Output folder: {dialog.SelectedPath}");
+                    MessageBox.Show("No text boxes found in the PowerPoint file.", "No Fields Detected",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
                 }
+
+                LogMessage($"Found {textBoxes.Count} text boxes");
+
+                // Convert to DetectedField objects
+                var detectedFields = textBoxes.Select(tb => new DetectedField
+                {
+                    Text = tb.Text,
+                    Left = tb.Left,
+                    Top = tb.Top,
+                    Width = tb.Width,
+                    Height = tb.Height
+                }).ToList();
+
+                // Check for existing mappings
+                string suggestedTemplate = FieldMappingManager.SuggestTemplate(textBoxes);
+                Dictionary<string, string> existingMappings = null;
+
+                if (!string.IsNullOrEmpty(suggestedTemplate))
+                {
+                    var result = MessageBox.Show(
+                        $"Detected template: {suggestedTemplate}\n\nWould you like to load existing mappings for this template?",
+                        "Load Existing Mappings",
+                        MessageBoxButtons.YesNoCancel,
+                        MessageBoxIcon.Question);
+
+                    if (result == DialogResult.Cancel)
+                        return;
+
+                    if (result == DialogResult.Yes)
+                    {
+                        existingMappings = FieldMappingManager.GetMappings(suggestedTemplate);
+                    }
+                }
+
+                // Show field mapping dialog
+                using (var mappingForm = new FieldMappingForm(detectedFields, existingMappings))
+                {
+                    if (mappingForm.ShowDialog() == DialogResult.OK)
+                    {
+                        // Save the mappings
+                        FieldMappingManager.SaveMapping(mappingForm.TemplateName, mappingForm.Mappings);
+
+                        LogMessage($"Field mapping saved as: {mappingForm.TemplateName}", Color.Green);
+                        MessageBox.Show($"Field mapping configuration saved successfully!\n\nTemplate: {mappingForm.TemplateName}\nMappings: {mappingForm.Mappings.Count}",
+                            "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Error configuring field mapping: {ex.Message}", Color.Red);
+                MessageBox.Show($"An error occurred while configuring field mapping:\n\n{ex.Message}",
+                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void BtnConvert_Click(object sender, EventArgs e)
+        private void BtnManageMappings_Click(object sender, EventArgs e)
+        {
+            using (var manageForm = new ManageMappingsForm())
+            {
+                manageForm.ShowDialog();
+            }
+        }
+
+        private List<TextBoxInfo> ExtractTextBoxesFromPowerPoint(string pptxPath)
+        {
+            var textBoxes = new List<TextBoxInfo>();
+            Microsoft.Office.Interop.PowerPoint.Application pptApp = null;
+            Microsoft.Office.Interop.PowerPoint.Presentation ppt = null;
+
+            try
+            {
+                pptApp = new Microsoft.Office.Interop.PowerPoint.Application();
+                ppt = pptApp.Presentations.Open(pptxPath,
+                    Microsoft.Office.Core.MsoTriState.msoFalse,
+                    Microsoft.Office.Core.MsoTriState.msoFalse,
+                    Microsoft.Office.Core.MsoTriState.msoFalse);
+
+                if (ppt.Slides.Count > 0)
+                {
+                    var firstSlide = ppt.Slides[1];
+
+                    // Collect from slide
+                    CollectTextBoxesForMapping(firstSlide.Shapes, textBoxes);
+
+                    // Collect from master
+                    try { CollectTextBoxesForMapping(firstSlide.Master.Shapes, textBoxes); } catch { }
+                    try { CollectTextBoxesForMapping(firstSlide.Design.SlideMaster.Shapes, textBoxes); } catch { }
+                    try { CollectTextBoxesForMapping(firstSlide.CustomLayout.Shapes, textBoxes); } catch { }
+                }
+
+                ppt.Close();
+            }
+            finally
+            {
+                if (ppt != null)
+                {
+                    try { ppt.Close(); } catch { }
+                }
+                if (pptApp != null)
+                {
+                    try { pptApp.Quit(); } catch { }
+                }
+            }
+
+            return textBoxes;
+        }
+
+        private void CollectTextBoxesForMapping(Microsoft.Office.Interop.PowerPoint.Shapes shapes, List<TextBoxInfo> textBoxes)
+        {
+            foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in shapes)
+            {
+                try
+                {
+                    if (shape.Type == Microsoft.Office.Core.MsoShapeType.msoGroup)
+                    {
+                        CollectTextBoxesFromGroupForMapping(shape.GroupItems, textBoxes);
+                    }
+                    else if (shape.HasTextFrame == Microsoft.Office.Core.MsoTriState.msoTrue)
+                    {
+                        string text = shape.TextFrame.TextRange.Text.Trim();
+                        if (!string.IsNullOrEmpty(text))
+                        {
+                            textBoxes.Add(new TextBoxInfo
+                            {
+                                Text = text,
+                                Left = shape.Left,
+                                Top = shape.Top,
+                                Width = shape.Width,
+                                Height = shape.Height
+                            });
+                        }
+                    }
+                }
+                catch { }
+            }
+        }
+
+        private void CollectTextBoxesFromGroupForMapping(Microsoft.Office.Interop.PowerPoint.GroupShapes groupShapes, List<TextBoxInfo> textBoxes)
+        {
+            foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in groupShapes)
+            {
+                try
+                {
+                    if (shape.Type == Microsoft.Office.Core.MsoShapeType.msoGroup)
+                    {
+                        CollectTextBoxesFromGroupForMapping(shape.GroupItems, textBoxes);
+                    }
+                    else if (shape.HasTextFrame == Microsoft.Office.Core.MsoTriState.msoTrue)
+                    {
+                        string text = shape.TextFrame.TextRange.Text.Trim();
+                        if (!string.IsNullOrEmpty(text))
+                        {
+                            textBoxes.Add(new TextBoxInfo
+                            {
+                                Text = text,
+                                Left = shape.Left,
+                                Top = shape.Top,
+                                Width = shape.Width,
+                                Height = shape.Height
+                            });
+                        }
+                    }
+                }
+                catch { }
+            }
+        }
+
+        private void btnExtract_Click(object sender, EventArgs e)
         {
             // Validation
             if (string.IsNullOrWhiteSpace(txtPowerPointPath.Text))
             {
                 MessageBox.Show("Please select a PowerPoint file.", "Validation Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            if (!chkExtractOnly.Checked && string.IsNullOrWhiteSpace(txtWordTemplatePath.Text))
-            {
-                MessageBox.Show("Please select a Word template.", "Validation Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -938,12 +285,10 @@ namespace WorkInstructionExtractor
             progressBar.Value = 0;
 
             // Start background processing
-            var workData = new ConversionWorkData
+            var workData = new ExtractionWorkData
             {
                 PowerPointPath = txtPowerPointPath.Text,
-                TemplatePath = txtWordTemplatePath.Text,
-                OutputFolder = txtOutputFolder.Text,
-                ExtractOnly = chkExtractOnly.Checked
+                OutputFolder = txtOutputFolder.Text
             };
 
             backgroundWorker.RunWorkerAsync(workData);
@@ -952,11 +297,11 @@ namespace WorkInstructionExtractor
         private void BackgroundWorker_DoWork(object sender, DoWorkEventArgs e)
         {
             var worker = sender as BackgroundWorker;
-            var data = e.Argument as ConversionWorkData;
+            var data = e.Argument as ExtractionWorkData;
 
             try
             {
-                // Step 1: Extract PowerPoint data
+                // Extract PowerPoint data
                 worker.ReportProgress(10, "Extracting data from PowerPoint...");
 
                 var extractor = new PowerPointExtractor();
@@ -966,51 +311,16 @@ namespace WorkInstructionExtractor
                     (progress, message) => worker.ReportProgress(progress, message)
                 );
 
-                if (!data.ExtractOnly)
+                worker.ReportProgress(100, $"Complete! Data extracted to: {extractResult.ExcelPath}");
+                e.Result = new ExtractionResultWrapper
                 {
-                    // Step 2: Populate Word template
-                    worker.ReportProgress(60, "Loading extracted data...");
-
-                    var populator = new WordTemplatePopulator();
-                    var wiData = WordTemplatePopulator.LoadFromExcel(
-                        extractResult.ExcelPath,
-                        extractResult.ComposedImagesFolder
-                    );
-
-                    worker.ReportProgress(70, "Populating Word template...");
-
-                    string outputWordPath = Path.Combine(
-                        data.OutputFolder,
-                        $"{wiData.WINumber}_WorkInstruction.docx"
-                    );
-
-                    WordTemplatePopulator.PopulateTemplate(
-                        data.TemplatePath,
-                        outputWordPath,
-                        wiData
-                    );
-
-                    worker.ReportProgress(100, $"Complete! Word document saved: {outputWordPath}");
-                    e.Result = new ConversionResult
-                    {
-                        Success = true,
-                        ExcelPath = extractResult.ExcelPath,
-                        WordPath = outputWordPath
-                    };
-                }
-                else
-                {
-                    worker.ReportProgress(100, $"Complete! Data extracted to: {extractResult.ExcelPath}");
-                    e.Result = new ConversionResult
-                    {
-                        Success = true,
-                        ExcelPath = extractResult.ExcelPath
-                    };
-                }
+                    Success = true,
+                    ExcelPath = extractResult.ExcelPath
+                };
             }
             catch (Exception ex)
             {
-                e.Result = new ConversionResult
+                e.Result = new ExtractionResultWrapper
                 {
                     Success = false,
                     ErrorMessage = ex.Message
@@ -1029,15 +339,13 @@ namespace WorkInstructionExtractor
         {
             SetUIEnabled(true);
 
-            var result = e.Result as ConversionResult;
+            var result = e.Result as ExtractionResultWrapper;
 
             if (result != null && result.Success)
             {
-                LogMessage("✓ Conversion completed successfully!", Color.Green);
+                LogMessage("✓ Extraction completed successfully!", Color.Green);
 
-                var message = chkExtractOnly.Checked
-                    ? $"Data extracted successfully!\n\nExcel file: {result.ExcelPath}"
-                    : $"Conversion completed successfully!\n\nExcel file: {result.ExcelPath}\nWord file: {result.WordPath}";
+                var message = $"Data extracted successfully!\n\nExcel file: {result.ExcelPath}";
 
                 var openFiles = MessageBox.Show(
                     message + "\n\nWould you like to open the output folder?",
@@ -1061,11 +369,11 @@ namespace WorkInstructionExtractor
 
         private void SetUIEnabled(bool enabled)
         {
-            btnBrowsePowerPoint.Enabled = enabled;
-            btnBrowseTemplate.Enabled = enabled;
-            btnBrowseOutput.Enabled = enabled;
-            btnConvert.Enabled = enabled;
-            chkExtractOnly.Enabled = enabled;
+            btnSelectFile.Enabled = enabled;
+            btnSelectOutputFolder.Enabled = enabled;
+            btnExtract.Enabled = enabled;
+            btnConfigureMapping.Enabled = enabled;
+            btnManageTemplates.Enabled = enabled;
         }
 
         private void LogMessage(string message, Color? color = null)
@@ -1083,24 +391,281 @@ namespace WorkInstructionExtractor
             txtLog.SelectionColor = txtLog.ForeColor;
             txtLog.ScrollToCaret();
         }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            LogMessage("Work Instruction Extractor ready.");
+        }
     }
 
     // Helper classes
-    public class ConversionWorkData
+    public class ExtractionWorkData
     {
         public string PowerPointPath { get; set; }
-        public string TemplatePath { get; set; }
         public string OutputFolder { get; set; }
-        public bool ExtractOnly { get; set; }
     }
 
-    public class ConversionResult
+    public class ExtractionResultWrapper
     {
         public bool Success { get; set; }
         public string ExcelPath { get; set; }
-        public string WordPath { get; set; }
         public string ErrorMessage { get; set; }
     }
+
+}
+---------
+
+formdesigner
+namespace WorkInstructionExtractor
+{
+    partial class Form1
+    {
+        private System.ComponentModel.IContainer components = null;
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && (components != null))
+            {
+                components.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
+        #region Windows Form Designer generated code
+
+        private void InitializeComponent()
+        {
+            this.txtPowerPointPath = new System.Windows.Forms.TextBox();
+            this.txtOutputFolder = new System.Windows.Forms.TextBox();
+            this.btnSelectFile = new System.Windows.Forms.Button();
+            this.btnSelectOutputFolder = new System.Windows.Forms.Button();
+            this.btnExtract = new System.Windows.Forms.Button();
+            this.progressBar = new System.Windows.Forms.ProgressBar();
+            this.txtLog = new System.Windows.Forms.RichTextBox();
+            this.lblStatus = new System.Windows.Forms.Label();
+            this.btnConfigureMapping = new System.Windows.Forms.Button();
+            this.btnManageTemplates = new System.Windows.Forms.Button();
+            this.label1 = new System.Windows.Forms.Label();
+            this.label3 = new System.Windows.Forms.Label();
+            this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.groupBox3 = new System.Windows.Forms.GroupBox();
+            this.label4 = new System.Windows.Forms.Label();
+            this.groupBox1.SuspendLayout();
+            this.groupBox2.SuspendLayout();
+            this.groupBox3.SuspendLayout();
+            this.SuspendLayout();
+            // 
+            // txtPowerPointPath
+            // 
+            this.txtPowerPointPath.Location = new System.Drawing.Point(150, 30);
+            this.txtPowerPointPath.Name = "txtPowerPointPath";
+            this.txtPowerPointPath.ReadOnly = true;
+            this.txtPowerPointPath.Size = new System.Drawing.Size(550, 22);
+            this.txtPowerPointPath.TabIndex = 0;
+            // 
+            // txtOutputFolder
+            // 
+            this.txtOutputFolder.Location = new System.Drawing.Point(150, 65);
+            this.txtOutputFolder.Name = "txtOutputFolder";
+            this.txtOutputFolder.ReadOnly = true;
+            this.txtOutputFolder.Size = new System.Drawing.Size(550, 22);
+            this.txtOutputFolder.TabIndex = 2;
+            // 
+            // btnSelectFile
+            // 
+            this.btnSelectFile.Location = new System.Drawing.Point(720, 28);
+            this.btnSelectFile.Name = "btnSelectFile";
+            this.btnSelectFile.Size = new System.Drawing.Size(100, 26);
+            this.btnSelectFile.TabIndex = 3;
+            this.btnSelectFile.Text = "Browse...";
+            this.btnSelectFile.UseVisualStyleBackColor = true;
+            this.btnSelectFile.Click += new System.EventHandler(this.btnSelectFile_Click);
+            // 
+            // btnSelectOutputFolder
+            // 
+            this.btnSelectOutputFolder.Location = new System.Drawing.Point(720, 63);
+            this.btnSelectOutputFolder.Name = "btnSelectOutputFolder";
+            this.btnSelectOutputFolder.Size = new System.Drawing.Size(100, 26);
+            this.btnSelectOutputFolder.TabIndex = 5;
+            this.btnSelectOutputFolder.Text = "Browse...";
+            this.btnSelectOutputFolder.UseVisualStyleBackColor = true;
+            this.btnSelectOutputFolder.Click += new System.EventHandler(this.btnSelectOutputFolder_Click);
+            // 
+            // btnExtract
+            // 
+            this.btnExtract.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(120)))), ((int)(((byte)(215)))));
+            this.btnExtract.FlatAppearance.BorderSize = 0;
+            this.btnExtract.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnExtract.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
+            this.btnExtract.ForeColor = System.Drawing.Color.White;
+            this.btnExtract.Location = new System.Drawing.Point(20, 25);
+            this.btnExtract.Name = "btnExtract";
+            this.btnExtract.Size = new System.Drawing.Size(200, 40);
+            this.btnExtract.TabIndex = 6;
+            this.btnExtract.Text = "Extract PowerPoint";
+            this.btnExtract.UseVisualStyleBackColor = false;
+            this.btnExtract.Click += new System.EventHandler(this.btnExtract_Click);
+            // 
+            // progressBar
+            // 
+            this.progressBar.Location = new System.Drawing.Point(240, 30);
+            this.progressBar.Name = "progressBar";
+            this.progressBar.Size = new System.Drawing.Size(400, 30);
+            this.progressBar.TabIndex = 7;
+            // 
+            // txtLog
+            // 
+            this.txtLog.BackColor = System.Drawing.Color.White;
+            this.txtLog.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.txtLog.Font = new System.Drawing.Font("Consolas", 9F);
+            this.txtLog.Location = new System.Drawing.Point(3, 18);
+            this.txtLog.Name = "txtLog";
+            this.txtLog.ReadOnly = true;
+            this.txtLog.Size = new System.Drawing.Size(834, 189);
+            this.txtLog.TabIndex = 8;
+            this.txtLog.Text = "";
+            // 
+            // lblStatus
+            // 
+            this.lblStatus.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.lblStatus.Location = new System.Drawing.Point(660, 35);
+            this.lblStatus.Name = "lblStatus";
+            this.lblStatus.Size = new System.Drawing.Size(180, 20);
+            this.lblStatus.TabIndex = 10;
+            this.lblStatus.Text = "Ready";
+            // 
+            // btnConfigureMapping
+            // 
+            this.btnConfigureMapping.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnConfigureMapping.Location = new System.Drawing.Point(20, 30);
+            this.btnConfigureMapping.Name = "btnConfigureMapping";
+            this.btnConfigureMapping.Size = new System.Drawing.Size(200, 35);
+            this.btnConfigureMapping.TabIndex = 11;
+            this.btnConfigureMapping.Text = "Configure Field Mapping...";
+            this.btnConfigureMapping.UseVisualStyleBackColor = true;
+            this.btnConfigureMapping.Click += new System.EventHandler(this.BtnConfigureMapping_Click);
+            // 
+            // btnManageTemplates
+            // 
+            this.btnManageTemplates.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnManageTemplates.Location = new System.Drawing.Point(240, 30);
+            this.btnManageTemplates.Name = "btnManageTemplates";
+            this.btnManageTemplates.Size = new System.Drawing.Size(150, 35);
+            this.btnManageTemplates.TabIndex = 12;
+            this.btnManageTemplates.Text = "Manage Templates";
+            this.btnManageTemplates.UseVisualStyleBackColor = true;
+            this.btnManageTemplates.Click += new System.EventHandler(this.BtnManageMappings_Click);
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(20, 33);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(102, 16);
+            this.label1.TabIndex = 13;
+            this.label1.Text = "PowerPoint File:";
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(20, 68);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(93, 16);
+            this.label3.TabIndex = 15;
+            this.label3.Text = "Output Folder:";
+            // 
+            // groupBox1
+            // 
+            this.groupBox1.Controls.Add(this.label1);
+            this.groupBox1.Controls.Add(this.label3);
+            this.groupBox1.Controls.Add(this.txtPowerPointPath);
+            this.groupBox1.Controls.Add(this.txtOutputFolder);
+            this.groupBox1.Controls.Add(this.btnSelectFile);
+            this.groupBox1.Controls.Add(this.btnSelectOutputFolder);
+            this.groupBox1.Location = new System.Drawing.Point(20, 80);
+            this.groupBox1.Name = "groupBox1";
+            this.groupBox1.Size = new System.Drawing.Size(840, 110);
+            this.groupBox1.TabIndex = 16;
+            this.groupBox1.TabStop = false;
+            this.groupBox1.Text = "Input Files";
+            // 
+            // groupBox2
+            // 
+            this.groupBox2.Controls.Add(this.btnConfigureMapping);
+            this.groupBox2.Controls.Add(this.btnManageTemplates);
+            this.groupBox2.Location = new System.Drawing.Point(20, 210);
+            this.groupBox2.Name = "groupBox2";
+            this.groupBox2.Size = new System.Drawing.Size(840, 85);
+            this.groupBox2.TabIndex = 17;
+            this.groupBox2.TabStop = false;
+            this.groupBox2.Text = "Field Mapping Options";
+            // 
+            // groupBox3
+            // 
+            this.groupBox3.Controls.Add(this.txtLog);
+            this.groupBox3.Location = new System.Drawing.Point(20, 410);
+            this.groupBox3.Name = "groupBox3";
+            this.groupBox3.Size = new System.Drawing.Size(840, 210);
+            this.groupBox3.TabIndex = 18;
+            this.groupBox3.TabStop = false;
+            this.groupBox3.Text = "Activity Log";
+            // 
+            // label4
+            // 
+            this.label4.Font = new System.Drawing.Font("Segoe UI", 16F, System.Drawing.FontStyle.Bold);
+            this.label4.Location = new System.Drawing.Point(20, 20);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(840, 40);
+            this.label4.TabIndex = 19;
+            this.label4.Text = "Work Instruction Extractor";
+            this.label4.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            // 
+            // Form1
+            // 
+            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.ClientSize = new System.Drawing.Size(880, 640);
+            this.Controls.Add(this.label4);
+            this.Controls.Add(this.groupBox3);
+            this.Controls.Add(this.groupBox2);
+            this.Controls.Add(this.groupBox1);
+            this.Controls.Add(this.lblStatus);
+            this.Controls.Add(this.progressBar);
+            this.Controls.Add(this.btnExtract);
+            this.MinimumSize = new System.Drawing.Size(800, 600);
+            this.Name = "Form1";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
+            this.Text = "Work Instruction Extractor";
+            this.Load += new System.EventHandler(this.Form1_Load);
+            this.groupBox1.ResumeLayout(false);
+            this.groupBox1.PerformLayout();
+            this.groupBox2.ResumeLayout(false);
+            this.groupBox3.ResumeLayout(false);
+            this.ResumeLayout(false);
+
+        }
+
+        #endregion
+
+        private System.Windows.Forms.TextBox txtPowerPointPath;
+        private System.Windows.Forms.TextBox txtOutputFolder;
+        private System.Windows.Forms.Button btnSelectFile;
+        private System.Windows.Forms.Button btnSelectOutputFolder;
+        private System.Windows.Forms.Button btnExtract;
+        private System.Windows.Forms.ProgressBar progressBar;
+        private System.Windows.Forms.RichTextBox txtLog;
+        private System.Windows.Forms.Label lblStatus;
+        private System.Windows.Forms.Button btnConfigureMapping;
+        private System.Windows.Forms.Button btnManageTemplates;
+        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.GroupBox groupBox1;
+        private System.Windows.Forms.GroupBox groupBox2;
+        private System.Windows.Forms.GroupBox groupBox3;
+        private System.Windows.Forms.Label label4;
+    }
+
 }
 -----------
 
@@ -1112,6 +677,7 @@ using System.Linq;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
+using PowerPointApp = Microsoft.Office.Interop.PowerPoint.Application;
 using Microsoft.Office.Interop.PowerPoint;
 using Microsoft.Office.Core;
 using OfficeOpenXml;
@@ -1122,7 +688,7 @@ namespace WorkInstructionExtractor
     {
         static PowerPointExtractor()
         {
-            ExcelPackage.License.SetNonCommercialPersonal("Diana");
+            ExcelPackage.License.SetNonCommercialPersonal("<Diana>");
         }
 
         public ExtractionResult ExtractWorkInstruction(
@@ -1147,7 +713,7 @@ namespace WorkInstructionExtractor
 
             // STEP 1: Extract header data and images with C#
             progressCallback?.Invoke(10, "Extracting header data and images...");
-            var headerData = ExtractHeadersAndImages(pptxPath, headerExcel, baseImagesFolder, composedImagesFolder, progressCallback);
+            var (headerData, tocData) = ExtractHeadersAndImages(pptxPath, headerExcel, baseImagesFolder, composedImagesFolder, progressCallback);
 
             string wiNumber = headerData.FirstOrDefault()?["WI_Number"] ?? "";
 
@@ -1185,14 +751,15 @@ namespace WorkInstructionExtractor
             };
         }
 
-        private List<Dictionary<string, string>> ExtractHeadersAndImages(string filePath, string excelPath,
-            string baseImagesFolder, string composedImagesFolder, Action<int, string> progressCallback)
+        private (List<Dictionary<string, string>> headerData, List<Dictionary<string, string>> tocData) ExtractHeadersAndImages(
+            string filePath, string excelPath, string baseImagesFolder, string composedImagesFolder, Action<int, string> progressCallback)
         {
             var headerData = new List<Dictionary<string, string>>();
             var imageData = new List<Dictionary<string, string>>();
             var textData = new List<Dictionary<string, string>>();
+            var tocData = new List<Dictionary<string, string>>();
 
-            Application pptApp = new Application();
+            PowerPointApp pptApp = new PowerPointApp();
             int docCounter = 1;
 
             try
@@ -1221,7 +788,8 @@ namespace WorkInstructionExtractor
                     try { CollectTextBoxes(firstSlide.Design.SlideMaster.Shapes, allTextBoxes); } catch { }
                     try { CollectTextBoxes(firstSlide.CustomLayout.Shapes, allTextBoxes); } catch { }
 
-                    ExtractData(allTextBoxes, data);
+                    // Use the new mapping-based extraction
+                    ExtractDataWithMappings(allTextBoxes, data, ppt);
 
                     int totalPages = ppt.Slides.Count;
                     data["TotalPages"] = totalPages.ToString();
@@ -1240,6 +808,18 @@ namespace WorkInstructionExtractor
                         Path.GetFileName(filePath));
                     textData.AddRange(slideTexts);
 
+                    progressCallback?.Invoke(33, "Building table of contents...");
+
+                    var tocEntries = ExtractTableOfContents(ppt, docCounter, GetValue(data, "WI_Number"),
+                        Path.GetFileName(filePath));
+                    tocData.AddRange(tocEntries);
+
+                    // Extract subject from TOC if available
+                    if (tocEntries.Count > 0 && string.IsNullOrEmpty(GetValue(data, "Subject")))
+                    {
+                        data["Subject"] = tocEntries[0]["SlideSubject"];
+                    }
+
                     headerData.Add(data);
 
                     progressCallback?.Invoke(35, $"Extracted: {GetValue(data, "WI_Number")}");
@@ -1252,16 +832,126 @@ namespace WorkInstructionExtractor
                 pptApp.Quit();
             }
 
-            WriteToExcel(headerData, imageData, textData, excelPath);
+            WriteToExcel(headerData, imageData, textData, tocData, excelPath);
 
-            return headerData;
+            return (headerData, tocData);
+        }
+
+        private void ExtractDataWithMappings(List<TextBoxInfo> textBoxes, Dictionary<string, string> data, Presentation ppt)
+        {
+            // Try to load saved mappings
+            string suggestedTemplate = FieldMappingManager.SuggestTemplate(textBoxes);
+            Dictionary<string, string> savedMappings = null;
+
+            if (!string.IsNullOrEmpty(suggestedTemplate))
+            {
+                savedMappings = FieldMappingManager.GetMappings(suggestedTemplate);
+                Console.WriteLine($"Using saved mappings from template: {suggestedTemplate}");
+                Console.WriteLine($"Found {savedMappings.Count} field mappings");
+
+                // Update last used timestamp
+                FieldMappingManager.UpdateLastUsed(suggestedTemplate);
+            }
+
+            if (savedMappings != null && savedMappings.Count > 0)
+            {
+                // Use saved mappings - match by text content
+                foreach (var box in textBoxes)
+                {
+                    string text = box.Text.Trim();
+
+                    foreach (var mapping in savedMappings)
+                    {
+                        string fieldLabel = mapping.Key;      // e.g., "WI_Number"
+                        string expectedText = mapping.Value;  // e.g., "WI-1234"
+
+                        // Check if this text box matches the saved mapping
+                        if (text.Equals(expectedText, StringComparison.OrdinalIgnoreCase) ||
+                            text.Contains(expectedText) ||
+                            expectedText.Contains(text))
+                        {
+                            // Found a match!
+                            data[fieldLabel] = text;
+                            Console.WriteLine($"Mapped '{fieldLabel}' = '{text}' using saved template");
+                            break;
+                        }
+                    }
+                }
+
+                // Also run pattern-based extraction for fields not found in mappings
+                ExtractDataWithPatterns(textBoxes, data);
+            }
+            else
+            {
+                // No saved mappings - fall back to position-based extraction
+                Console.WriteLine("No saved mappings found, using position-based extraction");
+                ExtractData(textBoxes, data, ppt);
+            }
+        }
+
+        private void ExtractDataWithPatterns(List<TextBoxInfo> textBoxes, Dictionary<string, string> data)
+        {
+            // Pattern-based extraction that doesn't rely on position
+            foreach (var box in textBoxes)
+            {
+                string text = box.Text.Trim();
+                string upperText = text.ToUpper();
+
+                // Extract WI Number (pattern-based, position-independent)
+                if (string.IsNullOrEmpty(GetValue(data, "WI_Number")))
+                {
+                    var wiMatch = System.Text.RegularExpressions.Regex.Match(text,
+                        @"W\.?I\.?\s*-?\s*\d+",
+                        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+                    if (wiMatch.Success)
+                    {
+                        string wiNum = wiMatch.Value.Replace(" ", "").Replace(".", "");
+                        if (!wiNum.Contains("-"))
+                            wiNum = wiNum.Replace("WI", "WI-");
+                        data["WI_Number"] = wiNum.ToUpper();
+                    }
+                }
+
+                // Extract Revision (pattern-based)
+                if (string.IsNullOrEmpty(GetValue(data, "Revision")))
+                {
+                    // Skip labels
+                    if (upperText == "REV" || upperText == "REV:" || upperText == "REVISION:")
+                        continue;
+
+                    // Look for single/double digit revisions
+                    if (text.Length >= 1 && text.Length <= 3 &&
+                        System.Text.RegularExpressions.Regex.IsMatch(text, @"^[0-9]+$"))
+                    {
+                        // This could be a revision number - only set if not already set
+                        if (string.IsNullOrEmpty(GetValue(data, "Revision")))
+                        {
+                            data["Revision"] = text;
+                        }
+                    }
+                }
+
+                // Extract Template Revision (pattern-based)
+                if (upperText.Contains("FM-ME") || upperText.Contains("FM ME") || upperText.Contains("FMME"))
+                {
+                    var revMatch = System.Text.RegularExpressions.Regex.Match(text,
+                        @"FM-?[\s]?ME-?\d+.*?rev\.?\s*(\d+)",
+                        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+                    if (revMatch.Success && revMatch.Groups.Count > 1)
+                    {
+                        data["RevisionType"] = revMatch.Groups[1].Value;
+                    }
+                }
+            }
         }
 
         private List<Dictionary<string, string>> ExtractTextFromSlides(Presentation ppt, int docId, string wiNumber, string sourceFileName)
         {
             var textData = new List<Dictionary<string, string>>();
 
-            for (int slideIdx = 3; slideIdx <= ppt.Slides.Count; slideIdx++)
+            for (int slideIdx = 2; slideIdx <= ppt.Slides.Count; slideIdx++)
             {
                 try
                 {
@@ -1271,9 +961,25 @@ namespace WorkInstructionExtractor
 
                     foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in slide.Shapes)
                     {
+                        // Skip tables - we don't want to extract table data as text
+                        if (shape.HasTable == MsoTriState.msoTrue)
+                        {
+                            continue;
+                        }
+
                         string extractedText = ExtractTextFromShape(shape);
                         if (!string.IsNullOrWhiteSpace(extractedText))
                         {
+                            // IMPORTANT: Skip if this text IS the slide subject (avoid duplication)
+                            string normalizedExtracted = extractedText.Trim().ToUpper();
+                            string normalizedSubject = slideSubject.Trim().ToUpper();
+
+                            if (normalizedExtracted == normalizedSubject)
+                            {
+                                // This is the slide title/subject - skip it
+                                continue;
+                            }
+
                             textData.Add(new Dictionary<string, string>
                             {
                                 ["DocumentID"] = docId.ToString(),
@@ -1299,6 +1005,7 @@ namespace WorkInstructionExtractor
         {
             try
             {
+                // Method 1: Check for title placeholder
                 foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in slide.Shapes)
                 {
                     try
@@ -1314,7 +1021,7 @@ namespace WorkInstructionExtractor
                                     string titleText = shape.TextFrame.TextRange.Text.Trim();
                                     if (!string.IsNullOrWhiteSpace(titleText))
                                     {
-                                        return titleText;
+                                        return titleText.ToUpper();
                                     }
                                 }
                             }
@@ -1323,6 +1030,7 @@ namespace WorkInstructionExtractor
                     catch { }
                 }
 
+                // Method 2: Find largest font at top of slide
                 var topShapes = new List<(string text, float top, float fontSize)>();
 
                 foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in slide.Shapes)
@@ -1350,14 +1058,14 @@ namespace WorkInstructionExtractor
                 if (topShapes.Count > 0)
                 {
                     var largestFont = topShapes.OrderByDescending(s => s.fontSize).ThenBy(s => s.top).First();
-                    return largestFont.text;
+                    return largestFont.text.ToUpper();
                 }
 
-                return "Untitled Slide";
+                return "UNTITLED SLIDE";
             }
             catch
             {
-                return "Untitled Slide";
+                return "UNTITLED SLIDE";
             }
         }
 
@@ -1390,34 +1098,83 @@ namespace WorkInstructionExtractor
                     }
                     catch { }
                 }
-                else if (shape.HasTable == MsoTriState.msoTrue)
-                {
-                    try
-                    {
-                        var table = shape.Table;
-                        for (int row = 1; row <= table.Rows.Count; row++)
-                        {
-                            var rowText = new System.Text.StringBuilder();
-                            for (int col = 1; col <= table.Columns.Count; col++)
-                            {
-                                string cellText = table.Cell(row, col).Shape.TextFrame.TextRange.Text;
-                                if (!string.IsNullOrWhiteSpace(cellText))
-                                {
-                                    rowText.Append(cellText.Trim() + " | ");
-                                }
-                            }
-                            if (rowText.Length > 0)
-                            {
-                                text.AppendLine(rowText.ToString().TrimEnd(' ', '|'));
-                            }
-                        }
-                    }
-                    catch { }
-                }
             }
             catch { }
 
             return text.ToString().Trim();
+        }
+
+        private List<Dictionary<string, string>> ExtractTableOfContents(Presentation ppt, int docId, string wiNumber, string sourceFileName)
+        {
+            var tocData = new List<Dictionary<string, string>>();
+
+            string currentSubject = null;
+            int subjectStartSlide = 0;
+            int slideCount = 0;
+
+            for (int slideIdx = 1; slideIdx <= ppt.Slides.Count; slideIdx++)
+            {
+                try
+                {
+                    Slide slide = ppt.Slides[slideIdx];
+                    string slideSubject = ExtractSlideSubject(slide);
+
+                    // Convert to uppercase
+                    slideSubject = slideSubject.ToUpper();
+
+                    // Check if subject changed or if it's a new subject
+                    if (currentSubject == null)
+                    {
+                        // First slide
+                        currentSubject = slideSubject;
+                        subjectStartSlide = slideIdx;
+                        slideCount = 1;
+                    }
+                    else if (slideSubject == currentSubject)
+                    {
+                        // Same subject continues
+                        slideCount++;
+                    }
+                    else
+                    {
+                        // Subject changed - save the previous subject entry
+                        tocData.Add(new Dictionary<string, string>
+                        {
+                            ["DocumentID"] = docId.ToString(),
+                            ["WI_Number"] = wiNumber,
+                            ["SourceFileName"] = sourceFileName,
+                            ["SlideNumber"] = subjectStartSlide.ToString(),
+                            ["SlideSubject"] = currentSubject,
+                            ["SlideTotal"] = slideCount.ToString()
+                        });
+
+                        // Start tracking new subject
+                        currentSubject = slideSubject;
+                        subjectStartSlide = slideIdx;
+                        slideCount = 1;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error processing slide {slideIdx} for TOC: {ex.Message}");
+                }
+            }
+
+            // Don't forget to add the last subject
+            if (currentSubject != null)
+            {
+                tocData.Add(new Dictionary<string, string>
+                {
+                    ["DocumentID"] = docId.ToString(),
+                    ["WI_Number"] = wiNumber,
+                    ["SourceFileName"] = sourceFileName,
+                    ["SlideNumber"] = subjectStartSlide.ToString(),
+                    ["SlideSubject"] = currentSubject,
+                    ["SlideTotal"] = slideCount.ToString()
+                });
+            }
+
+            return tocData;
         }
 
         private List<Dictionary<string, string>> ExtractImagesFromPresentation(Presentation ppt, int docId,
@@ -1675,16 +1432,16 @@ namespace WorkInstructionExtractor
         {
             string[] possiblePaths = new string[]
             {
-                "python",
-                "python3",
-                @"C:\Python39\python.exe",
-                @"C:\Python310\python.exe",
-                @"C:\Python311\python.exe",
-                @"C:\Python313\python.exe",
-                @"C:\Users\" + Environment.UserName + @"\AppData\Local\Programs\Python\Python39\python.exe",
-                @"C:\Users\" + Environment.UserName + @"\AppData\Local\Programs\Python\Python310\python.exe",
-                @"C:\Users\" + Environment.UserName + @"\AppData\Local\Programs\Python\Python311\python.exe",
-                @"C:\Users\" + Environment.UserName + @"\AppData\Local\Programs\Python\Python313\python.exe"
+            "python",
+            "python3",
+            @"C:\Python39\python.exe",
+            @"C:\Python310\python.exe",
+            @"C:\Python311\python.exe",
+            @"C:\Python313\python.exe",
+            @"C:\Users\" + Environment.UserName + @"\AppData\Local\Programs\Python\Python39\python.exe",
+            @"C:\Users\" + Environment.UserName + @"\AppData\Local\Programs\Python\Python310\python.exe",
+            @"C:\Users\" + Environment.UserName + @"\AppData\Local\Programs\Python\Python311\python.exe",
+            @"C:\Users\" + Environment.UserName + @"\AppData\Local\Programs\Python\Python313\python.exe"
             };
 
             foreach (string path in possiblePaths)
@@ -1744,25 +1501,36 @@ namespace WorkInstructionExtractor
             using (var tablesPackage = new ExcelPackage(new FileInfo(tablesFile)))
             using (var outputPackage = new ExcelPackage())
             {
-                // Copy Header Data sheet first
-                var headerSheet = headerPackage.Workbook.Worksheets[0];
-                outputPackage.Workbook.Worksheets.Add("Header Data", headerSheet);
+                // Copy sheets from header file in correct order
+                // Sheet 0: Header Data
+                if (headerPackage.Workbook.Worksheets.Count > 0)
+                {
+                    var headerSheet = headerPackage.Workbook.Worksheets[0];
+                    outputPackage.Workbook.Worksheets.Add("Header Data", headerSheet);
+                }
 
-                // Copy Images sheet if it exists
+                // Sheet 1: Images
                 if (headerPackage.Workbook.Worksheets.Count > 1)
                 {
                     var imagesSheet = headerPackage.Workbook.Worksheets[1];
                     outputPackage.Workbook.Worksheets.Add("Images", imagesSheet);
                 }
 
-                // Copy Text Content sheet if it exists
+                // Sheet 2: Table of Contents
                 if (headerPackage.Workbook.Worksheets.Count > 2)
                 {
-                    var textSheet = headerPackage.Workbook.Worksheets[2];
+                    var tocSheet = headerPackage.Workbook.Worksheets[2];
+                    outputPackage.Workbook.Worksheets.Add("Table of Contents", tocSheet);
+                }
+
+                // Sheet 3: Text Content
+                if (headerPackage.Workbook.Worksheets.Count > 3)
+                {
+                    var textSheet = headerPackage.Workbook.Worksheets[3];
                     outputPackage.Workbook.Worksheets.Add("Text Content", textSheet);
                 }
 
-                // Copy all sheets from tables file
+                // Copy all sheets from tables file (BOM, Equipment, Parts, etc.)
                 foreach (var sheet in tablesPackage.Workbook.Worksheets)
                 {
                     outputPackage.Workbook.Worksheets.Add(sheet.Name, sheet);
@@ -1825,7 +1593,7 @@ namespace WorkInstructionExtractor
             }
         }
 
-        private void ExtractData(List<TextBoxInfo> textBoxes, Dictionary<string, string> data)
+        private void ExtractData(List<TextBoxInfo> textBoxes, Dictionary<string, string> data, Presentation ppt)
         {
             foreach (var box in textBoxes)
             {
@@ -2003,6 +1771,7 @@ namespace WorkInstructionExtractor
         private void WriteToExcel(List<Dictionary<string, string>> headerData,
             List<Dictionary<string, string>> imageData,
             List<Dictionary<string, string>> textData,
+            List<Dictionary<string, string>> tocData,
             string excelPath)
         {
             if (File.Exists(excelPath))
@@ -2014,10 +1783,10 @@ namespace WorkInstructionExtractor
                 var worksheet = package.Workbook.Worksheets.Add("Header Data");
 
                 var headers = new string[] {
-                    "Document ID", "Source File Name", "WI Number", "WI Title", "Revision",
-                    "BOM/ASSY DWG NO", "Operation No", "Product Line", "Subject", "Revision Type",
-                    "Total Pages", "Total Images"
-                };
+                "Document ID", "Source File Name", "WI Number", "WI Title", "Revision",
+                "BOM/ASSY DWG NO", "Operation No", "Product Line", "Subject", "Revision Type",
+                "Total Pages", "Total Images"
+            };
 
                 for (int i = 0; i < headers.Length; i++)
                 {
@@ -2058,9 +1827,9 @@ namespace WorkInstructionExtractor
                     var imgWorksheet = package.Workbook.Worksheets.Add("Images");
 
                     var imgHeaders = new string[] {
-                        "Document ID", "WI Number", "Source File Name", "Slide Number", "Image Number",
-                        "Image Type", "Image File Name", "Image Path", "Is Grouped", "Width", "Height"
-                    };
+                    "Document ID", "WI Number", "Source File Name", "Slide Number", "Image Number",
+                    "Image Type", "Image File Name", "Image Path", "Is Grouped", "Width", "Height"
+                };
 
                     for (int i = 0; i < imgHeaders.Length; i++)
                     {
@@ -2095,15 +1864,53 @@ namespace WorkInstructionExtractor
                     imgWorksheet.Cells[imgWorksheet.Dimension.Address].AutoFitColumns();
                 }
 
+                // Table of Contents sheet
+                if (tocData.Count > 0)
+                {
+                    var tocWorksheet = package.Workbook.Worksheets.Add("Table of Contents");
+
+                    var tocHeaders = new string[] {
+                    "Document ID", "WI Number", "Source File Name", "Slide Number",
+                    "Slide Subject", "Slide Total"
+                };
+
+                    for (int i = 0; i < tocHeaders.Length; i++)
+                    {
+                        tocWorksheet.Cells[1, i + 1].Value = tocHeaders[i];
+                    }
+
+                    using (var range = tocWorksheet.Cells[1, 1, 1, tocHeaders.Length])
+                    {
+                        range.Style.Font.Bold = true;
+                        range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                        range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGray);
+                        range.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+                    }
+
+                    row = 2;
+                    foreach (var toc in tocData)
+                    {
+                        tocWorksheet.Cells[row, 1].Value = GetValue(toc, "DocumentID");
+                        tocWorksheet.Cells[row, 2].Value = GetValue(toc, "WI_Number");
+                        tocWorksheet.Cells[row, 3].Value = GetValue(toc, "SourceFileName");
+                        tocWorksheet.Cells[row, 4].Value = GetValue(toc, "SlideNumber");
+                        tocWorksheet.Cells[row, 5].Value = GetValue(toc, "SlideSubject");
+                        tocWorksheet.Cells[row, 6].Value = GetValue(toc, "SlideTotal");
+                        row++;
+                    }
+
+                    tocWorksheet.Cells[tocWorksheet.Dimension.Address].AutoFitColumns();
+                }
+
                 // Text Content sheet
                 if (textData.Count > 0)
                 {
                     var textWorksheet = package.Workbook.Worksheets.Add("Text Content");
 
                     var textHeaders = new string[] {
-                        "Document ID", "WI Number", "Source File Name", "Slide Number",
-                        "Slide Subject", "TextBox Number", "Text Content"
-                    };
+                    "Document ID", "WI Number", "Source File Name", "Slide Number",
+                    "Slide Subject", "TextBox Number", "Text Content"
+                };
 
                     for (int i = 0; i < textHeaders.Length; i++)
                     {
@@ -2153,7 +1960,7 @@ namespace WorkInstructionExtractor
         public string WINumber { get; set; } = string.Empty;
     }
 
-    internal class TextBoxInfo
+    public class TextBoxInfo
     {
         public string Text { get; set; } = string.Empty;
         public float Left { get; set; }
@@ -2161,10 +1968,11 @@ namespace WorkInstructionExtractor
         public float Width { get; set; }
         public float Height { get; set; }
     }
-}
-----------
 
-extract tables python
+}
+---------
+
+extract
 """
 Work Instruction PowerPoint Data Extractor
 Extracts tables and images from PowerPoint files to Excel
@@ -2329,6 +2137,33 @@ def extract_bom_table(slide, doc_id):
     
     return bom_data
 
+def get_merged_cell_value(table, row_idx, col_idx):
+    """
+    Gets the actual value from a cell, handling merged cells.
+    If a cell is part of a merged region, returns the value from the top-left cell of that region.
+    """
+    try:
+        cell = table.cell(row_idx, col_idx)
+        # Try to get text from this cell
+        text = cell.text_frame.text.strip()
+        
+        # If empty, it might be part of a merged cell - look upward for the value
+        if not text:
+            # Check cells above in the same column
+            for check_row in range(row_idx - 1, -1, -1):
+                try:
+                    check_cell = table.cell(check_row, col_idx)
+                    check_text = check_cell.text_frame.text.strip()
+                    if check_text:
+                        return check_text
+                except:
+                    pass
+        
+        return text
+    except:
+        return ""
+
+
 def extract_equipment_and_parts(slide, doc_id):
     """Extracts Equipment Required and Parts Required tables from slide 2"""
     equipment_data = []
@@ -2342,46 +2177,89 @@ def extract_equipment_and_parts(slide, doc_id):
         equipment_table = find_table_by_header(slide, 'Equipment Required')
     
     if equipment_table:
-        print(f"    Found Equipment Required table")
-        # Find header row with Qty, Part No, Description
+        print(f"    Found Equipment Required table with {len(equipment_table.rows)} rows")
+        
+        # Find header row
         header_row_index = None
         for idx, row in enumerate(equipment_table.rows):
             row_text = ' '.join([cell.text for cell in row.cells]).upper()
             if 'QTY' in row_text and ('PART NO' in row_text or 'DESCRIPTION' in row_text):
                 header_row_index = idx
+                print(f"    Header row found at index {idx}")
                 break
         
         if header_row_index is not None:
             data_row_count = 0
-            for idx, row in enumerate(list(equipment_table.rows)[header_row_index + 1:], start=1):
-                if len(row.cells) >= 3:
-                    qty = clean_cell_value(row.cells[0].text.strip())
-                    part_no = clean_cell_value(row.cells[1].text.strip())
-                    description = clean_cell_value(row.cells[2].text.strip())
-                    
-                    # Only add if has content
-                    if qty or part_no or description:
+            
+            # Process each data row
+            for row_idx, row in enumerate(list(equipment_table.rows)[header_row_index + 1:], start=header_row_index + 1):
+                print(f"    Processing row {row_idx}, cells: {len(row.cells)}")
+                
+                if len(row.cells) < 3:
+                    continue
+                
+                # Get cell values - handle merged cells by looking up for values
+                cell0_text = get_merged_cell_value(equipment_table, row_idx, 0)  # Qty
+                cell1_text = get_merged_cell_value(equipment_table, row_idx, 1)  # Part No
+                cell2_text = clean_cell_value(row.cells[2].text.strip())  # Description
+                
+                # Clean the values
+                cell0_text = clean_cell_value(cell0_text)
+                cell1_text = clean_cell_value(cell1_text)
+                
+                print(f"      Cell 0 (Qty): '{cell0_text}' (merged-aware)")
+                print(f"      Cell 1 (Part): '{cell1_text}' (merged-aware)")
+                print(f"      Cell 2 (Desc): '{cell2_text}'")
+                
+                # Check if Description cell contains multiple items separated by semicolons or newlines
+                descriptions = []
+                if ';' in cell2_text:
+                    descriptions = [d.strip() for d in cell2_text.split(';') if d.strip()]
+                elif '\n' in cell2_text or '\r' in cell2_text:
+                    descriptions = [d.strip() for d in cell2_text.replace('\r', '\n').split('\n') if d.strip()]
+                else:
+                    descriptions = [cell2_text] if cell2_text else []
+                
+                print(f"      Found {len(descriptions)} description(s)")
+                
+                # If we have multiple descriptions, repeat Qty and Part No for each
+                if len(descriptions) > 1:
+                    print(f"      MERGED CELL DETECTED - Creating {len(descriptions)} separate rows")
+                    for desc in descriptions:
                         equipment_data.append({
                             'DocumentID': doc_id,
-                            'Quantity': qty,
-                            'PartNumber': part_no,
-                            'Description': description,
-                            'RowOrder': idx
+                            'Quantity': cell0_text,  # Repeat same Qty
+                            'PartNumber': cell1_text,  # Repeat same Part No
+                            'Description': desc,
+                            'RowOrder': data_row_count + 1
                         })
                         data_row_count += 1
+                        print(f"        Row {data_row_count}: Qty='{cell0_text}', Part='{cell1_text}', Desc='{desc}'")
+                else:
+                    # Normal single row - but still use merged-aware values
+                    if cell0_text or cell1_text or (descriptions and descriptions[0]):
+                        equipment_data.append({
+                            'DocumentID': doc_id,
+                            'Quantity': cell0_text,
+                            'PartNumber': cell1_text,
+                            'Description': descriptions[0] if descriptions else "",
+                            'RowOrder': data_row_count + 1
+                        })
+                        data_row_count += 1
+                        print(f"        Row {data_row_count}: Qty='{cell0_text}', Part='{cell1_text}', Desc='{descriptions[0] if descriptions else ''}'")
             
             print(f"    Extracted {data_row_count} equipment entries")
     else:
         print(f"    No Equipment Required table found")
     
-    # Look for Parts Required table
+    # Parts Required - same logic with merged cell handling
     parts_table = find_table_by_header(slide, 'PARTS REQUIRED')
     if not parts_table:
         parts_table = find_table_by_header(slide, 'Parts Required')
     
     if parts_table:
-        print(f"    Found Parts Required table")
-        # Find header row with Qty, Part No, Description
+        print(f"    Found Parts Required table with {len(parts_table.rows)} rows")
+        
         header_row_index = None
         for idx, row in enumerate(parts_table.rows):
             row_text = ' '.join([cell.text for cell in row.cells]).upper()
@@ -2391,20 +2269,47 @@ def extract_equipment_and_parts(slide, doc_id):
         
         if header_row_index is not None:
             data_row_count = 0
-            for idx, row in enumerate(list(parts_table.rows)[header_row_index + 1:], start=1):
-                if len(row.cells) >= 3:
-                    qty = clean_cell_value(row.cells[0].text.strip())
-                    part_no = clean_cell_value(row.cells[1].text.strip())
-                    description = clean_cell_value(row.cells[2].text.strip())
-                    
-                    # Only add if has content
-                    if qty or part_no or description:
+            
+            for row_idx, row in enumerate(list(parts_table.rows)[header_row_index + 1:], start=header_row_index + 1):
+                if len(row.cells) < 3:
+                    continue
+                
+                # Get cell values - handle merged cells
+                cell0_text = get_merged_cell_value(parts_table, row_idx, 0)  # Qty
+                cell1_text = get_merged_cell_value(parts_table, row_idx, 1)  # Part No
+                cell2_text = clean_cell_value(row.cells[2].text.strip())  # Description
+                
+                # Clean the values
+                cell0_text = clean_cell_value(cell0_text)
+                cell1_text = clean_cell_value(cell1_text)
+                
+                # Handle multiple descriptions
+                descriptions = []
+                if ';' in cell2_text:
+                    descriptions = [d.strip() for d in cell2_text.split(';') if d.strip()]
+                elif '\n' in cell2_text or '\r' in cell2_text:
+                    descriptions = [d.strip() for d in cell2_text.replace('\r', '\n').split('\n') if d.strip()]
+                else:
+                    descriptions = [cell2_text] if cell2_text else []
+                
+                if len(descriptions) > 1:
+                    for desc in descriptions:
                         parts_data.append({
                             'DocumentID': doc_id,
-                            'Quantity': qty,
-                            'PartNumber': part_no,
-                            'Description': description,
-                            'RowOrder': idx
+                            'Quantity': cell0_text,  # Repeat same Qty
+                            'PartNumber': cell1_text,  # Repeat same Part No
+                            'Description': desc,
+                            'RowOrder': data_row_count + 1
+                        })
+                        data_row_count += 1
+                else:
+                    if cell0_text or cell1_text or (descriptions and descriptions[0]):
+                        parts_data.append({
+                            'DocumentID': doc_id,
+                            'Quantity': cell0_text,
+                            'PartNumber': cell1_text,
+                            'Description': descriptions[0] if descriptions else "",
+                            'RowOrder': data_row_count + 1
                         })
                         data_row_count += 1
             
@@ -2413,6 +2318,120 @@ def extract_equipment_and_parts(slide, doc_id):
         print(f"    No Parts Required table found")
     
     return equipment_data, parts_data
+
+def extract_all_other_tables(prs, doc_id, known_table_headers):
+    """
+    Scans all slides for tables that aren't already identified.
+    Creates a separate dataset for each unique table found.
+    
+    Args:
+        prs: PowerPoint presentation object
+        doc_id: Document ID
+        known_table_headers: List of table headers we already extract (to skip them)
+    
+    Returns:
+        Dictionary where keys are table names and values are lists of row data
+    """
+    all_tables = {}
+    table_counter = 1
+    
+    print(f"\n  Scanning for additional tables across all slides...")
+    
+    for slide_idx in range(len(prs.slides)):
+        slide = prs.slides[slide_idx]
+        slide_num = slide_idx + 1
+        
+        for shape in slide.shapes:
+            if shape.has_table:
+                table = shape.table
+                
+                # Get first row to identify the table
+                if len(table.rows) == 0:
+                    continue
+                
+                first_row_text = ' '.join([cell.text for cell in table.rows[0].cells]).upper()
+                
+                # Skip if this is a known table we already process
+                is_known = False
+                for known_header in known_table_headers:
+                    if known_header.upper() in first_row_text:
+                        is_known = True
+                        print(f"    Slide {slide_num}: Skipping known table '{known_header}'")
+                        break
+                
+                if is_known:
+                    continue
+                
+                # This is a new table!
+                # Determine table name from first row or use generic name
+                table_name = first_row_text[:50].strip() if first_row_text else f"Table_{table_counter}"
+                
+                # Make it a valid sheet name (Excel limit: 31 chars, no special chars)
+                table_name = table_name.replace('/', '_').replace('\\', '_').replace('*', '_')
+                table_name = table_name.replace('[', '_').replace(']', '_').replace(':', '_')
+                table_name = table_name.replace('?', '_').replace('|', '_')
+                table_name = table_name[:31]  # Excel sheet name limit
+                
+                # Make unique if duplicate
+                original_name = table_name
+                suffix = 1
+                while table_name in all_tables:
+                    table_name = f"{original_name[:27]}_{suffix}"
+                    suffix += 1
+                
+                print(f"    Slide {slide_num}: Found new table - '{table_name}'")
+                print(f"      Rows: {len(table.rows)}, Columns: {len(table.columns)}")
+                
+                # Extract all rows from this table
+                table_data = []
+                
+                for row_idx in range(len(table.rows)):
+                    row_data = {
+                        'DocumentID': doc_id,
+                        'SlideNumber': slide_num,
+                        'RowNumber': row_idx + 1
+                    }
+                    
+                    # Extract each cell in the row
+                    for col_idx in range(len(table.columns)):
+                        # Use merged-cell-aware extraction
+                        cell_value = get_merged_cell_value(table, row_idx, col_idx)
+                        cell_value = clean_cell_value(cell_value)
+                        
+                        # Column name: use first row as headers if it looks like headers,
+                        # otherwise use generic Column1, Column2, etc.
+                        if row_idx == 0:
+                            col_name = f"Column{col_idx + 1}"
+                        else:
+                            # Try to use first row as header
+                            try:
+                                header_cell = table.rows[0].cells[col_idx].text.strip()
+                                if header_cell and len(header_cell) < 50:
+                                    col_name = header_cell.replace(' ', '_').replace('/', '_')
+                                    # Make it Excel-friendly
+                                    col_name = ''.join(c for c in col_name if c.isalnum() or c == '_')
+                                    if not col_name:
+                                        col_name = f"Column{col_idx + 1}"
+                                else:
+                                    col_name = f"Column{col_idx + 1}"
+                            except:
+                                col_name = f"Column{col_idx + 1}"
+                        
+                        row_data[col_name] = cell_value
+                    
+                    table_data.append(row_data)
+                
+                all_tables[table_name] = table_data
+                print(f"      Extracted {len(table_data)} rows")
+                
+                table_counter += 1
+    
+    if all_tables:
+        print(f"\n  Found {len(all_tables)} additional table(s)")
+    else:
+        print(f"\n  No additional tables found")
+    
+    return all_tables
 
 def extract_revision_history(slide, doc_id):
     """Extracts Revision History table from slide"""
@@ -2539,8 +2558,21 @@ def process_powerpoint_files(folder_path, output_excel):
     rev_history_all = []
     drafting_all = []
     approvals_all = []
+    other_tables_all = {}  # Dictionary to hold all other tables
     
     doc_id = 1
+    
+    # Define known table headers that we already extract
+    known_table_headers = [
+        'BOM/CONFIGURATION',
+        'BOM',
+        'CONFIGURATION',
+        'EQUIPMENT REQUIRED',
+        'PARTS REQUIRED',
+        'REVISION HISTORY',
+        'DRAFTING',
+        'APPROVALS'
+    ]
     
     # Process each PowerPoint file
     for filename in os.listdir(folder_path):
@@ -2582,6 +2614,15 @@ def process_powerpoint_files(folder_path, output_excel):
                     equipment_data_all.extend(equipment)
                     parts_data_all.extend(parts)
                     print(f"  Extracted from slide 2: {len(equipment)} equipment, {len(parts)} parts")
+                
+                # **NEW: Scan for all other tables across all slides**
+                other_tables = extract_all_other_tables(prs, doc_id, known_table_headers)
+                
+                # Merge other tables data
+                for table_name, table_data in other_tables.items():
+                    if table_name not in other_tables_all:
+                        other_tables_all[table_name] = []
+                    other_tables_all[table_name].extend(table_data)
                 
                 doc_id += 1
                 
@@ -2641,6 +2682,15 @@ def process_powerpoint_files(folder_path, output_excel):
         else:
             df_approve = pd.DataFrame(columns=['DocumentID', 'Department', 'Signature', 'ApprovalDate'])
             df_approve.to_excel(writer, sheet_name='Approvals', index=False)
+        
+        # **NEW: Add sheets for all other discovered tables**
+        for table_name, table_data in other_tables_all.items():
+            if table_data:
+                df_other = pd.DataFrame(table_data)
+                # Ensure sheet name is valid
+                safe_sheet_name = table_name[:31]
+                df_other.to_excel(writer, sheet_name=safe_sheet_name, index=False)
+                print(f"  Created sheet: {safe_sheet_name} ({len(table_data)} rows)")
     
     # Apply formatting to all sheets
     print("Applying formatting...")
@@ -2660,6 +2710,9 @@ def process_powerpoint_files(folder_path, output_excel):
     print(f"Total Revision History entries: {len(rev_history_all)}")
     print(f"Total Drafting entries: {len(drafting_all)}")
     print(f"Total Approval entries: {len(approvals_all)}")
+    print(f"Total additional tables found: {len(other_tables_all)}")
+    for table_name, table_data in other_tables_all.items():
+        print(f"  - {table_name}: {len(table_data)} rows")
     print(f"Saved to: {output_excel}")
 
 if __name__ == "__main__":
