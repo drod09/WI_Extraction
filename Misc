@@ -1,0 +1,39 @@
+private void ExtractImagesFromPage(PdfPage page, int pageNumber, string imagesFolder,
+    string wiNumber, List<Dictionary<string, string>> imageData)
+{
+    var images = page.GetImages().ToList();
+    int imageCounter = 1;
+
+    foreach (var image in images)
+    {
+        try
+        {
+            var rawBytes = image.RawBytes;
+            if (rawBytes != null && rawBytes.Any())  // Changed this line
+            {
+                string imageName = $"{wiNumber}_Page{pageNumber}_Img{imageCounter}.png";
+                string imagePath = Path.Combine(imagesFolder, imageName);
+
+                // Save image
+                var bytes = rawBytes.ToArray();
+                File.WriteAllBytes(imagePath, bytes);
+
+                imageData.Add(new Dictionary<string, string>
+                {
+                    ["DocumentID"] = "1",
+                    ["WI_Number"] = wiNumber,
+                    ["PageNumber"] = pageNumber.ToString(),
+                    ["ImageNumber"] = imageCounter.ToString(),
+                    ["ImageFileName"] = imageName,
+                    ["ImagePath"] = imagePath
+                });
+
+                imageCounter++;
+            }
+        }
+        catch
+        {
+            // Skip images that can't be extracted
+        }
+    }
+}
