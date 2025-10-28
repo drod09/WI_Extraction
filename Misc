@@ -317,7 +317,7 @@ ExcelPackage.License.SetNonCommercialPersonal(”<Diana>”);
                 catch { }
             }
 
-            // Method 2: Find largest font at top of slide
+            // Method 2: Find largest font at top of slide (for content slides)
             var topShapes = new List<(string text, float top, float fontSize)>();
 
             foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in slide.Shapes)
@@ -346,6 +346,58 @@ ExcelPackage.License.SetNonCommercialPersonal(”<Diana>”);
             {
                 var largestFont = topShapes.OrderByDescending(s => s.fontSize).ThenBy(s => s.top).First();
                 return largestFont.text.ToUpper();
+            }
+
+            // Method 3: For slide 1 (title slide), look for Subject field at bottom
+            // This matches the position-based extraction in ExtractData()
+            var allShapes = new List<(string text, float left, float top, float height, float width)>();
+            
+            foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in slide.Shapes)
+            {
+                try
+                {
+                    if (shape.HasTextFrame == MsoTriState.msoTrue)
+                    {
+                        string text = shape.TextFrame.TextRange.Text.Trim();
+                        if (!string.IsNullOrWhiteSpace(text))
+                        {
+                            allShapes.Add((text, shape.Left, shape.Top, shape.Height, shape.Width));
+                        }
+                    }
+                }
+                catch { }
+            }
+
+            // Look for Subject field using same position-based logic as ExtractData()
+            foreach (var shape in allShapes)
+            {
+                string text = shape.text;
+                string upperText = text.ToUpper();
+                
+                // Skip label fields
+                if (upperText == "SUBJECT" || upperText == "SUBJECT:" || 
+                    upperText.Contains("COMPANY") || upperText.Contains("WORK INSTRUCTION") ||
+                    upperText.Contains("W.I. NUMBER") || upperText.Contains("BOM") ||
+                    upperText.Contains("OPERATION NO") || upperText == "PRODUCT LINE" ||
+                    upperText == "PAGE" || upperText == "REV" ||
+                    System.Text.RegularExpressions.Regex.IsMatch(text, @"^\<?#?\>?\s*OF\s*\d+$", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                    continue;
+
+                // Check for Rev 15-16 Subject position
+                bool isRev15_16Subject = (shape.left > 420 && shape.left < 430 && 
+                                         shape.top > 520 && shape.top < 525);
+
+                // Check for Rev 17-19 Subject position
+                bool isRev17_19Subject = (shape.top > 495 && shape.top < 510) &&
+                                        (shape.left > 315 && shape.left < 640) &&
+                                        (shape.height > 10 && shape.height < 30) &&
+                                        (shape.width > 200 && shape.width < 400) &&
+                                        text.Length > 2 && text.Length < 100;
+
+                if (isRev15_16Subject || isRev17_19Subject)
+                {
+                    return text.ToUpper();
+                }
             }
 
             return "UNTITLED SLIDE";
