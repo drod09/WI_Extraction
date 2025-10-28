@@ -19,7 +19,6 @@ static PowerPointExtractor()
 ExcelPackage.License.SetNonCommercialPersonal(”<Diana>”);
 }
 
-```
     public ExtractionResult ExtractWorkInstruction(
         string pptxPath,
         string outputFolder,
@@ -1353,6 +1352,5 @@ public class TextBoxInfo
     public float Width { get; set; }
     public float Height { get; set; }
 }
-```
 
 }
