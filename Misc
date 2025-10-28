@@ -1,519 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-
-namespace WorkInstructionExtractor
-{
-    public partial class Form1 : Form
-    {
-        private BackgroundWorker backgroundWorker;
-        private bool isSingleFileMode = true;
-
-        public Form1()
-        {
-            InitializeComponent();
-            InitializeBackgroundWorker();
-        }
-
-        private void InitializeBackgroundWorker()
-        {
-            backgroundWorker = new BackgroundWorker
-            {
-                WorkerReportsProgress = true,
-                WorkerSupportsCancellation = true
-            };
-
-            backgroundWorker.DoWork += BackgroundWorker_DoWork;
-            backgroundWorker.ProgressChanged += BackgroundWorker_ProgressChanged;
-            backgroundWorker.RunWorkerCompleted += BackgroundWorker_RunWorkerCompleted;
-        }
-
-        private void rbSingleFile_CheckedChanged(object sender, EventArgs e)
-        {
-            if (rbSingleFile.Checked)
-            {
-                isSingleFileMode = true;
-                btnSelectFile.Visible = true;
-                btnSelectFolder.Visible = false;
-                txtPowerPointPath.Text = "";
-                lblFileCount.Text = "";
-                label1.Text = "Input File:";
-                LogMessage("Mode: Single File Processing");
-            }
-        }
-
-        private void rbBulkFolder_CheckedChanged(object sender, EventArgs e)
-        {
-            if (rbBulkFolder.Checked)
-            {
-                isSingleFileMode = false;
-                btnSelectFile.Visible = false;
-                btnSelectFolder.Visible = true;
-                txtPowerPointPath.Text = "";
-                lblFileCount.Text = "";
-                label1.Text = "Input Folder:";
-                LogMessage("Mode: Bulk Folder Processing");
-            }
-        }
-
-        private void btnSelectFile_Click(object sender, EventArgs e)
-        {
-            using (OpenFileDialog openFileDialog = new OpenFileDialog())
-            {
-                openFileDialog.Filter = "PowerPoint Files (*.pptx;*.ppt)|*.pptx;*.ppt|All Files (*.*)|*.*";
-                openFileDialog.Title = "Select PowerPoint Work Instruction";
-
-                if (openFileDialog.ShowDialog() == DialogResult.OK)
-                {
-                    txtPowerPointPath.Text = openFileDialog.FileName;
-                    lblFileCount.Text = "";
-                    LogMessage($"Selected file: {Path.GetFileName(openFileDialog.FileName)}");
-                    
-                    // Auto-set output folder to same directory as input file
-                    if (string.IsNullOrEmpty(txtOutputFolder.Text))
-                    {
-                        string autoOutputFolder = Path.GetDirectoryName(openFileDialog.FileName);
-                        txtOutputFolder.Text = autoOutputFolder;
-                        LogMessage($"Auto-set output folder: {autoOutputFolder}");
-                    }
-                }
-            }
-        }
-
-        private void btnSelectFolder_Click(object sender, EventArgs e)
-        {
-            using (FolderBrowserDialog folderDialog = new FolderBrowserDialog())
-            {
-                folderDialog.Description = "Select Folder Containing PowerPoint Files";
-
-                if (folderDialog.ShowDialog() == DialogResult.OK)
-                {
-                    txtPowerPointPath.Text = folderDialog.SelectedPath;
-                    
-                    // Count .pptx and .ppt files in folder
-                    string[] files = Directory.GetFiles(folderDialog.SelectedPath, "*.ppt*")
-                        .Where(f => !Path.GetFileName(f).StartsWith("~$"))
-                        .ToArray();
-                    
-                    lblFileCount.Text = $"({files.Length} PowerPoint file{(files.Length != 1 ? "s" : "")} found)";
-                    lblFileCount.ForeColor = files.Length > 0 ? Color.DarkGreen : Color.Red;
-                    
-                    LogMessage($"Selected folder: {folderDialog.SelectedPath}");
-                    LogMessage($"Found {files.Length} PowerPoint file(s)");
-                    
-                    // Auto-set output folder to same directory
-                    if (string.IsNullOrEmpty(txtOutputFolder.Text))
-                    {
-                        txtOutputFolder.Text = folderDialog.SelectedPath;
-                        LogMessage($"Auto-set output folder: {folderDialog.SelectedPath}");
-                    }
-                }
-            }
-        }
-
-        private void btnSelectOutputFolder_Click(object sender, EventArgs e)
-        {
-            using (FolderBrowserDialog folderDialog = new FolderBrowserDialog())
-            {
-                folderDialog.Description = "Select Output Folder";
-
-                if (folderDialog.ShowDialog() == DialogResult.OK)
-                {
-                    txtOutputFolder.Text = folderDialog.SelectedPath;
-                    LogMessage($"Output folder: {folderDialog.SelectedPath}");
-                }
-            }
-        }
-
-        private void btnExtract_Click(object sender, EventArgs e)
-        {
-            // Validation
-            if (string.IsNullOrWhiteSpace(txtPowerPointPath.Text))
-            {
-                MessageBox.Show(
-                    isSingleFileMode ? 
-                    "Please select a PowerPoint file." : 
-                    "Please select a folder containing PowerPoint files.", 
-                    "Validation Error",
-                    MessageBoxButtons.OK, 
-                    MessageBoxIcon.Warning);
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(txtOutputFolder.Text))
-            {
-                MessageBox.Show("Please select an output folder.", "Validation Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            // Additional validation for folder mode
-            if (!isSingleFileMode)
-            {
-                string[] files = Directory.GetFiles(txtPowerPointPath.Text, "*.ppt*")
-                    .Where(f => !Path.GetFileName(f).StartsWith("~$"))
-                    .ToArray();
-                
-                if (files.Length == 0)
-                {
-                    MessageBox.Show("No PowerPoint files found in the selected folder.", 
-                        "Validation Error",
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-            }
-
-            // Disable UI during processing
-            SetUIEnabled(false);
-            txtLog.Clear();
-            progressBar.Value = 0;
-
-            // Start background processing
-            var workData = new ExtractionWorkData
-            {
-                InputPath = txtPowerPointPath.Text,
-                OutputFolder = txtOutputFolder.Text,
-                IsSingleFile = isSingleFileMode
-            };
-
-            LogMessage("=".PadRight(60, '='));
-            LogMessage("STARTING EXTRACTION PROCESS");
-            LogMessage("=".PadRight(60, '='));
-
-            backgroundWorker.RunWorkerAsync(workData);
-        }
-
-        private void BackgroundWorker_DoWork(object sender, DoWorkEventArgs e)
-        {
-            var worker = sender as BackgroundWorker;
-            var data = e.Argument as ExtractionWorkData;
-
-            try
-            {
-                if (data.IsSingleFile)
-                {
-                    // Process single file
-                    e.Result = ProcessSingleFile(worker, data);
-                }
-                else
-                {
-                    // Process multiple files
-                    e.Result = ProcessMultipleFiles(worker, data);
-                }
-            }
-            catch (Exception ex)
-            {
-                e.Result = new ExtractionResultWrapper
-                {
-                    Success = false,
-                    ErrorMessage = ex.Message,
-                    StackTrace = ex.StackTrace
-                };
-            }
-        }
-
-        private ExtractionResultWrapper ProcessSingleFile(BackgroundWorker worker, ExtractionWorkData data)
-        {
-            worker.ReportProgress(5, "Processing single file...");
-
-            string fileName = Path.GetFileNameWithoutExtension(data.InputPath);
-            
-            // Create output subfolder with timestamp
-            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            string outputSubFolder = Path.Combine(data.OutputFolder, $"ExtractedData_{fileName}_{timestamp}");
-            Directory.CreateDirectory(outputSubFolder);
-
-            worker.ReportProgress(10, $"Extracting: {Path.GetFileName(data.InputPath)}");
-
-            var extractor = new PowerPointExtractor();
-            var extractResult = extractor.ExtractWorkInstruction(
-                data.InputPath,
-                outputSubFolder,
-                (progress, message) => worker.ReportProgress(progress, message)
-            );
-
-            worker.ReportProgress(100, "Extraction complete!");
-            
-            return new ExtractionResultWrapper
-            {
-                Success = true,
-                ExcelPath = extractResult.ExcelPath,
-                OutputFolder = outputSubFolder,
-                ProcessedCount = 1,
-                FailedCount = 0
-            };
-        }
-
-        private ExtractionResultWrapper ProcessMultipleFiles(BackgroundWorker worker, ExtractionWorkData data)
-        {
-            worker.ReportProgress(5, "Scanning for PowerPoint files...");
-
-            string[] files = Directory.GetFiles(data.InputPath, "*.ppt*")
-                .Where(f => !Path.GetFileName(f).StartsWith("~$"))
-                .ToArray();
-
-            worker.ReportProgress(10, $"Found {files.Length} file(s) to process");
-
-            // Create main output folder with timestamp
-            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            string mainOutputFolder = Path.Combine(data.OutputFolder, $"ExtractedData_Bulk_{timestamp}");
-            Directory.CreateDirectory(mainOutputFolder);
-
-            int successCount = 0;
-            var failures = new List<(string fileName, string error)>();
-
-            var extractor = new PowerPointExtractor();
-
-            for (int i = 0; i < files.Length; i++)
-            {
-                string file = files[i];
-                string fileName = Path.GetFileName(file);
-                
-                try
-                {
-                    int baseProgress = 10 + (i * 80 / files.Length);
-                    worker.ReportProgress(baseProgress, $"Processing {i + 1}/{files.Length}: {fileName}");
-
-                    // Create subfolder for each file
-                    string fileOutputFolder = Path.Combine(mainOutputFolder, Path.GetFileNameWithoutExtension(fileName));
-                    Directory.CreateDirectory(fileOutputFolder);
-
-                    var extractResult = extractor.ExtractWorkInstruction(
-                        file,
-                        fileOutputFolder,
-                        (progress, message) => 
-                        {
-                            // Scale progress to current file's portion
-                            int scaledProgress = baseProgress + (progress * 80 / files.Length / 100);
-                            worker.ReportProgress(scaledProgress, $"[{i + 1}/{files.Length}] {message}");
-                        }
-                    );
-
-                    successCount++;
-                    worker.ReportProgress(baseProgress + (80 / files.Length), $"✓ Completed: {fileName}");
-                }
-                catch (Exception ex)
-                {
-                    failures.Add((fileName, ex.Message));
-                    worker.ReportProgress(0, $"✗ Failed: {fileName} - {ex.Message}");
-                }
-            }
-
-            worker.ReportProgress(95, "Creating summary report...");
-
-            // Create summary report
-            CreateSummaryReport(mainOutputFolder, files.Length, successCount, failures);
-
-            worker.ReportProgress(100, $"Bulk processing complete! {successCount}/{files.Length} succeeded");
-
-            return new ExtractionResultWrapper
-            {
-                Success = true,
-                OutputFolder = mainOutputFolder,
-                ProcessedCount = successCount,
-                FailedCount = failures.Count,
-                Failures = failures,
-                IsBulk = true
-            };
-        }
-
-        private void CreateSummaryReport(string outputFolder, int totalFiles, int successCount, List<(string fileName, string error)> failures)
-        {
-            string summaryPath = Path.Combine(outputFolder, "EXTRACTION_SUMMARY.txt");
-            
-            using (StreamWriter writer = new StreamWriter(summaryPath))
-            {
-                writer.WriteLine("=".PadRight(80, '='));
-                writer.WriteLine("WORK INSTRUCTION EXTRACTION SUMMARY");
-                writer.WriteLine("=".PadRight(80, '='));
-                writer.WriteLine();
-                writer.WriteLine($"Extraction Date: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-                writer.WriteLine($"Total Files Found: {totalFiles}");
-                writer.WriteLine($"Successfully Processed: {successCount}");
-                writer.WriteLine($"Failed: {failures.Count}");
-                writer.WriteLine($"Success Rate: {(successCount * 100.0 / totalFiles):F1}%");
-                writer.WriteLine();
-
-                if (failures.Count > 0)
-                {
-                    writer.WriteLine("=".PadRight(80, '='));
-                    writer.WriteLine("FAILED FILES");
-                    writer.WriteLine("=".PadRight(80, '='));
-                    writer.WriteLine();
-
-                    foreach (var (fileName, error) in failures)
-                    {
-                        writer.WriteLine($"File: {fileName}");
-                        writer.WriteLine($"Error: {error}");
-                        writer.WriteLine();
-                    }
-                }
-
-                writer.WriteLine("=".PadRight(80, '='));
-                writer.WriteLine("OUTPUT STRUCTURE");
-                writer.WriteLine("=".PadRight(80, '='));
-                writer.WriteLine();
-                writer.WriteLine("Each successfully processed file has a subfolder containing:");
-                writer.WriteLine("  - Extracted_Data.xlsx (all extracted data)");
-                writer.WriteLine("  - BaseImages/ (individual images)");
-                writer.WriteLine("  - ComposedImages/ (grouped images)");
-                writer.WriteLine();
-            }
-        }
-
-        private void BackgroundWorker_ProgressChanged(object sender, ProgressChangedEventArgs e)
-        {
-            progressBar.Value = Math.Min(e.ProgressPercentage, 100);
-            lblStatus.Text = e.UserState?.ToString() ?? "Processing...";
-            
-            if (!string.IsNullOrEmpty(e.UserState?.ToString()))
-            {
-                LogMessage(e.UserState.ToString());
-            }
-        }
-
-        private void BackgroundWorker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
-        {
-            SetUIEnabled(true);
-
-            var result = e.Result as ExtractionResultWrapper;
-
-            if (result != null && result.Success)
-            {
-                LogMessage("");
-                LogMessage("=".PadRight(60, '='));
-                
-                if (result.IsBulk)
-                {
-                    LogMessage($"✓ BULK EXTRACTION COMPLETED!", Color.Green);
-                    LogMessage($"  Successfully processed: {result.ProcessedCount} file(s)", Color.Green);
-                    
-                    if (result.FailedCount > 0)
-                    {
-                        LogMessage($"  Failed: {result.FailedCount} file(s)", Color.Red);
-                    }
-                    
-                    LogMessage("");
-                    LogMessage($"Output location: {result.OutputFolder}");
-                    
-                    var message = $"Bulk extraction completed!\n\n" +
-                                  $"Successfully processed: {result.ProcessedCount}\n" +
-                                  $"Failed: {result.FailedCount}\n\n" +
-                                  $"Output folder: {result.OutputFolder}\n\n" +
-                                  $"A summary report has been created.";
-
-                    var openFolder = MessageBox.Show(
-                        message + "\n\nWould you like to open the output folder?",
-                        "Bulk Extraction Complete",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Information
-                    );
-
-                    if (openFolder == DialogResult.Yes)
-                    {
-                        System.Diagnostics.Process.Start("explorer.exe", result.OutputFolder);
-                    }
-                }
-                else
-                {
-                    LogMessage("✓ EXTRACTION COMPLETED SUCCESSFULLY!", Color.Green);
-                    LogMessage($"  Excel file: {Path.GetFileName(result.ExcelPath)}", Color.Green);
-                    LogMessage($"  Output folder: {result.OutputFolder}");
-
-                    var message = $"Data extracted successfully!\n\n" +
-                                  $"Excel file: {Path.GetFileName(result.ExcelPath)}\n" +
-                                  $"Output folder: {result.OutputFolder}";
-
-                    var openFolder = MessageBox.Show(
-                        message + "\n\nWould you like to open the output folder?",
-                        "Extraction Complete",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Information
-                    );
-
-                    if (openFolder == DialogResult.Yes)
-                    {
-                        System.Diagnostics.Process.Start("explorer.exe", result.OutputFolder);
-                    }
-                }
-                
-                LogMessage("=".PadRight(60, '='));
-            }
-            else if (result != null && !result.Success)
-            {
-                LogMessage("");
-                LogMessage("=".PadRight(60, '='));
-                LogMessage($"✗ ERROR OCCURRED", Color.Red);
-                LogMessage($"  {result.ErrorMessage}", Color.Red);
-                LogMessage("=".PadRight(60, '='));
-                
-                MessageBox.Show($"An error occurred during extraction:\n\n{result.ErrorMessage}",
-                    "Extraction Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void SetUIEnabled(bool enabled)
-        {
-            btnSelectFile.Enabled = enabled;
-            btnSelectFolder.Enabled = enabled;
-            btnSelectOutputFolder.Enabled = enabled;
-            btnExtract.Enabled = enabled;
-            rbSingleFile.Enabled = enabled;
-            rbBulkFolder.Enabled = enabled;
-        }
-
-        private void LogMessage(string message, Color? color = null)
-        {
-            if (txtLog.InvokeRequired)
-            {
-                txtLog.Invoke(new Action(() => LogMessage(message, color)));
-                return;
-            }
-
-            txtLog.SelectionStart = txtLog.TextLength;
-            txtLog.SelectionLength = 0;
-            txtLog.SelectionColor = color ?? Color.Black;
-            txtLog.AppendText($"[{DateTime.Now:HH:mm:ss}] {message}\n");
-            txtLog.SelectionColor = txtLog.ForeColor;
-            txtLog.ScrollToCaret();
-        }
-
-        private void Form1_Load(object sender, EventArgs e)
-        {
-            LogMessage("Work Instruction Data Extractor ready.");
-            LogMessage("Select a single file or folder, then click 'Extract Data' to begin.");
-        }
-    }
-
-    // Helper classes
-    public class ExtractionWorkData
-    {
-        public string InputPath { get; set; }
-        public string OutputFolder { get; set; }
-        public bool IsSingleFile { get; set; }
-    }
-
-    public class ExtractionResultWrapper
-    {
-        public bool Success { get; set; }
-        public string ExcelPath { get; set; }
-        public string OutputFolder { get; set; }
-        public string ErrorMessage { get; set; }
-        public string StackTrace { get; set; }
-        public int ProcessedCount { get; set; }
-        public int FailedCount { get; set; }
-        public List<(string fileName, string error)> Failures { get; set; } = new List<(string, string)>();
-        public bool IsBulk { get; set; }
-    }
-}
------------
 namespace WorkInstructionExtractor
 {
     partial class Form1
@@ -546,12 +30,12 @@ namespace WorkInstructionExtractor
             this.label2 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.rbSingleFile = new System.Windows.Forms.RadioButton();
+            this.lblFileCount = new System.Windows.Forms.Label();
             this.rbBulkFolder = new System.Windows.Forms.RadioButton();
+            this.rbSingleFile = new System.Windows.Forms.RadioButton();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
             this.label4 = new System.Windows.Forms.Label();
-            this.lblFileCount = new System.Windows.Forms.Label();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox3.SuspendLayout();
@@ -609,9 +93,9 @@ namespace WorkInstructionExtractor
             this.btnExtract.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(120)))), ((int)(((byte)(215)))));
             this.btnExtract.FlatAppearance.BorderSize = 0;
             this.btnExtract.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnExtract.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
+            this.btnExtract.Font = new System.Drawing.Font("Segoe UI", 11F, System.Drawing.FontStyle.Bold);
             this.btnExtract.ForeColor = System.Drawing.Color.White;
-            this.btnExtract.Location = new System.Drawing.Point(310, 200);
+            this.btnExtract.Location = new System.Drawing.Point(295, 25);
             this.btnExtract.Name = "btnExtract";
             this.btnExtract.Size = new System.Drawing.Size(250, 45);
             this.btnExtract.TabIndex = 6;
@@ -621,9 +105,9 @@ namespace WorkInstructionExtractor
             // 
             // progressBar
             // 
-            this.progressBar.Location = new System.Drawing.Point(20, 260);
+            this.progressBar.Location = new System.Drawing.Point(20, 80);
             this.progressBar.Name = "progressBar";
-            this.progressBar.Size = new System.Drawing.Size(840, 30);
+            this.progressBar.Size = new System.Drawing.Size(800, 25);
             this.progressBar.TabIndex = 7;
             // 
             // txtLog
@@ -641,12 +125,12 @@ namespace WorkInstructionExtractor
             // lblStatus
             // 
             this.lblStatus.Font = new System.Drawing.Font("Segoe UI", 9F);
-            this.lblStatus.Location = new System.Drawing.Point(20, 300);
+            this.lblStatus.Location = new System.Drawing.Point(565, 35);
             this.lblStatus.Name = "lblStatus";
-            this.lblStatus.Size = new System.Drawing.Size(840, 20);
+            this.lblStatus.Size = new System.Drawing.Size(255, 25);
             this.lblStatus.TabIndex = 10;
             this.lblStatus.Text = "Ready";
-            this.lblStatus.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.lblStatus.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // label1
             // 
@@ -662,7 +146,7 @@ namespace WorkInstructionExtractor
             this.label2.AutoSize = true;
             this.label2.Location = new System.Drawing.Point(20, 30);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(95, 16);
+            this.label2.Size = new System.Drawing.Size(108, 16);
             this.label2.TabIndex = 14;
             this.label2.Text = "Processing Mode:";
             // 
@@ -695,30 +179,6 @@ namespace WorkInstructionExtractor
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Input Configuration";
             // 
-            // rbSingleFile
-            // 
-            this.rbSingleFile.AutoSize = true;
-            this.rbSingleFile.Checked = true;
-            this.rbSingleFile.Location = new System.Drawing.Point(150, 28);
-            this.rbSingleFile.Name = "rbSingleFile";
-            this.rbSingleFile.Size = new System.Drawing.Size(85, 20);
-            this.rbSingleFile.TabIndex = 16;
-            this.rbSingleFile.TabStop = true;
-            this.rbSingleFile.Text = "Single File";
-            this.rbSingleFile.UseVisualStyleBackColor = true;
-            this.rbSingleFile.CheckedChanged += new System.EventHandler(this.rbSingleFile_CheckedChanged);
-            // 
-            // rbBulkFolder
-            // 
-            this.rbBulkFolder.AutoSize = true;
-            this.rbBulkFolder.Location = new System.Drawing.Point(260, 28);
-            this.rbBulkFolder.Name = "rbBulkFolder";
-            this.rbBulkFolder.Size = new System.Drawing.Size(156, 20);
-            this.rbBulkFolder.TabIndex = 17;
-            this.rbBulkFolder.Text = "Bulk Process (Folder)";
-            this.rbBulkFolder.UseVisualStyleBackColor = true;
-            this.rbBulkFolder.CheckedChanged += new System.EventHandler(this.rbBulkFolder_CheckedChanged);
-            // 
             // lblFileCount
             // 
             this.lblFileCount.AutoSize = true;
@@ -729,11 +189,35 @@ namespace WorkInstructionExtractor
             this.lblFileCount.Size = new System.Drawing.Size(0, 15);
             this.lblFileCount.TabIndex = 18;
             // 
+            // rbBulkFolder
+            // 
+            this.rbBulkFolder.AutoSize = true;
+            this.rbBulkFolder.Location = new System.Drawing.Point(260, 28);
+            this.rbBulkFolder.Name = "rbBulkFolder";
+            this.rbBulkFolder.Size = new System.Drawing.Size(165, 20);
+            this.rbBulkFolder.TabIndex = 17;
+            this.rbBulkFolder.Text = "Bulk Process (Folder)";
+            this.rbBulkFolder.UseVisualStyleBackColor = true;
+            this.rbBulkFolder.CheckedChanged += new System.EventHandler(this.rbBulkFolder_CheckedChanged);
+            // 
+            // rbSingleFile
+            // 
+            this.rbSingleFile.AutoSize = true;
+            this.rbSingleFile.Checked = true;
+            this.rbSingleFile.Location = new System.Drawing.Point(150, 28);
+            this.rbSingleFile.Name = "rbSingleFile";
+            this.rbSingleFile.Size = new System.Drawing.Size(91, 20);
+            this.rbSingleFile.TabIndex = 16;
+            this.rbSingleFile.TabStop = true;
+            this.rbSingleFile.Text = "Single File";
+            this.rbSingleFile.UseVisualStyleBackColor = true;
+            this.rbSingleFile.CheckedChanged += new System.EventHandler(this.rbSingleFile_CheckedChanged);
+            // 
             // groupBox2
             // 
             this.groupBox2.Controls.Add(this.btnExtract);
-            this.groupBox2.Controls.Add(this.progressBar);
             this.groupBox2.Controls.Add(this.lblStatus);
+            this.groupBox2.Controls.Add(this.progressBar);
             this.groupBox2.Location = new System.Drawing.Point(20, 210);
             this.groupBox2.Name = "groupBox2";
             this.groupBox2.Size = new System.Drawing.Size(840, 120);
@@ -770,7 +254,7 @@ namespace WorkInstructionExtractor
             this.Controls.Add(this.groupBox3);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.groupBox1);
-            this.MinimumSize = new System.Drawing.Size(800, 600);
+            this.MinimumSize = new System.Drawing.Size(896, 659);
             this.Name = "Form1";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Work Instruction Data Extractor";
@@ -806,7 +290,3 @@ namespace WorkInstructionExtractor
         private System.Windows.Forms.Label lblFileCount;
     }
 }
-
-
-
-
