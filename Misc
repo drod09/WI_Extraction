@@ -1,1 +1,0 @@
-'Span<byte>' does not contain a definition for 'Count' and no accessible extension method 'Count' accepting a first argument of type 'Span<byte>' could be found (are you missing a using directive or an assembly reference?)
