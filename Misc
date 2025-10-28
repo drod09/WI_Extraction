@@ -1,16 +1,7 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <Nullable>enable</Nullable>
-    <UseWindowsForms>true</UseWindowsForms>
-    <ImplicitUsings>enable</ImplicitUsings>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="PdfPig" Version="0.1.11" />
-    <PackageReference Include="EPPlus" Version="8.2.1" />
-  </ItemGroup>
-
-</Project>
+Argument 1: cannot convert from 'UglyToad.PdfPig.Content.Page' to 'UglyToad.PdfPig.Content.Page'
+Argument 1: cannot convert from 'UglyToad.PdfPig.Content.Page' to 'UglyToad.PdfPig.Content.Page'
+Argument 1: cannot convert from 'UglyToad.PdfPig.Content.Page' to 'UglyToad.PdfPig.Content.Page'
+Argument 1: cannot convert from 'UglyToad.PdfPig.Content.Page' to 'UglyToad.PdfPig.Content.Page'
+'Page' is an ambiguous reference between 'UglyToad.PdfPig.Content.Page' and 'System.Windows.Forms.VisualStyles.VisualStyleElement.Page'
+'Page' is an ambiguous reference between 'UglyToad.PdfPig.Content.Page' and 'System.Windows.Forms.VisualStyles.VisualStyleElement.Page'
+'Page' is an ambiguous reference between 'UglyToad.PdfPig.Content.Page' and 'System.Windows.Forms.VisualStyles.VisualStyleElement.Page'
