@@ -390,19 +390,21 @@ ExcelPackage.License.SetNonCommercialPersonal(”<Diana>”);
                     upperText.Contains("FM-ME") || upperText.Contains("REVISION HISTORY") ||
                     upperText.Contains("DRAFTING") || upperText.Contains("APPROVALS") ||
                     upperText.Contains("SUBJECT OF SLIDE") || upperText.Contains("WORK PKG") ||
+                    upperText.Contains("<SUBJECT OF SLIDE>") || upperText.Contains("< SUBJECT") ||
+                    upperText.Contains("SUBJECT >") || upperText == "SUBJECT OF THIS SLIDE" ||
                     System.Text.RegularExpressions.Regex.IsMatch(text, @"^\s*\<?\#?\>?\s*OF\s+\d+\s*$", System.Text.RegularExpressions.RegexOptions.IgnoreCase) ||
                     System.Text.RegularExpressions.Regex.IsMatch(text, @"^\s*\d+\s+OF\s+\d+\s*$", System.Text.RegularExpressions.RegexOptions.IgnoreCase) ||
                     System.Text.RegularExpressions.Regex.IsMatch(text, @"^\s*PAGE\s+\d+", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
                     continue;
 
-                // Expanded position ranges to catch subjects at various vertical positions
-                // Rev 15-16 Subject position
-                bool isRev15_16Subject = (shape.left > 400 && shape.left < 650 && 
-                                         shape.top > 480 && shape.top < 570);
+                // Position ranges for subject field at bottom of slide
+                // Rev 15-16 (5:4 aspect ratio) - X: 4.2-4.5" (302-324 pts), Y: 6.8-7.1" (490-511 pts)
+                bool isRev15_16Subject = (shape.left > 300 && shape.left < 330 && 
+                                         shape.top > 488 && shape.top < 515);
 
-                // Rev 17-19 Subject position (broader range)
-                bool isRev17_19Subject = (shape.left > 300 && shape.left < 650) &&
-                                        (shape.top > 480 && shape.top < 570) &&
+                // Rev 17-19 (4:3 aspect ratio) - X: 4.2-4.6" (302-331 pts), Y: 6.8-7.1" (490-511 pts)
+                bool isRev17_19Subject = (shape.left > 300 && shape.left < 335) &&
+                                        (shape.top > 488 && shape.top < 515) &&
                                         text.Length > 2 && text.Length < 100;
 
                 if (isRev15_16Subject || isRev17_19Subject)
@@ -426,17 +428,21 @@ ExcelPackage.License.SetNonCommercialPersonal(”<Diana>”);
                     upperText.Contains("FM-ME") || upperText.Contains("REVISION HISTORY") ||
                     upperText.Contains("DRAFTING") || upperText.Contains("APPROVALS") ||
                     upperText.Contains("SUBJECT OF SLIDE") || upperText.Contains("WORK PKG") ||
+                    upperText.Contains("<SUBJECT OF SLIDE>") || upperText.Contains("< SUBJECT") ||
+                    upperText.Contains("SUBJECT >") || upperText == "SUBJECT OF THIS SLIDE" ||
                     System.Text.RegularExpressions.Regex.IsMatch(text, @"^\s*\<?\#?\>?\s*OF\s+\d+\s*$", System.Text.RegularExpressions.RegexOptions.IgnoreCase) ||
                     System.Text.RegularExpressions.Regex.IsMatch(text, @"^\s*\d+\s+OF\s+\d+\s*$", System.Text.RegularExpressions.RegexOptions.IgnoreCase) ||
                     System.Text.RegularExpressions.Regex.IsMatch(text, @"^\s*PAGE\s+\d+", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
                     continue;
 
-                // Expanded position ranges
-                bool isRev15_16Subject = (shape.left > 400 && shape.left < 650 && 
-                                         shape.top > 480 && shape.top < 570);
+                // Position ranges for subject field at bottom of slide
+                // Rev 15-16 (5:4 aspect ratio) - X: 4.2-4.5" (302-324 pts), Y: 6.8-7.1" (490-511 pts)
+                bool isRev15_16Subject = (shape.left > 300 && shape.left < 330 && 
+                                         shape.top > 488 && shape.top < 515);
 
-                bool isRev17_19Subject = (shape.left > 300 && shape.left < 650) &&
-                                        (shape.top > 480 && shape.top < 570) &&
+                // Rev 17-19 (4:3 aspect ratio) - X: 4.2-4.6" (302-331 pts), Y: 6.8-7.1" (490-511 pts)
+                bool isRev17_19Subject = (shape.left > 300 && shape.left < 335) &&
+                                        (shape.top > 488 && shape.top < 515) &&
                                         text.Length > 2 && text.Length < 100;
 
                 if (isRev15_16Subject || isRev17_19Subject)
