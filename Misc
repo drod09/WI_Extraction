@@ -1,330 +1,322 @@
-using OfficeOpenXml;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
-using pdfpage = UglyToad.PdfPig.Content.Page;
+using OfficeOpenXml;
+using PdfPage = UglyToad.PdfPig.Content.Page;
 
 namespace WorkInstructionExtractorPDF
 {
-    public class PDFExtractor
+public class PDFExtractor
+{
+public class ExtractionResult
+{
+public string ExcelPath { get; set; }
+public string ImagesFolder { get; set; }
+public string WINumber { get; set; }
+}
+
+    public ExtractionResult ExtractFromPDF(string pdfPath, string outputFolder, Action<int, string> progressCallback)
     {
-        public class ExtractionResult
+        progressCallback?.Invoke(0, "Starting PDF extraction...");
+
+        string fileName = Path.GetFileNameWithoutExtension(pdfPath);
+        string imagesFolder = Path.Combine(outputFolder, $"{fileName}_Images");
+        Directory.CreateDirectory(imagesFolder);
+
+        string excelPath = Path.Combine(outputFolder, "Extracted_Data.xlsx");
+
+        progressCallback?.Invoke(10, "Opening PDF...");
+
+        using (PdfDocument document = PdfDocument.Open(pdfPath))
         {
-            public string ExcelPath { get; set; }
-            public string ImagesFolder { get; set; }
-            public string WINumber { get; set; }
-        }
+            var headerData = new Dictionary<string, string>();
+            var tocData = new List<Dictionary<string, string>>();
+            var imageData = new List<Dictionary<string, string>>();
 
-        public ExtractionResult ExtractFromPDF(string pdfPath, string outputFolder, Action<int, string> progressCallback)
-        {
-            progressCallback?.Invoke(0, "Starting PDF extraction...");
+            progressCallback?.Invoke(20, "Extracting first page data...");
 
-            string fileName = Path.GetFileNameWithoutExtension(pdfPath);
-            string imagesFolder = Path.Combine(outputFolder, $"{fileName}_Images");
-            Directory.CreateDirectory(imagesFolder);
-
-            string excelPath = Path.Combine(outputFolder, "Extracted_Data.xlsx");
-
-            progressCallback?.Invoke(10, "Opening PDF...");
-
-            using (PdfDocument document = PdfDocument.Open(pdfPath))
+            // Extract from first page
+            if (document.NumberOfPages > 0)
             {
-                var headerData = new Dictionary<string, string>();
-                var tocData = new List<Dictionary<string, string>>();
-                var imageData = new List<Dictionary<string, string>>();
-
-                progressCallback?.Invoke(20, "Extracting first page data...");
-
-                // Extract from first page
-                if (document.NumberOfPages > 0)
-                {
-                    var firstPage = document.GetPage(1);
-                    headerData = ExtractHeaderData(firstPage, fileName);
-                    ExtractImagesFromPage(firstPage, 1, imagesFolder, headerData["WI_Number"], imageData);
-                }
-
-                progressCallback?.Invoke(40, "Building table of contents...");
-
-                // Extract TOC from all pages
-                for (int i = 1; i <= document.NumberOfPages; i++)
-                {
-                    var pdfpage = document.GetPage(i);
-                    var subject = ExtractSubjectFromPage();
-
-                    tocData.Add(new Dictionary<string, string>
-                    {
-                        ["DocumentID"] = "1",
-                        ["WI_Number"] = headerData["WI_Number"],
-                        ["SourceFileName"] = fileName,
-                        ["PageNumber"] = i.ToString(),
-                        ["SlideSubject"] = subject
-                    });
-
-                    progressCallback?.Invoke(40 + (int)(40.0 * i / document.NumberOfPages),
-                        $"Processing page {i} of {document.NumberOfPages}...");
-                }
-
-                progressCallback?.Invoke(85, "Extracting all images...");
-
-                // Extract images from all pages
-                for (int i = 2; i <= document.NumberOfPages; i++)
-                {
-                    var pdfpage = document.GetPage(i);
-                    ExtractImagesFromPage(pdfpage, i, imagesFolder, headerData["WI_Number"], imageData);
-                }
-
-                progressCallback?.Invoke(95, "Writing to Excel...");
-
-                WriteToExcel(headerData, tocData, imageData, excelPath, document.NumberOfPages);
-
-                progressCallback?.Invoke(100, "Extraction complete!");
-
-                return new ExtractionResult
-                {
-                    ExcelPath = excelPath,
-                    ImagesFolder = imagesFolder,
-                    WINumber = headerData["WI_Number"]
-                };
+                var firstPage = document.GetPage(1);
+                headerData = ExtractHeaderData(firstPage, fileName);
+                ExtractImagesFromPage(firstPage, 1, imagesFolder, headerData["WI_Number"], imageData);
             }
-        }
 
-        private Dictionary<string, string> ExtractHeaderData(pdfpage page, string fileName)
-        {
-            var data = new Dictionary<string, string>
+            progressCallback?.Invoke(40, "Building table of contents...");
+
+            // Extract TOC from all pages
+            for (int i = 1; i <= document.NumberOfPages; i++)
             {
-                ["DocumentID"] = "1",
-                ["SourceFileName"] = fileName
+                var page = document.GetPage(i);
+                var subject = ExtractSubjectFromPage(page);
+
+                tocData.Add(new Dictionary<string, string>
+                {
+                    ["DocumentID"] = "1",
+                    ["WI_Number"] = headerData["WI_Number"],
+                    ["SourceFileName"] = fileName,
+                    ["PageNumber"] = i.ToString(),
+                    ["SlideSubject"] = subject
+                });
+
+                progressCallback?.Invoke(40 + (int)(40.0 * i / document.NumberOfPages),
+                    $"Processing page {i} of {document.NumberOfPages}...");
+            }
+
+            progressCallback?.Invoke(85, "Extracting all images...");
+
+            // Extract images from all pages
+            for (int i = 2; i <= document.NumberOfPages; i++)
+            {
+                var page = document.GetPage(i);
+                ExtractImagesFromPage(page, i, imagesFolder, headerData["WI_Number"], imageData);
+            }
+
+            progressCallback?.Invoke(95, "Writing to Excel...");
+
+            WriteToExcel(headerData, tocData, imageData, excelPath, document.NumberOfPages);
+
+            progressCallback?.Invoke(100, "Extraction complete!");
+
+            return new ExtractionResult
+            {
+                ExcelPath = excelPath,
+                ImagesFolder = imagesFolder,
+                WINumber = headerData["WI_Number"]
             };
-
-            var words = page.GetWords().ToList();
-
-            // Extract fields using position-based detection (bottom of page)
-            // Y coordinate in PDF: 0 is at bottom, increases upward
-            double pageHeight = page.Height;
-
-            foreach (var word in words)
-            {
-                string text = word.Text.Trim();
-                double yFromTop = pageHeight - word.BoundingBox.Bottom; // Convert to "from top"
-                double xFromLeft = word.BoundingBox.Left;
-
-                // Subject field: ~6.8-7.1" from top (489-511 pts), X: 300-335 pts
-                if (yFromTop >= 489 && yFromTop <= 515 &&
-                    xFromLeft >= 300 && xFromLeft <= 400 &&
-                    text.Length > 2 && text.Length < 100 &&
-                    !IsLabelText(text))
-                {
-                    if (!data.ContainsKey("Subject"))
-                    {
-                        // Get full line of text at this position
-                        var lineWords = words.Where(w =>
-                            Math.Abs((pageHeight - w.BoundingBox.Bottom) - yFromTop) < 5 &&
-                            w.BoundingBox.Left >= 300).OrderBy(w => w.BoundingBox.Left);
-
-                        data["Subject"] = string.Join(" ", lineWords.Select(w => w.Text));
-                    }
-                }
-
-                // WI Number: Look for pattern like "WI-0665" or "W.I. 0665"
-                if (System.Text.RegularExpressions.Regex.IsMatch(text, @"^W\.?I\.?\s*-?\s*\d+",
-                    System.Text.RegularExpressions.RegexOptions.IgnoreCase))
-                {
-                    data["WI_Number"] = text;
-                }
-
-                // Revision: Look for "Rev" followed by number
-                if (text.StartsWith("Rev", StringComparison.OrdinalIgnoreCase) && text.Length <= 10)
-                {
-                    data["Revision"] = text;
-                }
-            }
-
-            // Fallback for WI_Number if not found
-            if (!data.ContainsKey("WI_Number") || string.IsNullOrEmpty(data["WI_Number"]))
-            {
-                data["WI_Number"] = fileName;
-            }
-
-            return data;
         }
+    }
 
-        private string ExtractSubjectFromPage(pdfPage page)
+    private Dictionary<string, string> ExtractHeaderData(PdfPage page, string fileName)
+    {
+        var data = new Dictionary<string, string>
         {
-            var words = page.GetWords().ToList();
-            double pageHeight = page.Height;
+            ["DocumentID"] = "1",
+            ["SourceFileName"] = fileName
+        };
 
-            // Look for subject at bottom of page
-            foreach (var word in words)
+        var words = page.GetWords().ToList();
+
+        // Extract fields using position-based detection (bottom of page)
+        // Y coordinate in PDF: 0 is at bottom, increases upward
+        double pageHeight = page.Height;
+
+        foreach (var word in words)
+        {
+            string text = word.Text.Trim();
+            double yFromTop = pageHeight - word.BoundingBox.Bottom; // Convert to "from top"
+            double xFromLeft = word.BoundingBox.Left;
+
+            // Subject field: ~6.8-7.1" from top (489-511 pts), X: 300-335 pts
+            if (yFromTop >= 489 && yFromTop <= 515 &&
+                xFromLeft >= 300 && xFromLeft <= 400 &&
+                text.Length > 2 && text.Length < 100 &&
+                !IsLabelText(text))
             {
-                string text = word.Text.Trim();
-                double yFromTop = pageHeight - word.BoundingBox.Bottom;
-                double xFromLeft = word.BoundingBox.Left;
-
-                // Subject position: Y: 489-515 pts from top, X: 300-400 pts from left
-                if (yFromTop >= 489 && yFromTop <= 515 &&
-                    xFromLeft >= 300 && xFromLeft <= 400 &&
-                    text.Length > 2 && text.Length < 100 &&
-                    !IsLabelText(text))
+                if (!data.ContainsKey("Subject"))
                 {
-                    // Get full line of text
+                    // Get full line of text at this position
                     var lineWords = words.Where(w =>
                         Math.Abs((pageHeight - w.BoundingBox.Bottom) - yFromTop) < 5 &&
                         w.BoundingBox.Left >= 300).OrderBy(w => w.BoundingBox.Left);
 
-                    string subject = string.Join(" ", lineWords.Select(w => w.Text));
-                    if (!IsLabelText(subject))
-                    {
-                        return subject.ToUpper();
-                    }
+                    data["Subject"] = string.Join(" ", lineWords.Select(w => w.Text));
                 }
             }
 
-            return "UNTITLED SLIDE";
-        }
-
-        private bool IsLabelText(string text)
-        {
-            string upper = text.ToUpper();
-            return upper == "SUBJECT" || upper == "SUBJECT:" ||
-                   upper.Contains("COMPANY") || upper.Contains("WORK INSTRUCTION") ||
-                   upper.Contains("W.I. NUMBER") || upper.Contains("BOM") ||
-                   upper.Contains("OPERATION NO") || upper == "PRODUCT LINE" ||
-                   upper == "PAGE" || upper == "REV" ||
-                   upper.Contains("FM-ME") || upper.Contains("REVISION HISTORY") ||
-                   upper.Contains("SUBJECT OF SLIDE") ||
-                   System.Text.RegularExpressions.Regex.IsMatch(text, @"^\s*\d+\s+OF\s+\d+\s*$",
-                       System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        }
-
-        private void ExtractImagesFromPage(pdfpage pdfpage, int pageNumber, string imagesFolder,
-            string wiNumber, List<Dictionary<string, string>> imageData)
-        {
-            var images = pdfpage.GetImages().ToList();
-            int imageCounter = 1;
-
-            foreach (var image in images)
+            // WI Number: Look for pattern like "WI-0665" or "W.I. 0665"
+            if (System.Text.RegularExpressions.Regex.IsMatch(text, @"^W\.?I\.?\s*-?\s*\d+",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase))
             {
-                try
+                data["WI_Number"] = text;
+            }
+
+            // Revision: Look for "Rev" followed by number
+            if (text.StartsWith("Rev", StringComparison.OrdinalIgnoreCase) && text.Length <= 10)
+            {
+                data["Revision"] = text;
+            }
+        }
+
+        // Fallback for WI_Number if not found
+        if (!data.ContainsKey("WI_Number") || string.IsNullOrEmpty(data["WI_Number"]))
+        {
+            data["WI_Number"] = fileName;
+        }
+
+        return data;
+    }
+
+    private string ExtractSubjectFromPage(PdfPage page)
+    {
+        var words = page.GetWords().ToList();
+        double pageHeight = page.Height;
+
+        // Look for subject at bottom of page
+        foreach (var word in words)
+        {
+            string text = word.Text.Trim();
+            double yFromTop = pageHeight - word.BoundingBox.Bottom;
+            double xFromLeft = word.BoundingBox.Left;
+
+            // Subject position: Y: 489-515 pts from top, X: 300-400 pts from left
+            if (yFromTop >= 489 && yFromTop <= 515 &&
+                xFromLeft >= 300 && xFromLeft <= 400 &&
+                text.Length > 2 && text.Length < 100 &&
+                !IsLabelText(text))
+            {
+                // Get full line of text
+                var lineWords = words.Where(w =>
+                    Math.Abs((pageHeight - w.BoundingBox.Bottom) - yFromTop) < 5 &&
+                    w.BoundingBox.Left >= 300).OrderBy(w => w.BoundingBox.Left);
+
+                string subject = string.Join(" ", lineWords.Select(w => w.Text));
+                if (!IsLabelText(subject))
                 {
-                    var rawBytes = image.RawBytes;
-                    if (rawBytes != null && rawBytes.Count > 0)
-                    {
-                        string imageName = $"{wiNumber}_Page{pageNumber}_Img{imageCounter}.png";
-                        string imagePath = Path.Combine(imagesFolder, imageName);
-
-                        // Save image
-                        var bytes = rawBytes.ToArray();
-                        File.WriteAllBytes(imagePath, bytes);
-
-                        imageData.Add(new Dictionary<string, string>
-                        {
-                            ["DocumentID"] = "1",
-                            ["WI_Number"] = wiNumber,
-                            ["PageNumber"] = pageNumber.ToString(),
-                            ["ImageNumber"] = imageCounter.ToString(),
-                            ["ImageFileName"] = imageName,
-                            ["ImagePath"] = imagePath
-                        });
-
-                        imageCounter++;
-                    }
-                }
-                catch
-                {
-                    // Skip images that can't be extracted
+                    return subject.ToUpper();
                 }
             }
         }
 
-        private void WriteToExcel(Dictionary<string, string> headerData,
-            List<Dictionary<string, string>> tocData,
-            List<Dictionary<string, string>> imageData,
-            string excelPath, int totalPages)
+        return "UNTITLED SLIDE";
+    }
+
+    private bool IsLabelText(string text)
+    {
+        string upper = text.ToUpper();
+        return upper == "SUBJECT" || upper == "SUBJECT:" ||
+               upper.Contains("COMPANY") || upper.Contains("WORK INSTRUCTION") ||
+               upper.Contains("W.I. NUMBER") || upper.Contains("BOM") ||
+               upper.Contains("OPERATION NO") || upper == "PRODUCT LINE" ||
+               upper == "PAGE" || upper == "REV" ||
+               upper.Contains("FM-ME") || upper.Contains("REVISION HISTORY") ||
+               upper.Contains("SUBJECT OF SLIDE") ||
+               System.Text.RegularExpressions.Regex.IsMatch(text, @"^\s*\d+\s+OF\s+\d+\s*$",
+                   System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+    }
+
+    private void ExtractImagesFromPage(PdfPage page, int pageNumber, string imagesFolder,
+        string wiNumber, List<Dictionary<string, string>> imageData)
+    {
+        var images = page.GetImages().ToList();
+        int imageCounter = 1;
+
+        foreach (var image in images)
         {
-            ExcelPackage.License.SetNonCommercialPersonal("<Diana>");
-
-            using (var package = new ExcelPackage())
+            try
             {
-                // Header Data Sheet
-                var headerSheet = package.Workbook.Worksheets.Add("Header Data");
-                headerSheet.Cells[1, 1].Value = "Document ID";
-                headerSheet.Cells[1, 2].Value = "Source File Name";
-                headerSheet.Cells[1, 3].Value = "WI Number";
-                headerSheet.Cells[1, 4].Value = "Subject";
-                headerSheet.Cells[1, 5].Value = "Revision";
-                headerSheet.Cells[1, 6].Value = "Total Pages";
-
-                headerSheet.Cells[2, 1].Value = headerData.GetValueOrDefault("DocumentID", "1");
-                headerSheet.Cells[2, 2].Value = headerData.GetValueOrDefault("SourceFileName", "");
-                headerSheet.Cells[2, 3].Value = headerData.GetValueOrDefault("WI_Number", "");
-                headerSheet.Cells[2, 4].Value = headerData.GetValueOrDefault("Subject", "");
-                headerSheet.Cells[2, 5].Value = headerData.GetValueOrDefault("Revision", "");
-                headerSheet.Cells[2, 6].Value = totalPages;
-
-                headerSheet.Cells[1, 1, 1, 6].Style.Font.Bold = true;
-                headerSheet.Cells.AutoFitColumns();
-
-                // Table of Contents Sheet
-                var tocSheet = package.Workbook.Worksheets.Add("Table of Contents");
-                tocSheet.Cells[1, 1].Value = "Document ID";
-                tocSheet.Cells[1, 2].Value = "WI Number";
-                tocSheet.Cells[1, 3].Value = "Source File Name";
-                tocSheet.Cells[1, 4].Value = "Page Number";
-                tocSheet.Cells[1, 5].Value = "Slide Subject";
-
-                int tocRow = 2;
-                foreach (var entry in tocData)
+                var rawBytes = image.RawBytes;
+                if (rawBytes != null && rawBytes.Count > 0)
                 {
-                    tocSheet.Cells[tocRow, 1].Value = entry.GetValueOrDefault("DocumentID", "");
-                    tocSheet.Cells[tocRow, 2].Value = entry.GetValueOrDefault("WI_Number", "");
-                    tocSheet.Cells[tocRow, 3].Value = entry.GetValueOrDefault("SourceFileName", "");
-                    tocSheet.Cells[tocRow, 4].Value = entry.GetValueOrDefault("PageNumber", "");
-                    tocSheet.Cells[tocRow, 5].Value = entry.GetValueOrDefault("SlideSubject", "");
-                    tocRow++;
+                    string imageName = $"{wiNumber}_Page{pageNumber}_Img{imageCounter}.png";
+                    string imagePath = Path.Combine(imagesFolder, imageName);
+
+                    // Save image
+                    var bytes = rawBytes.ToArray();
+                    File.WriteAllBytes(imagePath, bytes);
+
+                    imageData.Add(new Dictionary<string, string>
+                    {
+                        ["DocumentID"] = "1",
+                        ["WI_Number"] = wiNumber,
+                        ["PageNumber"] = pageNumber.ToString(),
+                        ["ImageNumber"] = imageCounter.ToString(),
+                        ["ImageFileName"] = imageName,
+                        ["ImagePath"] = imagePath
+                    });
+
+                    imageCounter++;
                 }
-
-                tocSheet.Cells[1, 1, 1, 5].Style.Font.Bold = true;
-                tocSheet.Cells.AutoFitColumns();
-
-                // Images Sheet
-                var imagesSheet = package.Workbook.Worksheets.Add("Images");
-                imagesSheet.Cells[1, 1].Value = "Document ID";
-                imagesSheet.Cells[1, 2].Value = "WI Number";
-                imagesSheet.Cells[1, 3].Value = "Page Number";
-                imagesSheet.Cells[1, 4].Value = "Image Number";
-                imagesSheet.Cells[1, 5].Value = "Image File Name";
-                imagesSheet.Cells[1, 6].Value = "Image Path";
-
-                int imageRow = 2;
-                foreach (var image in imageData)
-                {
-                    imagesSheet.Cells[imageRow, 1].Value = image.GetValueOrDefault("DocumentID", "");
-                    imagesSheet.Cells[imageRow, 2].Value = image.GetValueOrDefault("WI_Number", "");
-                    imagesSheet.Cells[imageRow, 3].Value = image.GetValueOrDefault("PageNumber", "");
-                    imagesSheet.Cells[imageRow, 4].Value = image.GetValueOrDefault("ImageNumber", "");
-                    imagesSheet.Cells[imageRow, 5].Value = image.GetValueOrDefault("ImageFileName", "");
-                    imagesSheet.Cells[imageRow, 6].Value = image.GetValueOrDefault("ImagePath", "");
-                    imageRow++;
-                }
-
-                imagesSheet.Cells[1, 1, 1, 6].Style.Font.Bold = true;
-                imagesSheet.Cells.AutoFitColumns();
-
-                package.SaveAs(new FileInfo(excelPath));
+            }
+            catch
+            {
+                // Skip images that can't be extracted
             }
         }
     }
 
+    private void WriteToExcel(Dictionary<string, string> headerData,
+        List<Dictionary<string, string>> tocData,
+        List<Dictionary<string, string>> imageData,
+        string excelPath, int totalPages)
+    {
+        // EPPlus 8.2.1 license setting
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
+        using (var package = new ExcelPackage())
+        {
+            // Header Data Sheet
+            var headerSheet = package.Workbook.Worksheets.Add("Header Data");
+            headerSheet.Cells[1, 1].Value = "Document ID";
+            headerSheet.Cells[1, 2].Value = "Source File Name";
+            headerSheet.Cells[1, 3].Value = "WI Number";
+            headerSheet.Cells[1, 4].Value = "Subject";
+            headerSheet.Cells[1, 5].Value = "Revision";
+            headerSheet.Cells[1, 6].Value = "Total Pages";
+
+            headerSheet.Cells[2, 1].Value = headerData.GetValueOrDefault("DocumentID", "1");
+            headerSheet.Cells[2, 2].Value = headerData.GetValueOrDefault("SourceFileName", "");
+            headerSheet.Cells[2, 3].Value = headerData.GetValueOrDefault("WI_Number", "");
+            headerSheet.Cells[2, 4].Value = headerData.GetValueOrDefault("Subject", "");
+            headerSheet.Cells[2, 5].Value = headerData.GetValueOrDefault("Revision", "");
+            headerSheet.Cells[2, 6].Value = totalPages;
+
+            headerSheet.Cells[1, 1, 1, 6].Style.Font.Bold = true;
+            headerSheet.Cells.AutoFitColumns();
+
+            // Table of Contents Sheet
+            var tocSheet = package.Workbook.Worksheets.Add("Table of Contents");
+            tocSheet.Cells[1, 1].Value = "Document ID";
+            tocSheet.Cells[1, 2].Value = "WI Number";
+            tocSheet.Cells[1, 3].Value = "Source File Name";
+            tocSheet.Cells[1, 4].Value = "Page Number";
+            tocSheet.Cells[1, 5].Value = "Slide Subject";
+
+            int tocRow = 2;
+            foreach (var entry in tocData)
+            {
+                tocSheet.Cells[tocRow, 1].Value = entry.GetValueOrDefault("DocumentID", "");
+                tocSheet.Cells[tocRow, 2].Value = entry.GetValueOrDefault("WI_Number", "");
+                tocSheet.Cells[tocRow, 3].Value = entry.GetValueOrDefault("SourceFileName", "");
+                tocSheet.Cells[tocRow, 4].Value = entry.GetValueOrDefault("PageNumber", "");
+                tocSheet.Cells[tocRow, 5].Value = entry.GetValueOrDefault("SlideSubject", "");
+                tocRow++;
+            }
+
+            tocSheet.Cells[1, 1, 1, 5].Style.Font.Bold = true;
+            tocSheet.Cells.AutoFitColumns();
+
+            // Images Sheet
+            var imagesSheet = package.Workbook.Worksheets.Add("Images");
+            imagesSheet.Cells[1, 1].Value = "Document ID";
+            imagesSheet.Cells[1, 2].Value = "WI Number";
+            imagesSheet.Cells[1, 3].Value = "Page Number";
+            imagesSheet.Cells[1, 4].Value = "Image Number";
+            imagesSheet.Cells[1, 5].Value = "Image File Name";
+            imagesSheet.Cells[1, 6].Value = "Image Path";
+
+            int imageRow = 2;
+            foreach (var image in imageData)
+            {
+                imagesSheet.Cells[imageRow, 1].Value = image.GetValueOrDefault("DocumentID", "");
+                imagesSheet.Cells[imageRow, 2].Value = image.GetValueOrDefault("WI_Number", "");
+                imagesSheet.Cells[imageRow, 3].Value = image.GetValueOrDefault("PageNumber", "");
+                imagesSheet.Cells[imageRow, 4].Value = image.GetValueOrDefault("ImageNumber", "");
+                imagesSheet.Cells[imageRow, 5].Value = image.GetValueOrDefault("ImageFileName", "");
+                imagesSheet.Cells[imageRow, 6].Value = image.GetValueOrDefault("ImagePath", "");
+                imageRow++;
+            }
+
+            imagesSheet.Cells[1, 1, 1, 6].Style.Font.Bold = true;
+            imagesSheet.Cells.AutoFitColumns();
+
+            package.SaveAs(new FileInfo(excelPath));
+        }
+    }
 }
 
-
-
-The type or namespace name 'pdfPage' could not be found (are you missing a using directive or an assembly reference?)
-There is no argument given that corresponds to the required parameter 'page' of 'PDFExtractor.ExtractSubjectFromPage(pdfPage)'
-Operator '>' cannot be applied to operands of type 'method group' and 'int'
+}
