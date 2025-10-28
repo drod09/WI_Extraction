@@ -16,7 +16,7 @@ public class PowerPointExtractor
 {
 static PowerPointExtractor()
 {
-ExcelPackage.License.SetNonCommercialPersonal("<Diana>");
+ExcelPackage.License.SetNonCommercialPersonal(”<Diana>”);
 }
 
     public ExtractionResult ExtractWorkInstruction(
@@ -393,15 +393,14 @@ ExcelPackage.License.SetNonCommercialPersonal("<Diana>");
                     System.Text.RegularExpressions.Regex.IsMatch(text, @"^\<?#?\>?\s*OF\s*\d+$", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
                     continue;
 
-                // Check for Rev 15-16 Subject position (bottom of slide)
-                bool isRev15_16Subject = (shape.left > 420 && shape.left < 430 && 
-                                         shape.top > 520 && shape.top < 525);
+                // Expanded position ranges to catch subjects at various vertical positions
+                // Rev 15-16 Subject position
+                bool isRev15_16Subject = (shape.left > 400 && shape.left < 650 && 
+                                         shape.top > 480 && shape.top < 570);
 
-                // Check for Rev 17-19 Subject position (bottom of slide)
-                bool isRev17_19Subject = (shape.top > 495 && shape.top < 510) &&
-                                        (shape.left > 315 && shape.left < 640) &&
-                                        (shape.height > 10 && shape.height < 30) &&
-                                        (shape.width > 200 && shape.width < 400) &&
+                // Rev 17-19 Subject position (broader range)
+                bool isRev17_19Subject = (shape.left > 300 && shape.left < 650) &&
+                                        (shape.top > 480 && shape.top < 570) &&
                                         text.Length > 2 && text.Length < 100;
 
                 if (isRev15_16Subject || isRev17_19Subject)
@@ -428,15 +427,12 @@ ExcelPackage.License.SetNonCommercialPersonal("<Diana>");
                     System.Text.RegularExpressions.Regex.IsMatch(text, @"^\<?#?\>?\s*OF\s*\d+$", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
                     continue;
 
-                // Check for Rev 15-16 Subject position (bottom of slide)
-                bool isRev15_16Subject = (shape.left > 420 && shape.left < 430 && 
-                                         shape.top > 520 && shape.top < 525);
+                // Expanded position ranges
+                bool isRev15_16Subject = (shape.left > 400 && shape.left < 650 && 
+                                         shape.top > 480 && shape.top < 570);
 
-                // Check for Rev 17-19 Subject position (bottom of slide)
-                bool isRev17_19Subject = (shape.top > 495 && shape.top < 510) &&
-                                        (shape.left > 315 && shape.left < 640) &&
-                                        (shape.height > 10 && shape.height < 30) &&
-                                        (shape.width > 200 && shape.width < 400) &&
+                bool isRev17_19Subject = (shape.left > 300 && shape.left < 650) &&
+                                        (shape.top > 480 && shape.top < 570) &&
                                         text.Length > 2 && text.Length < 100;
 
                 if (isRev15_16Subject || isRev17_19Subject)
