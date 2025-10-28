@@ -16,7 +16,7 @@ public class PowerPointExtractor
 {
 static PowerPointExtractor()
 {
-ExcelPackage.License.SetNonCommercialPersonal(”<Diana>”);
+ExcelPackage.License.SetNonCommercialPersonal("<Diana>");
 }
 
     public ExtractionResult ExtractWorkInstruction(
@@ -292,9 +292,10 @@ ExcelPackage.License.SetNonCommercialPersonal(”<Diana>”);
     {
         try
         {
-            var allShapes = new List<(string text, float left, float top, float height, float width)>();
+            var slideShapes = new List<(string text, float left, float top, float height, float width)>();
+            var masterShapes = new List<(string text, float left, float top, float height, float width)>();
             
-            // Collect shapes from slide
+            // Collect shapes from slide (PRIORITY 1)
             foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in slide.Shapes)
             {
                 try
@@ -304,14 +305,14 @@ ExcelPackage.License.SetNonCommercialPersonal(”<Diana>”);
                         string text = shape.TextFrame.TextRange.Text.Trim();
                         if (!string.IsNullOrWhiteSpace(text))
                         {
-                            allShapes.Add((text, shape.Left, shape.Top, shape.Height, shape.Width));
+                            slideShapes.Add((text, shape.Left, shape.Top, shape.Height, shape.Width));
                         }
                     }
                 }
                 catch { }
             }
 
-            // Collect shapes from master slide
+            // Collect shapes from master slide (PRIORITY 2)
             try
             {
                 foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in slide.Master.Shapes)
@@ -323,7 +324,7 @@ ExcelPackage.License.SetNonCommercialPersonal(”<Diana>”);
                             string text = shape.TextFrame.TextRange.Text.Trim();
                             if (!string.IsNullOrWhiteSpace(text))
                             {
-                                allShapes.Add((text, shape.Left, shape.Top, shape.Height, shape.Width));
+                                masterShapes.Add((text, shape.Left, shape.Top, shape.Height, shape.Width));
                             }
                         }
                     }
@@ -332,7 +333,7 @@ ExcelPackage.License.SetNonCommercialPersonal(”<Diana>”);
             }
             catch { }
 
-            // Collect shapes from design master
+            // Collect shapes from design master (PRIORITY 2)
             try
             {
                 foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in slide.Design.SlideMaster.Shapes)
@@ -344,7 +345,7 @@ ExcelPackage.License.SetNonCommercialPersonal(”<Diana>”);
                             string text = shape.TextFrame.TextRange.Text.Trim();
                             if (!string.IsNullOrWhiteSpace(text))
                             {
-                                allShapes.Add((text, shape.Left, shape.Top, shape.Height, shape.Width));
+                                masterShapes.Add((text, shape.Left, shape.Top, shape.Height, shape.Width));
                             }
                         }
                     }
@@ -353,7 +354,7 @@ ExcelPackage.License.SetNonCommercialPersonal(”<Diana>”);
             }
             catch { }
 
-            // Collect shapes from custom layout
+            // Collect shapes from custom layout (PRIORITY 2)
             try
             {
                 foreach (Microsoft.Office.Interop.PowerPoint.Shape shape in slide.CustomLayout.Shapes)
@@ -365,7 +366,7 @@ ExcelPackage.License.SetNonCommercialPersonal(”<Diana>”);
                             string text = shape.TextFrame.TextRange.Text.Trim();
                             if (!string.IsNullOrWhiteSpace(text))
                             {
-                                allShapes.Add((text, shape.Left, shape.Top, shape.Height, shape.Width));
+                                masterShapes.Add((text, shape.Left, shape.Top, shape.Height, shape.Width));
                             }
                         }
                     }
@@ -374,13 +375,13 @@ ExcelPackage.License.SetNonCommercialPersonal(”<Diana>”);
             }
             catch { }
 
-            // Look for Subject field using position-based logic at bottom of slide
-            foreach (var shape in allShapes)
+            // FIRST: Try to find subject from slide shapes (takes precedence)
+            foreach (var shape in slideShapes)
             {
                 string text = shape.text;
                 string upperText = text.ToUpper();
                 
-                // Skip label fields
+                // Skip label fields and placeholders
                 if (upperText == "SUBJECT" || upperText == "SUBJECT:" || 
                     upperText.Contains("COMPANY") || upperText.Contains("WORK INSTRUCTION") ||
                     upperText.Contains("W.I. NUMBER") || upperText.Contains("BOM") ||
@@ -388,6 +389,42 @@ ExcelPackage.License.SetNonCommercialPersonal(”<Diana>”);
                     upperText == "PAGE" || upperText == "REV" ||
                     upperText.Contains("FM-ME") || upperText.Contains("REVISION HISTORY") ||
                     upperText.Contains("DRAFTING") || upperText.Contains("APPROVALS") ||
+                    upperText.Contains("SUBJECT OF SLIDE") || upperText.Contains("WORK PKG") ||
+                    System.Text.RegularExpressions.Regex.IsMatch(text, @"^\<?#?\>?\s*OF\s*\d+$", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                    continue;
+
+                // Check for Rev 15-16 Subject position (bottom of slide)
+                bool isRev15_16Subject = (shape.left > 420 && shape.left < 430 && 
+                                         shape.top > 520 && shape.top < 525);
+
+                // Check for Rev 17-19 Subject position (bottom of slide)
+                bool isRev17_19Subject = (shape.top > 495 && shape.top < 510) &&
+                                        (shape.left > 315 && shape.left < 640) &&
+                                        (shape.height > 10 && shape.height < 30) &&
+                                        (shape.width > 200 && shape.width < 400) &&
+                                        text.Length > 2 && text.Length < 100;
+
+                if (isRev15_16Subject || isRev17_19Subject)
+                {
+                    return text.ToUpper();
+                }
+            }
+
+            // SECOND: If not found on slide, try master/custom layout shapes
+            foreach (var shape in masterShapes)
+            {
+                string text = shape.text;
+                string upperText = text.ToUpper();
+                
+                // Skip label fields and placeholders
+                if (upperText == "SUBJECT" || upperText == "SUBJECT:" || 
+                    upperText.Contains("COMPANY") || upperText.Contains("WORK INSTRUCTION") ||
+                    upperText.Contains("W.I. NUMBER") || upperText.Contains("BOM") ||
+                    upperText.Contains("OPERATION NO") || upperText == "PRODUCT LINE" ||
+                    upperText == "PAGE" || upperText == "REV" ||
+                    upperText.Contains("FM-ME") || upperText.Contains("REVISION HISTORY") ||
+                    upperText.Contains("DRAFTING") || upperText.Contains("APPROVALS") ||
+                    upperText.Contains("SUBJECT OF SLIDE") || upperText.Contains("WORK PKG") ||
                     System.Text.RegularExpressions.Regex.IsMatch(text, @"^\<?#?\>?\s*OF\s*\d+$", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
                     continue;
 
