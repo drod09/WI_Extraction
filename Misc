@@ -1,10 +1,37 @@
-Cannot implicitly convert type 'double' to 'long'. An explicit conversion exists (are you missing a cast?)
-Cannot implicitly convert type 'double' to 'long'. An explicit conversion exists (are you missing a cast?)
-Cannot declare a variable of static type 'ImagePartType'
-Cannot implicitly convert type 'DocumentFormat.OpenXml.Packaging.PartTypeInfo' to 'DocumentFormat.OpenXml.Packaging.ImagePartType'
-Cannot implicitly convert type 'DocumentFormat.OpenXml.Packaging.PartTypeInfo' to 'DocumentFormat.OpenXml.Packaging.ImagePartType'
-Cannot implicitly convert type 'DocumentFormat.OpenXml.Packaging.PartTypeInfo' to 'DocumentFormat.OpenXml.Packaging.ImagePartType'
-Cannot implicitly convert type 'DocumentFormat.OpenXml.Packaging.PartTypeInfo' to 'DocumentFormat.OpenXml.Packaging.ImagePartType'
-Cannot implicitly convert type 'DocumentFormat.OpenXml.Packaging.PartTypeInfo' to 'DocumentFormat.OpenXml.Packaging.ImagePartType'
-Argument 2: cannot convert from 'DocumentFormat.OpenXml.Packaging.ImagePartType' to 'DocumentFormat.OpenXml.Packaging.PartTypeInfo'
-Cannot implicitly convert type 'double' to 'DocumentFormat.OpenXml.Int64Value'. An explicit conversion exists (are you missing a cast?)
+using DocumentFormat.OpenXml.Packaging; // ensure this is present for PartTypeInfo
+
+private static void InsertImage(SlidePart sp, string imagePath, long xEmu, long yEmu, long cxEmu, long cyEmu)
+{
+    if (string.IsNullOrWhiteSpace(imagePath) || !File.Exists(imagePath)) return;
+
+    PartTypeInfo imgType = Path.GetExtension(imagePath).ToLowerInvariant() switch
+    {
+        ".png"          => ImagePartType.Png,
+        ".jpg" or ".jpeg" => ImagePartType.Jpeg,
+        ".bmp"          => ImagePartType.Bmp,
+        ".gif"          => ImagePartType.Gif,
+        _               => ImagePartType.Png
+    };
+
+    var imagePart = sp.AddImagePart(imgType);
+    using (var fs = File.OpenRead(imagePath)) imagePart.FeedData(fs);
+    var rId = sp.GetIdOfPart(imagePart);
+
+    uint nextId = (AllShapes(sp)
+        .Select(s => s.NonVisualShapeProperties?.NonVisualDrawingProperties?.Id?.Value ?? 0U)
+        .DefaultIfEmpty(0U).Max()) + 1;
+
+    var pic = new P.Picture(
+        new P.NonVisualPictureProperties(
+            new P.NonVisualDrawingProperties() { Id = nextId, Name = Path.GetFileName(imagePath) },
+            new P.NonVisualPictureDrawingProperties(new A.PictureLocks() { NoChangeAspect = true }),
+            new P.ApplicationNonVisualDrawingProperties()),
+        new P.BlipFill(new A.Blip() { Embed = rId }, new A.Stretch(new A.FillRectangle())),
+        new P.ShapeProperties(
+            new A.Transform2D(new A.Offset() { X = xEmu, Y = yEmu },
+                              new A.Extents() { Cx = cxEmu, Cy = cyEmu }),
+            new A.PresetGeometry(new A.AdjustValueList()) { Preset = A.ShapeTypeValues.Rectangle })
+    );
+
+    sp.Slide.CommonSlideData.ShapeTree.AppendChild(pic);
+}
