@@ -1,39 +1,57 @@
-// Replace the text in an existing table cell WITHOUT nuking its formatting.
-// Keeps the cell's first paragraph properties and first run's RunProperties (size, font, color).
+// Safe: preserves existing formatting AND keeps the required trailing empty paragraph.
 private static void SetCellText(A.Table tbl, int row1, int col1, string text)
 {
     var row  = tbl.Elements<A.TableRow>().ElementAt(row1 - 1);
     var cell = row.Elements<A.TableCell>().ElementAt(col1 - 1);
 
-    var tb = cell.TextBody ?? cell.AppendChild(new A.TextBody(new A.BodyProperties(), new A.Paragraph()));
-    var firstPara = tb.GetFirstChild<A.Paragraph>();
-    if (firstPara == null)
+    var tb = cell.TextBody;
+    if (tb == null)
     {
-        firstPara = tb.AppendChild(new A.Paragraph());
+        tb = new A.TextBody(new A.BodyProperties(), new A.Paragraph());
+        cell.AppendChild(tb);
     }
 
-    // Keep existing paragraph properties (alignment, spacing, etc.)
-    var paraProps = firstPara.GetFirstChild<A.ParagraphProperties>();
+    // Ensure at least one paragraph exists
+    var paras = tb.Elements<A.Paragraph>().ToList();
+    if (paras.Count == 0)
+        paras.Add(tb.AppendChild(new A.Paragraph()));
 
-    // Get/create the first run and keep its RunProperties (font size, bold, etc.)
-    var firstRun = firstPara.GetFirstChild<A.Run>();
-    A.RunProperties? runProps = firstRun?.RunProperties?.CloneNode(true) as A.RunProperties;
+    var firstPara = paras[0];
 
-    // Clear ALL runs from the first paragraph (but keep the paragraph itself & its properties)
-    firstPara.RemoveAllChildren<A.Run>();
+    // Keep paragraph properties & first run properties (size, font, etc.)
+    var paraProps = firstPara.GetFirstChild<A.ParagraphProperties>()?.CloneNode(true) as A.ParagraphProperties;
+    var firstRun  = firstPara.GetFirstChild<A.Run>();
+    var runProps  = firstRun?.RunProperties?.CloneNode(true) as A.RunProperties;
 
-    // Write the new text as a single run, reusing the prior RunProperties if available
+    // Clear all runs in paragraph (not the paragraph itself)
+    foreach (var r in firstPara.Elements<A.Run>().ToList()) r.Remove();
+
+    // New run with preserved RunProperties
     var newRun = new A.Run();
     if (runProps != null) newRun.RunProperties = runProps;
     newRun.Text = new A.Text(text ?? string.Empty);
-
-    // Ensure paragraph still has its properties
-    if (paraProps != null && firstPara.GetFirstChild<A.ParagraphProperties>() == null)
-        firstPara.PrependChild(paraProps.CloneNode(true) as A.ParagraphProperties);
-
     firstPara.AppendChild(newRun);
 
-    // Remove any extra paragraphs that may have been present (keeps formatting predictable)
-    var extraParas = tb.Elements<A.Paragraph>().Skip(1).ToList();
-    foreach (var p in extraParas) p.Remove();
+    // Restore paragraph properties if we had any
+    var existingProps = firstPara.GetFirstChild<A.ParagraphProperties>();
+    if (paraProps != null && existingProps == null)
+        firstPara.PrependChild(paraProps);
+
+    // Guarantee a trailing empty paragraph (OpenXML requires one in table cells)
+    // Keep only first paragraph as content, last paragraph as empty end marker.
+    // If we have only 1 paragraph, add one empty:
+    paras = tb.Elements<A.Paragraph>().ToList();
+    if (paras.Count == 1)
+        tb.AppendChild(new A.Paragraph());                 // empty end para
+    else
+    {
+        // Remove extra paragraphs beyond 2; ensure last is empty
+        for (int i = 1; i < paras.Count - 1; i++) paras[i].Remove();
+        var last = tb.Elements<A.Paragraph>().Last();
+        if (last.Elements<A.Run>().Any())
+        {
+            // replace with an empty paragraph
+            last.RemoveAllChildren<A.Run>();
+        }
+    }
 }
