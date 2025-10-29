@@ -1,212 +1,485 @@
-// Get slide #N (1-based)
-private static SlidePart GetSlideByIndex(PresentationDocument doc, int oneBasedIndex)
+// WiPptxImporter.cs
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.IO;
+using System.Linq;
+using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Presentation;
+using A = DocumentFormat.OpenXml.Drawing;
+using P = DocumentFormat.OpenXml.Presentation;
+
+namespace WorkInstructionImporter2
 {
-    var sldId = doc.PresentationPart.Presentation.SlideIdList.Elements<P.SlideId>().ElementAt(oneBasedIndex - 1);
-    return (SlidePart)doc.PresentationPart.GetPartById(sldId.RelationshipId);
-}
-
-// Read concatenated text from a table cell
-private static string GetCellText(A.Table tbl, int row1, int col1)
-{
-    var row = tbl.Elements<A.TableRow>().ElementAt(row1 - 1);
-    var cell = row.Elements<A.TableCell>().ElementAt(col1 - 1);
-    return string.Join(" ", cell.Descendants<A.Text>().Select(t => t.Text ?? "").Where(s => !string.IsNullOrWhiteSpace(s))).Trim();
-}
-
-// Set text of an existing cell
-private static void SetCellText(A.Table tbl, int row1, int col1, string text)
-{
-    var row = tbl.Elements<A.TableRow>().ElementAt(row1 - 1);
-    var cell = row.Elements<A.TableCell>().ElementAt(col1 - 1);
-    var tb = cell.TextBody;
-    tb.RemoveAllChildren<A.Paragraph>();
-    tb.AppendChild(new A.Paragraph(new A.Run(new A.Text(text ?? ""))));
-    tb.AppendChild(new A.Paragraph()); // required end para
-}
-
-// Title string from first row (helps identify which table is which)
-private static string GetTableTitle(A.Table tbl)
-{
-    if (!tbl.Elements<A.TableRow>().Any()) return "";
-    var firstRow = tbl.Elements<A.TableRow>().First();
-    var firstRowText = string.Join(" ", firstRow.Descendants<A.Text>().Select(t => t.Text ?? "")).Trim();
-    return firstRowText?.ToUpperInvariant() ?? "";
-}
-
-// All tables on a slide (in the order PPT stores them)
-private static List<A.Table> GetTables(SlidePart sp) =>
-    sp.Slide.Descendants<A.Table>().ToList();
-
-// Try to find by title; else fallback by index (1-based)
-private static A.Table FindTable(SlidePart sp, string titleContainsUpper, int fallbackIndex)
-{
-    var tables = GetTables(sp);
-    var byTitle = tables.FirstOrDefault(t => GetTableTitle(t).Contains(titleContainsUpper));
-    if (byTitle != null) return byTitle;
-    return (fallbackIndex >= 1 && fallbackIndex <= tables.Count) ? tables[fallbackIndex - 1] : null;
-}
-
-
-// BOM / CONFIGURATION TABLE
-// - Row 1: big title
-// - Row 2: column headers ("Part Number", "Description")
-// - Data starts at Row 3.
-// - We write only up to available data rows & table rows.
-private static void FillBom(SlidePart s1, DataTable bom)
-{
-    if (bom == null) return;
-    var tbl = FindTable(s1, "BOM / CONFIGURATION", 1);
-    if (tbl == null) return;
-
-    var rows = tbl.Elements<A.TableRow>().ToList();
-    if (rows.Count < 3) return; // need at least title+headers+1 data row
-
-    int dataStartRow = 3;                 // first writable row in template
-    int maxTableRows = rows.Count;        // last writable row index
-    int maxWrite = Math.Min(bom.Rows.Count, maxTableRows - (dataStartRow - 1));
-
-    // Optional: blank out existing data rows before writing
-    for (int r = dataStartRow; r <= maxTableRows; r++)
+    public static class WiPptxImporter
     {
-        SetCellText(tbl, r, 1, ""); // Part Number
-        SetCellText(tbl, r, 2, ""); // Description
-    }
-
-    for (int i = 0; i < maxWrite; i++)
-    {
-        var src = bom.Rows[i];
-        SetCellText(tbl, dataStartRow + i, 1, src.Table.Columns.Contains("PartNumber") ? src["PartNumber"]?.ToString() : "");
-        SetCellText(tbl, dataStartRow + i, 2, src.Table.Columns.Contains("Description") ? src["Description"]?.ToString() : "");
-    }
-}
-
-// REVISION HISTORY
-// - Row 1: title
-// - Row 2: headers ("Rev.", "Description of Change", "Date")
-// - Data starts at Row 3.
-private static void FillRevisionHistory(SlidePart s1, DataTable rev)
-{
-    if (rev == null) return;
-    var tbl = FindTable(s1, "REVISION HISTORY", 2);
-    if (tbl == null) return;
-
-    var rows = tbl.Elements<A.TableRow>().ToList();
-    if (rows.Count < 3) return;
-
-    int dataStartRow = 3;
-    int maxTableRows = rows.Count;
-    int maxWrite = Math.Min(rev.Rows.Count, maxTableRows - (dataStartRow - 1));
-
-    // Clear old data cells
-    for (int r = dataStartRow; r <= maxTableRows; r++)
-    {
-        SetCellText(tbl, r, 1, ""); // Rev
-        SetCellText(tbl, r, 2, ""); // Description
-        SetCellText(tbl, r, 3, ""); // Date
-    }
-
-    for (int i = 0; i < maxWrite; i++)
-    {
-        var src = rev.Rows[i];
-        SetCellText(tbl, dataStartRow + i, 1, GetOr(src, "RevNumber"));
-        SetCellText(tbl, dataStartRow + i, 2, GetOr(src, "ChangeDescription"));
-        SetCellText(tbl, dataStartRow + i, 3, GetOr(src, "ChangeDate"));
-    }
-
-    static string GetOr(DataRow r, string col) => r.Table.Columns.Contains(col) ? r[col]?.ToString() : "";
-}
-
-// DRAFTING (fixed 3 rows):
-// - Row 1: headers ("Drafting", "Signatures", "Date")
-// - Row 2: left cell already "Author" → write Signature (col 2) & Date (col 3)
-// - Row 3: left cell already "Updated by" → write Signature (col 2) & Date (col 3)
-private static void FillDrafting(SlidePart s1, DataTable drafting)
-{
-    if (drafting == null) return;
-    var tbl = FindTable(s1, "DRAFTING", 3);
-    if (tbl == null) return;
-
-    // Build lookup by Role (upper)
-    var dict = drafting.AsEnumerable()
-        .GroupBy(r => (r.Table.Columns.Contains("Role") ? (r["Role"]?.ToString() ?? "") : "").ToUpperInvariant())
-        .ToDictionary(g => g.Key, g => g.First());
-
-    // Row 2: Author
-    if (tbl.Elements<A.TableRow>().Count() >= 2)
-    {
-        if (dict.TryGetValue("AUTHOR", out var r2))
+        // =========================================================
+        // Public entry point: populate the existing template (slides 1..7)
+        // =========================================================
+        public static void PopulateExistingTemplate(string templatePptx, string outPptx, WiPayload payload)
         {
-            SetCellText(tbl, 2, 2, drafting.Columns.Contains("Signature") ? r2["Signature"]?.ToString() : "");
-            SetCellText(tbl, 2, 3, drafting.Columns.Contains("SignatureDate") ? r2["SignatureDate"]?.ToString() : "");
-        }
-        else { SetCellText(tbl, 2, 2, ""); SetCellText(tbl, 2, 3, ""); }
-    }
+            if (string.IsNullOrWhiteSpace(templatePptx) || !File.Exists(templatePptx))
+                throw new FileNotFoundException("Template .pptx not found.", templatePptx);
 
-    // Row 3: Updated by
-    if (tbl.Elements<A.TableRow>().Count() >= 3)
-    {
-        if (dict.TryGetValue("UPDATED BY", out var r3))
-        {
-            SetCellText(tbl, 3, 2, drafting.Columns.Contains("Signature") ? r3["Signature"]?.ToString() : "");
-            SetCellText(tbl, 3, 3, drafting.Columns.Contains("SignatureDate") ? r3["SignatureDate"]?.ToString() : "");
+            Directory.CreateDirectory(Path.GetDirectoryName(outPptx)!);
+            File.Copy(templatePptx, outPptx, true);
+
+            using var doc = PresentationDocument.Open(outPptx, true);
+
+            // ---------------- Slide 1: Title + 4 prebuilt tables ----------------
+            var s1 = GetSlideByIndex(doc, 1);
+            SetShapeText(GetTitleShape(s1), $"{payload.WiNumber} — {payload.Title}");
+
+            // Optional badges if your slide has fixed shapes (uncomment/adjust if needed)
+            // SetShapeText(FindShapeByContainsText(s1, "IPE"), payload.IPE);
+            // SetShapeText(FindShapeByContainsText(s1, "ER"),  payload.ER);
+            // SetShapeText(FindShapeByContainsText(s1, "ECO"), payload.ECO);
+
+            FillBom_Slide1(s1, payload.BomConfiguration);        // title row 1, headers row 2, data starts row 3
+            FillRevHistory_Slide1(s1, payload.RevisionHistory);  // title row 1, headers row 2, data starts row 3
+            FillDrafting_Slide1(s1, payload.Drafting);           // fixed 3 rows; writes Signatures/Date for Author & Updated by
+            FillApprovals_Slide1(s1, payload.Approvals);         // fixed rows: Mfg Eng, Ops, QA, Eng, Additional
+
+            // ---------------- Slide 2: Parts & Equipment (two prebuilt tables) ----------------
+            var s2 = GetSlideByIndex(doc, 2);
+            SetShapeText(GetTitleShape(s2), "PARTS AND EQUIPMENT REQUIREMENT");
+
+            // Equipment Required table: assume row1=title, row2=headers, data starts row3
+            FillThreeColumnTableByTitle(
+                s2,
+                titleContainsUpper: "EQUIPMENT REQUIRED",
+                data: payload.EquipmentRequired,
+                startRow: 3,
+                col1Name: "Quantity",
+                col2Name: "PartNumber",
+                col3Name: "Description"
+            );
+
+            // Parts Required table: assume row1=title, row2=headers, data starts row3
+            FillThreeColumnTableByTitle(
+                s2,
+                titleContainsUpper: "PARTS REQUIRED",
+                data: payload.PartsRequired,
+                startRow: 3,
+                col1Name: "Quantity",
+                col2Name: "PartNumber",
+                col3Name: "Description"
+            );
+
+            // ---------------- Slide 3: Accept Good Checklist ----------------
+            var s3 = GetSlideByIndex(doc, 3);
+            SetShapeText(GetTitleShape(s3), "ACCEPT GOOD CHECKLIST");
+            SetShapeText(GetBodyShape(s3), payload.AcceptGoodChecklist ?? new List<string>(), asNumbered: true);
+
+            // ---------------- Slide 4: Exploded View / Reference Image ----------------
+            var s4 = GetSlideByIndex(doc, 4);
+            SetShapeText(GetTitleShape(s4), "REFERENCE IMAGE");
+            ReplaceFirstPictureImage(s4, payload.ReferenceImagePath);
+
+            // ---------------- Slide 5: Generic Procedure (first block) ----------------
+            var s5 = GetSlideByIndex(doc, 5);
+            if (payload.Procedures != null && payload.Procedures.Count > 0)
+            {
+                var first = payload.Procedures[0];
+                SetShapeText(GetTitleShape(s5), string.IsNullOrWhiteSpace(first.Heading) ? "PROCEDURE" : first.Heading);
+                SetShapeText(GetBodyShape(s5), first.Lines ?? new List<string>(), asNumbered: false);
+                // (We leave any existing image/table placeholders on the template untouched.)
+            }
+            else
+            {
+                SetShapeText(GetTitleShape(s5), "PROCEDURE");
+                SetShapeText(GetBodyShape(s5), Array.Empty<string>());
+            }
+
+            // ---------------- Slide 6: Pass Good Checklist ----------------
+            var s6 = GetSlideByIndex(doc, 6);
+            SetShapeText(GetTitleShape(s6), "PASS GOOD CHECKLIST");
+            SetShapeText(GetBodyShape(s6), payload.PassGoodChecklist ?? new List<string>(), asNumbered: true);
+
+            // ---------------- Slide 7: Training Log (single prebuilt table) ----------------
+            var s7 = GetSlideByIndex(doc, 7);
+            SetShapeText(GetTitleShape(s7), "TRAINING LOG");
+            // Assumption: table has row1=headers; write from row2 downward.
+            FillTableDataOnly_ByIndex(s7, tableIndexOneBased: 1, payload.TrainingLog, startRow: 2);
+
+            doc.PresentationPart!.Presentation.Save();
         }
-        else { SetCellText(tbl, 3, 2, ""); SetCellText(tbl, 3, 3, ""); }
+
+        // =========================================================
+        // Slide access & shape helpers (non-mutating)
+        // =========================================================
+        private static SlidePart GetSlideByIndex(PresentationDocument doc, int oneBasedIndex)
+        {
+            var sldId = doc.PresentationPart!.Presentation.SlideIdList!.Elements<P.SlideId>().ElementAt(oneBasedIndex - 1);
+            return (SlidePart)doc.PresentationPart.GetPartById(sldId.RelationshipId!);
+        }
+
+        private static P.Shape? GetTitleShape(SlidePart sp) =>
+            sp.Slide.Descendants<P.Shape>()
+              .FirstOrDefault(s => s.NonVisualShapeProperties?
+                   .ApplicationNonVisualDrawingProperties?
+                   .PlaceholderShape?.Type?.Value == PlaceholderValues.Title);
+
+        private static P.Shape? GetBodyShape(SlidePart sp) =>
+            sp.Slide.Descendants<P.Shape>()
+              .FirstOrDefault(s =>
+                    s.NonVisualShapeProperties?
+                     .ApplicationNonVisualDrawingProperties?
+                     .PlaceholderShape != null &&
+                    s.NonVisualShapeProperties.ApplicationNonVisualDrawingProperties.PlaceholderShape.Type?.Value != PlaceholderValues.Title);
+
+        private static P.Shape? FindShapeByContainsText(SlidePart sp, params string[] needlesUpper)
+        {
+            foreach (var sh in sp.Slide.Descendants<P.Shape>())
+            {
+                var runs = sh.TextBody?.Descendants<A.Text>()?.Select(t => t.Text?.Trim()?.ToUpperInvariant());
+                if (runs == null) continue;
+                var hay = string.Join(" ", runs);
+                if (needlesUpper.Any(n => hay.Contains(n))) return sh;
+            }
+            return null;
+        }
+
+        // =========================================================
+        // Text writers (safe: replace text only)
+        // =========================================================
+        private static void SetShapeText(P.Shape? shape, IEnumerable<string> lines, bool asNumbered = false)
+        {
+            if (shape?.TextBody == null) return;
+            var tb = shape.TextBody;
+            tb.RemoveAllChildren<A.Paragraph>();
+
+            int i = 1;
+            foreach (var line in lines ?? Array.Empty<string>())
+            {
+                var p = new A.Paragraph();
+                if (asNumbered)
+                {
+                    p.AppendChild(new A.Run(new A.Text($"{i}. ")));
+                    i++;
+                }
+                p.AppendChild(new A.Run(new A.Text(line ?? string.Empty)));
+                tb.AppendChild(p);
+            }
+
+            if (!lines.Any())
+                tb.AppendChild(new A.Paragraph(new A.Run(new A.Text(""))));
+        }
+
+        private static void SetShapeText(P.Shape? shape, string text)
+            => SetShapeText(shape, new[] { text ?? string.Empty }, asNumbered: false);
+
+        // =========================================================
+        // Table discovery & cell access on an existing slide
+        // =========================================================
+        private static List<A.Table> GetTables(SlidePart sp) =>
+            sp.Slide.Descendants<A.Table>().ToList();
+
+        private static string GetTableTitle(A.Table tbl)
+        {
+            var firstRow = tbl.Elements<A.TableRow>().FirstOrDefault();
+            if (firstRow == null) return "";
+            var text = string.Join(" ",
+                firstRow.Descendants<A.Text>().Select(t => t.Text ?? ""))
+                .Trim();
+            return text.ToUpperInvariant();
+        }
+
+        private static A.Table? FindTable(SlidePart sp, string titleContainsUpper, int fallbackIndex)
+        {
+            var tables = GetTables(sp);
+            var byTitle = tables.FirstOrDefault(t => GetTableTitle(t).Contains(titleContainsUpper));
+            if (byTitle != null) return byTitle;
+
+            if (fallbackIndex >= 1 && fallbackIndex <= tables.Count)
+                return tables[fallbackIndex - 1];
+
+            return null;
+        }
+
+        private static void SetCellText(A.Table tbl, int row1, int col1, string text)
+        {
+            var row = tbl.Elements<A.TableRow>().ElementAt(row1 - 1);
+            var cell = row.Elements<A.TableCell>().ElementAt(col1 - 1);
+            var tb = cell.TextBody!;
+            tb.RemoveAllChildren<A.Paragraph>();
+            tb.AppendChild(new A.Paragraph(new A.Run(new A.Text(text ?? ""))));
+            tb.AppendChild(new A.Paragraph()); // required end para
+        }
+
+        // Writes only data rows (keeps existing title/header rows)
+        private static void FillTableDataOnly_ByIndex(SlidePart sp, int tableIndexOneBased, DataTable dt, int startRow)
+        {
+            if (dt == null) return;
+            var tables = GetTables(sp);
+            if (tableIndexOneBased < 1 || tableIndexOneBased > tables.Count) return;
+
+            var tbl = tables[tableIndexOneBased - 1];
+            var rows = tbl.Elements<A.TableRow>().ToList();
+            if (rows.Count < startRow) return;
+
+            // Clear data rows
+            for (int r = startRow; r <= rows.Count; r++)
+            {
+                var cells = rows[r - 1].Elements<A.TableCell>().ToList();
+                for (int c = 1; c <= cells.Count; c++)
+                    SetCellText(tbl, r, c, "");
+            }
+
+            // Write data respecting table width (column count)
+            int maxRows = rows.Count - (startRow - 1);
+            int maxWrite = Math.Min(dt.Rows.Count, maxRows);
+            int colCount = rows[startRow - 1].Elements<A.TableCell>().Count();
+
+            for (int i = 0; i < maxWrite; i++)
+            {
+                var src = dt.Rows[i];
+                for (int c = 0; c < colCount; c++)
+                {
+                    string val = c < dt.Columns.Count ? src[c]?.ToString() ?? "" : "";
+                    SetCellText(tbl, startRow + i, c + 1, val);
+                }
+            }
+        }
+
+        // =========================================================
+        // Slide 1: targeted fillers (exact structure you described)
+        // =========================================================
+
+        // BOM / CONFIGURATION:
+        // Row1=title, Row2=headers: Part Number | Description, data starts at Row3
+        private static void FillBom_Slide1(SlidePart s1, DataTable bom)
+        {
+            if (bom == null) return;
+            var tbl = FindTable(s1, "BOM / CONFIGURATION", fallbackIndex: 1);
+            if (tbl == null) return;
+
+            var rows = tbl.Elements<A.TableRow>().ToList();
+            if (rows.Count < 3) return;
+
+            int dataStartRow = 3;
+            int maxRows = rows.Count - (dataStartRow - 1);
+            int write = Math.Min(bom.Rows.Count, maxRows);
+
+            // Clear data area
+            for (int r = dataStartRow; r <= rows.Count; r++)
+            {
+                SetCellText(tbl, r, 1, "");
+                SetCellText(tbl, r, 2, "");
+            }
+
+            // Write (PartNumber, Description)
+            for (int i = 0; i < write; i++)
+            {
+                var src = bom.Rows[i];
+                string pn  = bom.Columns.Contains("PartNumber")  ? src["PartNumber"]?.ToString()  ?? "" : "";
+                string des = bom.Columns.Contains("Description") ? src["Description"]?.ToString() ?? "" : "";
+                SetCellText(tbl, dataStartRow + i, 1, pn);
+                SetCellText(tbl, dataStartRow + i, 2, des);
+            }
+        }
+
+        // REVISION HISTORY:
+        // Row1=title, Row2=headers: Rev | Description of Change | Date, data starts Row3
+        private static void FillRevHistory_Slide1(SlidePart s1, DataTable rev)
+        {
+            if (rev == null) return;
+            var tbl = FindTable(s1, "REVISION HISTORY", fallbackIndex: 2);
+            if (tbl == null) return;
+
+            var rows = tbl.Elements<A.TableRow>().ToList();
+            if (rows.Count < 3) return;
+
+            int dataStartRow = 3;
+            int maxRows = rows.Count - (dataStartRow - 1);
+            int write = Math.Min(rev.Rows.Count, maxRows);
+
+            // Clear data area
+            for (int r = dataStartRow; r <= rows.Count; r++)
+            {
+                SetCellText(tbl, r, 1, "");
+                SetCellText(tbl, r, 2, "");
+                SetCellText(tbl, r, 3, "");
+            }
+
+            // Write (RevNumber, ChangeDescription, ChangeDate)
+            for (int i = 0; i < write; i++)
+            {
+                var src = rev.Rows[i];
+                string rv  = rev.Columns.Contains("RevNumber")         ? src["RevNumber"]?.ToString()         ?? "" : "";
+                string chg = rev.Columns.Contains("ChangeDescription") ? src["ChangeDescription"]?.ToString() ?? "" : "";
+                string dt  = rev.Columns.Contains("ChangeDate")        ? src["ChangeDate"]?.ToString()        ?? "" : "";
+                SetCellText(tbl, dataStartRow + i, 1, rv);
+                SetCellText(tbl, dataStartRow + i, 2, chg);
+                SetCellText(tbl, dataStartRow + i, 3, dt);
+            }
+        }
+
+        // DRAFTING:
+        // Row1=headers; Row2 label is "Author", Row3 label is "Updated by".
+        // We only fill Signature (col2) and Date (col3) for those two rows.
+        private static void FillDrafting_Slide1(SlidePart s1, DataTable drafting)
+        {
+            if (drafting == null) return;
+            var tbl = FindTable(s1, "DRAFTING", fallbackIndex: 3);
+            if (tbl == null) return;
+
+            // Build quick lookups by Role (upper)
+            var rowsByRole = drafting.AsEnumerable()
+                .GroupBy(r => (drafting.Columns.Contains("Role") ? (r["Role"]?.ToString() ?? "") : "").ToUpperInvariant())
+                .ToDictionary(g => g.Key, g => g.First());
+
+            // Row 2: Author
+            if (rowsByRole.TryGetValue("AUTHOR", out var r2))
+            {
+                SetCellText(tbl, 2, 2, drafting.Columns.Contains("Signature") ? r2["Signature"]?.ToString() : "");
+                SetCellText(tbl, 2, 3, drafting.Columns.Contains("SignatureDate") ? r2["SignatureDate"]?.ToString() : "");
+            }
+            else { SetCellText(tbl, 2, 2, ""); SetCellText(tbl, 2, 3, ""); }
+
+            // Row 3: Updated by
+            if (rowsByRole.TryGetValue("UPDATED BY", out var r3))
+            {
+                SetCellText(tbl, 3, 2, drafting.Columns.Contains("Signature") ? r3["Signature"]?.ToString() : "");
+                SetCellText(tbl, 3, 3, drafting.Columns.Contains("SignatureDate") ? r3["SignatureDate"]?.ToString() : "");
+            }
+            else { SetCellText(tbl, 3, 2, ""); SetCellText(tbl, 3, 3, ""); }
+        }
+
+        // APPROVALS:
+        // Row1=headers; rows 2..6 first col are fixed labels:
+        // "Mfg Engineering", "Operations", "Quality Assurance", "Engineering", "Additional"
+        // We fill Signature (col2) and Date (col3) per Department.
+        private static void FillApprovals_Slide1(SlidePart s1, DataTable approvals)
+        {
+            if (approvals == null) return;
+            var tbl = FindTable(s1, "APPROVALS", fallbackIndex: 4);
+            if (tbl == null) return;
+
+            var rowsByDept = approvals.AsEnumerable()
+                .GroupBy(r => (approvals.Columns.Contains("Department") ? (r["Department"]?.ToString() ?? "") : "").ToUpperInvariant())
+                .ToDictionary(g => g.Key, g => g.First());
+
+            void Write(string labelUpper, int rowIndex)
+            {
+                if (rowsByDept.TryGetValue(labelUpper, out var rr))
+                {
+                    SetCellText(tbl, rowIndex, 2, approvals.Columns.Contains("Signature") ? rr["Signature"]?.ToString() : "");
+                    SetCellText(tbl, rowIndex, 3, approvals.Columns.Contains("SignatureDate") ? rr["SignatureDate"]?.ToString() : "");
+                }
+                else { SetCellText(tbl, rowIndex, 2, ""); SetCellText(tbl, rowIndex, 3, ""); }
+            }
+
+            Write("MFG ENGINEERING",   2);
+            Write("OPERATIONS",        3);
+            Write("QUALITY ASSURANCE", 4);
+            Write("ENGINEERING",       5);
+            Write("ADDITIONAL",        6);
+        }
+
+        // =========================================================
+        // Slide 2 helpers (3-column tables, keep title/headers)
+        // =========================================================
+        private static void FillThreeColumnTableByTitle(
+            SlidePart sp,
+            string titleContainsUpper,
+            DataTable data,
+            int startRow,
+            string col1Name,
+            string col2Name,
+            string col3Name)
+        {
+            if (data == null) return;
+            var tbl = FindTable(sp, titleContainsUpper, fallbackIndex: 1);
+            if (tbl == null) return;
+
+            var rows = tbl.Elements<A.TableRow>().ToList();
+            if (rows.Count < startRow) return;
+
+            // Clear
+            for (int r = startRow; r <= rows.Count; r++)
+            {
+                SetCellText(tbl, r, 1, "");
+                SetCellText(tbl, r, 2, "");
+                SetCellText(tbl, r, 3, "");
+            }
+
+            int maxRows = rows.Count - (startRow - 1);
+            int write = Math.Min(data.Rows.Count, maxRows);
+
+            string c1 = ResolveCol(data, col1Name);
+            string c2 = ResolveCol(data, col2Name);
+            string c3 = ResolveCol(data, col3Name);
+
+            for (int i = 0; i < write; i++)
+            {
+                var src = data.Rows[i];
+                SetCellText(tbl, startRow + i, 1, SafeGet(src, c1));
+                SetCellText(tbl, startRow + i, 2, SafeGet(src, c2));
+                SetCellText(tbl, startRow + i, 3, SafeGet(src, c3));
+            }
+
+            static string ResolveCol(DataTable dt, string preferred)
+            {
+                if (dt.Columns.Contains(preferred)) return preferred;
+
+                // tolerance for typical variants
+                string up = preferred.ToUpperInvariant();
+                foreach (DataColumn c in dt.Columns)
+                {
+                    var cu = c.ColumnName.ToUpperInvariant();
+                    if (cu == up) return c.ColumnName;
+                    if (up == "PARTNUMBER" && (cu == "PART NUMBER" || cu == "PN" || cu == "P/N")) return c.ColumnName;
+                    if (up == "QUANTITY" && (cu == "QTY" || cu == "QUANTITY")) return c.ColumnName;
+                    if (up == "DESCRIPTION" && cu.Contains("DESC")) return c.ColumnName;
+                }
+                // fallback to first/second/third columns
+                if (dt.Columns.Count >= 1 && preferred == col1Name) return dt.Columns[0].ColumnName;
+                if (dt.Columns.Count >= 2 && preferred == col2Name) return dt.Columns[1].ColumnName;
+                if (dt.Columns.Count >= 3 && preferred == col3Name) return dt.Columns[2].ColumnName;
+                return preferred;
+            }
+
+            static string SafeGet(DataRow r, string col) => r.Table.Columns.Contains(col) ? r[col]?.ToString() ?? "" : "";
+        }
+
+        // =========================================================
+        // Image replacement (reuse existing picture part if present)
+        // =========================================================
+        private static void ReplaceFirstPictureImage(SlidePart sp, string imagePath)
+        {
+            if (string.IsNullOrWhiteSpace(imagePath) || !File.Exists(imagePath)) return;
+
+            var blip = sp.Slide.Descendants<A.Blip>().FirstOrDefault();
+            if (blip == null) return;
+
+            // try reuse existing part
+            var relId = blip.Embed?.Value;
+            if (!string.IsNullOrEmpty(relId) && sp.TryGetPartById(relId, out var part) && part is ImagePart imgExisting)
+            {
+                using var fs = File.OpenRead(imagePath);
+                imgExisting.FeedData(fs);
+                return;
+            }
+
+            // else add a new part and rebind (should rarely happen if template has a picture)
+            var ext = Path.GetExtension(imagePath).ToLowerInvariant();
+            ImagePartType type = ext switch
+            {
+                ".png" => ImagePartType.Png,
+                ".jpg" or ".jpeg" => ImagePartType.Jpeg,
+                ".bmp" => ImagePartType.Bmp,
+                ".gif" => ImagePartType.Gif,
+                _ => ImagePartType.Png
+            };
+            var newImg = sp.AddImagePart(type);
+            using var fs2 = File.OpenRead(imagePath);
+            newImg.FeedData(fs2);
+            blip.Embed = sp.GetIdOfPart(newImg);
+        }
     }
 }
 
-// APPROVALS (fixed labels):
-// - Row 1: headers ("Approvals", "Signatures", "Date")
-// - Rows 2..6 left column already have: 
-//   "Mfg Engineering", "Operations", "Quality Assurance", "Engineering", "Additional"
-// - We only fill Signature & Date for each row label.
-private static void FillApprovals(SlidePart s1, DataTable approvals)
-{
-    if (approvals == null) return;
-    var tbl = FindTable(s1, "APPROVALS", 4);
-    if (tbl == null) return;
-
-    // Map by Department (upper)
-    var rowsByDept = approvals.AsEnumerable()
-        .GroupBy(r => (r.Table.Columns.Contains("Department") ? (r["Department"]?.ToString() ?? "") : "").ToUpperInvariant())
-        .ToDictionary(g => g.Key, g => g.First());
-
-    // A helper to write a row if present, else blank
-    void Write(string labelUpper, int rowIndex)
-    {
-        if (rowsByDept.TryGetValue(labelUpper, out var rr))
-        {
-            SetCellText(tbl, rowIndex, 2, approvals.Columns.Contains("Signature") ? rr["Signature"]?.ToString() : "");
-            SetCellText(tbl, rowIndex, 3, approvals.Columns.Contains("SignatureDate") ? rr["SignatureDate"]?.ToString() : "");
-        }
-        else { SetCellText(tbl, rowIndex, 2, ""); SetCellText(tbl, rowIndex, 3, ""); }
-    }
-
-    // Row indices (assuming template row 1 = headers):
-    Write("MFG ENGINEERING",     2);
-    Write("OPERATIONS",          3);
-    Write("QUALITY ASSURANCE",   4);
-    Write("ENGINEERING",         5);
-    Write("ADDITIONAL",          6);
-}
-
-
-
-
-
-// Slide 1 — Title + four existing tables
-var s1 = GetSlideByIndex(doc, 1);
-SetShapeText(GetTitleShape(s1), $"{payload.WiNumber} — {payload.Title}");
-
-// (Optional) IPE / ER / ECO small fields: target by known shape or seed text if you have them
-// SetShapeText(FindShapeByContainsText(s1, "IPE"), payload.IPE);
-// SetShapeText(FindShapeByContainsText(s1, "ER"),  payload.ER);
-// SetShapeText(FindShapeByContainsText(s1, "ECO"), payload.ECO);
-
-// Fill the tables WITHOUT changing titles/headers/labels
-FillBom(s1, payload.BomConfiguration);
-FillRevisionHistory(s1, payload.RevisionHistory);
-FillDrafting(s1, payload.Drafting);
-FillApprovals(s1, payload.Approvals);
-
-
+--------
 
