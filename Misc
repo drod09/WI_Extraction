@@ -1,323 +1,41 @@
-using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Presentation;
-using A = DocumentFormat.OpenXml.Drawing;
-using P = DocumentFormat.OpenXml.Presentation;
-using System;
-using System.Data;
-using System.IO;
-using System.Linq;
-using System.Collections.Generic;
-
-public static class WiPptxImporter
+public class WiPayload
 {
-    // ---- Configure the layout names from your template ----
-    private static class LayoutNames
+    // Slide 1 - Title + 4 tables
+    public string Title { get; set; }
+    public string WiNumber { get; set; }
+    public string IPE { get; set; }
+    public string ER { get; set; }
+    public string ECO { get; set; }
+
+    // Tables unique to Slide 1
+    public System.Data.DataTable BomConfiguration { get; set; }   // “BOM/CONFIGURATION”
+    public System.Data.DataTable RevisionHistory { get; set; }    // “REVISION HISTORY”
+    public System.Data.DataTable Drafting { get; set; }           // “DRAFTING”
+    public System.Data.DataTable Approvals { get; set; }          // “APPROVALS”
+
+    // Slide 2 - Parts & Equipment (as tables)
+    public System.Data.DataTable EquipmentRequired { get; set; }  // “EQUIPMENT REQUIRED”
+    public System.Data.DataTable PartsRequired { get; set; }      // “PARTS REQUIRED”
+
+    // Slide 3 - Accept Good Checklist
+    public System.Collections.Generic.List<string> AcceptGoodChecklist { get; set; } = new();
+
+    // Slide 4 - Exploded View / Reference image
+    public string ReferenceImagePath { get; set; }
+
+    // Slide 5+ - Procedures (generic content)
+    public class ProcedureStep
     {
-        public const string Title            = "Title Slide";
-        public const string GenericContent   = "Content Generic";
-        public const string ExplodedView     = "Exploded View";
-        public const string AcceptGood       = "Accept Good Checklist";
-        public const string PassGood         = "Pass Good Checklist";
-        public const string TrainingLog      = "Training Log"; // if you don't have a specific training layout, use GenericContent
+        public string Heading { get; set; }
+        public System.Collections.Generic.List<string> Lines { get; set; } = new();
+        public System.Collections.Generic.List<string> ImagePaths { get; set; } = new();
+        public System.Collections.Generic.List<System.Data.DataTable> Tables { get; set; } = new();
     }
+    public System.Collections.Generic.List<ProcedureStep> Procedures { get; set; } = new();
 
-    // EMU helpers (1 cm ≈ 360000 EMUs)
-    private const long CM = 360000;
+    // Slide 6 - Pass Good Checklist
+    public System.Collections.Generic.List<string> PassGoodChecklist { get; set; } = new();
 
-    // ---- Core public entry point ----
-    public static void ImportIntoTemplate(string templatePptx, string outPptx, WiPayload payload)
-    {
-        File.Copy(templatePptx, outPptx, overwrite: true);
-        using var doc = PresentationDocument.Open(outPptx, true);
-
-        // Pre-fetch layouts
-        var lTitle     = GetLayoutByName(doc, LayoutNames.Title);
-        var lGeneric   = GetLayoutByName(doc, LayoutNames.GenericContent);
-        var lExploded  = GetLayoutByName(doc, LayoutNames.ExplodedView);
-        var lAccept    = GetLayoutByName(doc, LayoutNames.AcceptGood);
-        var lPass      = GetLayoutByName(doc, LayoutNames.PassGood);
-        var lTraining  = GetLayoutByName(doc, LayoutNames.TrainingLog) ?? lGeneric;
-
-        // -------- Normal Slide 1: Title + 4 tables --------
-        var s1 = AddSlideFromLayout(doc, lTitle);
-        EnsureTitle(s1, $"{payload.WiNumber} — {payload.Title}");
-        ReplaceIfSeedText(s1, "IPE", payload.IPE);
-        ReplaceIfSeedText(s1, "ER", payload.ER);
-        ReplaceIfSeedText(s1, "ECO", payload.ECO);
-
-        // Place four tables on Slide 1 (rough grid; tweak to your template)
-        // Top row: BOM/CONFIG (left), REV HISTORY (right)
-        // Bottom row: DRAFTING (left), APPROVALS (right)
-        InsertNamedTable(s1, "BOM / CONFIGURATION", payload.BomConfiguration, 2*CM,  6*CM, 12*CM, 6*CM);
-        InsertNamedTable(s1, "REVISION HISTORY",    payload.RevisionHistory,  16*CM, 6*CM, 12*CM, 6*CM);
-        InsertNamedTable(s1, "DRAFTING",            payload.Drafting,         2*CM,  13*CM,12*CM, 6*CM);
-        InsertNamedTable(s1, "APPROVALS",           payload.Approvals,        16*CM, 13*CM,12*CM, 6*CM);
-
-        // -------- Normal Slide 2: Parts & Equipment (two tables) --------
-        var s2 = AddSlideFromLayout(doc, lGeneric);
-        EnsureTitle(s2, "PARTS AND EQUIPMENT REQUIREMENT");
-        InsertNamedTable(s2, "EQUIPMENT REQUIRED", payload.EquipmentRequired, 2*CM,  6*CM, 12*CM, 10*CM);
-        InsertNamedTable(s2, "PARTS REQUIRED",     payload.PartsRequired,     16*CM, 6*CM, 12*CM, 10*CM);
-
-        // -------- Normal Slide 3: Accept Good Checklist --------
-        if (payload.AcceptGoodChecklist?.Any() == true)
-        {
-            var s3 = AddSlideFromLayout(doc, lAccept);
-            EnsureTitle(s3, "ACCEPT GOOD CHECKLIST");
-            var body = GetBodyShape(s3);
-            ReplaceEntireText(body, "");
-            AppendBullets(body, payload.AcceptGoodChecklist.Select((t,i) => $"{i+1}. {t}"));
-        }
-
-        // -------- Normal Slide 4: Exploded View / Reference Image --------
-        if (!string.IsNullOrWhiteSpace(payload.ReferenceImagePath))
-        {
-            var s4 = AddSlideFromLayout(doc, lExploded ?? lGeneric);
-            EnsureTitle(s4, "REFERENCE IMAGE");
-            InsertImage(s4, payload.ReferenceImagePath, 2*CM,  6*CM, 24*CM, 12*CM);
-        }
-
-        // -------- Normal Slide 5+: Procedures (Generic Content) --------
-        if (payload.Procedures?.Any() == true)
-        {
-            foreach (var step in payload.Procedures)
-            {
-                var sp = AddSlideFromLayout(doc, lGeneric);
-                EnsureTitle(sp, string.IsNullOrWhiteSpace(step.Heading) ? "PROCEDURE" : step.Heading);
-
-                var body = GetBodyShape(sp);
-                ReplaceEntireText(body, "");
-                AppendBullets(body, step.Lines);
-
-                // Place images under body
-                long imgX = 2*CM, imgY = 12*CM, imgW = 12*CM, imgH = 8*CM;
-                foreach (var img in step.ImagePaths ?? new List<string>())
-                {
-                    InsertImage(sp, img, imgX, imgY, imgW, imgH);
-                    imgY += (imgH + 0.5*CM);
-                }
-
-                // Place any per-step tables on the right
-                long tblX = 16*CM, tblY = 10*CM, tblW = 12*CM, tblH = 8*CM;
-                foreach (var dt in step.Tables ?? new List<DataTable>())
-                {
-                    InsertTable(sp, dt, tblX, tblY, tblW, tblH);
-                    tblY += (tblH + 0.5*CM);
-                }
-            }
-        }
-
-        // -------- Normal Slide 6: Pass Good Checklist --------
-        if (payload.PassGoodChecklist?.Any() == true)
-        {
-            var s6 = AddSlideFromLayout(doc, lPass ?? lGeneric);
-            EnsureTitle(s6, "PASS GOOD CHECKLIST");
-            var body = GetBodyShape(s6);
-            ReplaceEntireText(body, "");
-            AppendBullets(body, payload.PassGoodChecklist.Select((t,i) => $"{i+1}. {t}"));
-        }
-
-        // -------- Normal Slide 7: Training Log (table) --------
-        if (payload.TrainingLog != null && payload.TrainingLog.Columns.Count > 0)
-        {
-            var s7 = AddSlideFromLayout(doc, lTraining);
-            EnsureTitle(s7, "TRAINING LOG");
-            InsertTable(s7, payload.TrainingLog, 2*CM, 6*CM, 24*CM, 10*CM);
-        }
-
-        doc.PresentationPart.Presentation.Save();
-    }
-
-    // ========== Helpers ==========
-    private static SlideLayoutPart GetLayoutByName(PresentationDocument doc, string layoutName)
-    {
-        if (layoutName == null) return null;
-        var master = doc.PresentationPart.SlideMasterParts.First();
-        return master.SlideLayoutParts
-            .FirstOrDefault(lp => lp.SlideLayout?.CommonSlideData?.Name?.Value?.Equals(layoutName, StringComparison.OrdinalIgnoreCase) == true);
-    }
-
-    private static SlidePart AddSlideFromLayout(PresentationDocument doc, SlideLayoutPart layoutPart)
-    {
-        var presentationPart = doc.PresentationPart;
-        var slidePart = presentationPart.AddNewPart<SlidePart>();
-        slidePart.Slide = new Slide(new CommonSlideData(new ShapeTree()));
-        if (layoutPart != null) slidePart.AddPart(layoutPart);
-
-        var slideIdList = presentationPart.Presentation.SlideIdList ??= new SlideIdList();
-        uint newId = slideIdList.ChildElements.OfType<SlideId>().Select(s => s.Id.Value).DefaultIfEmpty(256U).Max() + 1;
-        var relId = presentationPart.GetIdOfPart(slidePart);
-        slideIdList.Append(new SlideId() { Id = newId, RelationshipId = relId });
-        return slidePart;
-    }
-
-    private static IEnumerable<P.Shape> AllShapes(SlidePart sp) =>
-        sp.Slide.Descendants<P.Shape>();
-
-    private static P.Shape FindShapeByContainsText(SlidePart sp, params string[] needlesUpper)
-    {
-        foreach (var sh in AllShapes(sp))
-        {
-            var runs = sh.TextBody?.Descendants<A.Text>()?.Select(t => t.Text?.Trim()?.ToUpperInvariant());
-            if (runs == null) continue;
-            var hay = string.Join(" ", runs);
-            if (needlesUpper.Any(n => hay.Contains(n))) return sh;
-        }
-        return null;
-    }
-
-    private static void ReplaceEntireText(P.Shape shape, string text)
-    {
-        if (shape?.TextBody == null) return;
-        shape.TextBody.RemoveAllChildren<A.Paragraph>();
-        var p = new A.Paragraph(new A.Run(new A.Text(text ?? string.Empty)));
-        shape.TextBody.Append(p);
-    }
-
-    private static void ReplaceIfSeedText(SlidePart sp, string seed, string value)
-    {
-        var sh = FindShapeByContainsText(sp, seed?.ToUpperInvariant() ?? "");
-        if (sh != null) ReplaceEntireText(sh, value ?? "");
-    }
-
-    private static P.Shape GetBodyShape(SlidePart sp)
-    {
-        // prefer body placeholder
-        var body = AllShapes(sp).FirstOrDefault(s =>
-            s.NonVisualShapeProperties?.ApplicationNonVisualDrawingProperties?.PlaceholderShape != null
-            && s.NonVisualShapeProperties.ApplicationNonVisualDrawingProperties.PlaceholderShape.Type?.Value != PlaceholderValues.Title);
-        return body ?? AllShapes(sp).Skip(1).FirstOrDefault() ?? AllShapes(sp).FirstOrDefault();
-    }
-
-    private static void AppendBullets(P.Shape body, IEnumerable<string> lines)
-    {
-        if (body?.TextBody == null) return;
-        foreach (var line in lines ?? Enumerable.Empty<string>())
-        {
-            var p = new A.Paragraph(new A.Run(new A.Text(line ?? string.Empty)));
-            body.TextBody.Append(p);
-        }
-    }
-
-    private static void EnsureTitle(SlidePart sp, string title)
-    {
-        var titleShape =
-            AllShapes(sp).FirstOrDefault(s =>
-                s.NonVisualShapeProperties?.ApplicationNonVisualDrawingProperties?.PlaceholderShape?.Type?.Value == PlaceholderValues.Title)
-            ?? FindShapeByContainsText(sp, "SLIDE TITLE", "TITLE", "WORK INSTRUCTION");
-
-        if (titleShape != null) ReplaceEntireText(titleShape, title ?? "");
-    }
-
-    private static void InsertImage(SlidePart sp, string imagePath, long xEmu, long yEmu, long cxEmu, long cyEmu)
-    {
-        if (string.IsNullOrWhiteSpace(imagePath) || !File.Exists(imagePath)) return;
-
-        ImagePartType type = Path.GetExtension(imagePath).ToLowerInvariant() switch
-        {
-            ".png" => ImagePartType.Png,
-            ".jpg" or ".jpeg" => ImagePartType.Jpeg,
-            ".bmp" => ImagePartType.Bmp,
-            ".gif" => ImagePartType.Gif,
-            _ => ImagePartType.Png
-        };
-
-        var imagePart = sp.AddImagePart(type);
-        using (var fs = File.OpenRead(imagePath)) imagePart.FeedData(fs);
-        var rId = sp.GetIdOfPart(imagePart);
-
-        uint nextId = (AllShapes(sp).Select(s => s.NonVisualShapeProperties?.NonVisualDrawingProperties?.Id?.Value ?? 0U).DefaultIfEmpty(0U).Max()) + 1;
-
-        var pic = new P.Picture(
-            new P.NonVisualPictureProperties(
-                new P.NonVisualDrawingProperties() { Id = nextId, Name = Path.GetFileName(imagePath) },
-                new P.NonVisualPictureDrawingProperties(new A.PictureLocks() { NoChangeAspect = true }),
-                new P.ApplicationNonVisualDrawingProperties()),
-            new P.BlipFill(new A.Blip() { Embed = rId }, new A.Stretch(new A.FillRectangle())),
-            new P.ShapeProperties(
-                new A.Transform2D(new A.Offset() { X = xEmu, Y = yEmu },
-                                  new A.Extents() { Cx = cxEmu, Cy = cyEmu }),
-                new A.PresetGeometry(new A.AdjustValueList()) { Preset = A.ShapeTypeValues.Rectangle })
-        );
-
-        sp.Slide.CommonSlideData.ShapeTree.AppendChild(pic);
-    }
-
-    private static void InsertNamedTable(SlidePart sp, string heading, DataTable dt, long x, long y, long w, long h)
-    {
-        if (!string.IsNullOrWhiteSpace(heading))
-        {
-            // Add a small heading text box above the table
-            var headingShape = new P.Shape(
-                new P.NonVisualShapeProperties(
-                    new P.NonVisualDrawingProperties() { Id = 9001U, Name = $"{heading} Heading" },
-                    new P.NonVisualShapeDrawingProperties(),
-                    new P.ApplicationNonVisualDrawingProperties()),
-                new P.ShapeProperties(
-                    new A.Transform2D(new A.Offset() { X = x, Y = y - (1*CM) }, new A.Extents() { Cx = w, Cy = 0.8*CM })),
-                new P.TextBody(
-                    new A.BodyProperties(),
-                    new A.Paragraph(new A.Run(new A.Text(heading))))
-            );
-            sp.Slide.CommonSlideData.ShapeTree.Append(headingShape);
-        }
-        InsertTable(sp, dt, x, y, w, h);
-    }
-
-    private static void InsertTable(SlidePart sp, DataTable table, long xEmu, long yEmu, long cxEmu, long cyEmu)
-    {
-        if (table == null || table.Columns.Count == 0) return;
-
-        int rows = table.Rows.Count + 1; // + header
-        int cols = table.Columns.Count;
-
-        var gf = new P.GraphicFrame(
-            new P.NonVisualGraphicFrameProperties(
-                new P.NonVisualDrawingProperties() { Id = 1000U, Name = "Table" },
-                new P.NonVisualGraphicFrameDrawingProperties(),
-                new P.ApplicationNonVisualDrawingProperties()),
-            new P.Transform(new A.Offset { X = xEmu, Y = yEmu }, new A.Extents { Cx = cxEmu, Cy = cyEmu }),
-            new A.Graphic(new A.GraphicData(BuildTable(rows, cols, table)) { Uri = "http://schemas.openxmlformats.org/drawingml/2006/table" })
-        );
-
-        sp.Slide.CommonSlideData.ShapeTree.Append(gf);
-    }
-
-    private static A.Table BuildTable(int rows, int cols, DataTable dt)
-    {
-        var table = new A.Table();
-        table.Append(
-            new A.TableProperties(new A.TableStyleId("{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}")),
-            new A.TableGrid(Enumerable.Repeat(new A.GridColumn() { Width = (long)(24000000L / Math.Max(cols,1)) }, cols))
-        );
-
-        // Header
-        var headerRow = new A.TableRow() { Height = 370840L };
-        foreach (DataColumn col in dt.Columns)
-            headerRow.Append(MakeCell(col.ColumnName, bold: true));
-        table.Append(headerRow);
-
-        // Data rows
-        foreach (DataRow dr in dt.Rows)
-        {
-            var row = new A.TableRow() { Height = 370840L };
-            foreach (DataColumn col in dt.Columns)
-                row.Append(MakeCell(dr[col]?.ToString() ?? ""));
-            table.Append(row);
-        }
-        return table;
-    }
-
-    private static A.TableCell MakeCell(string text, bool bold = false)
-    {
-        var rp = new A.RunProperties();
-        if (bold) rp.Bold = true;
-
-        var cell = new A.TableCell(
-            new A.TextBody(new A.BodyProperties(), new A.Paragraph(new A.Run(rp, new A.Text(text ?? "")))),
-            new A.TableCellProperties()
-        );
-        cell.TextBody.Append(new A.Paragraph()); // endPara
-        return cell;
-    }
+    // Slide 7 - Training Log (table)
+    public System.Data.DataTable TrainingLog { get; set; }
 }
