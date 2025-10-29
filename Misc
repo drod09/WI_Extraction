@@ -353,3 +353,32 @@ public static class WiExcelReader
         return list.CopyToDataTable();
     }
 }
+
+
+
+using System;
+using System.IO;
+
+namespace WorkInstructionImporter2
+{
+    internal class Program
+    {
+        static void Main(string[] args)
+        {
+            var wiNumber = "WI-1234"; // <-- change or loop over all WIs
+            var baseFolder = $@"C:\Users\U309011\Desktop\New Folder\ExtractedData_{wiNumber}";
+            var templatePath = @"C:\Users\U309011\Desktop\Template.pptx";
+
+            var excelPath = Path.Combine(baseFolder, "Extracted_Data.xlsx");
+            var baseImages = Path.Combine(baseFolder, "BaseImages");
+            var composedImages = Path.Combine(baseFolder, "ComposedImages");
+            var outPath = Path.Combine(baseFolder, $"{wiNumber}_Imported.pptx");
+
+            var payload = WiExcelReader.BuildFromExcel(excelPath, baseImages, composedImages);
+
+            WiPptxImporter.ImportIntoTemplate(templatePath, outPath, payload);
+
+            Console.WriteLine($"✅ Imported {wiNumber} → {outPath}");
+        }
+    }
+}
