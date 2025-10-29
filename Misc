@@ -1,58 +1,10 @@
-using System;
-using System.Data;
-
-namespace WorkInstructionImporter2
-{
-    internal class Program
-    {
-        static void Main(string[] args)
-        {
-            Console.WriteLine("Starting Work Instruction Import...");
-
-            // Example payload (replace with your extracted data)
-            var payload = new WiPayload
-            {
-                Title = "Widget Assembly",
-                WiNumber = "WI-1234",
-                IPE = "IPE-001",
-                ER = "ER-045",
-                ECO = "ECO-2025-18",
-                BomConfiguration = BuildSampleTable("BOM/CONFIGURATION"),
-                RevisionHistory = BuildSampleTable("REVISION HISTORY"),
-                Drafting = BuildSampleTable("DRAFTING"),
-                Approvals = BuildSampleTable("APPROVALS"),
-                EquipmentRequired = BuildSampleTable("EQUIPMENT REQUIRED"),
-                PartsRequired = BuildSampleTable("PARTS REQUIRED"),
-                AcceptGoodChecklist = new() { "No burrs", "Finish intact", "Label legible" },
-                ReferenceImagePath = @"C:\images\exploded.png",
-                Procedures = new()
-                {
-                    new WiPayload.ProcedureStep
-                    {
-                        Heading = "Assembly Procedure",
-                        Lines = new() { "1. Verify components", "2. Assemble bracket", "3. Torque screws" }
-                    }
-                },
-                PassGoodChecklist = new() { "Meets spec", "No leaks", "Final sign-off complete" },
-                TrainingLog = BuildSampleTable("TRAINING LOG")
-            };
-
-            WiPptxImporter.ImportIntoTemplate(
-                templatePptx: @"C:\Templates\WI_NewTemplate.pptx",
-                outPptx: @"C:\Output\WI-1234_NEW.pptx",
-                payload: payload);
-
-            Console.WriteLine("Import completed successfully!");
-        }
-
-        static DataTable BuildSampleTable(string name)
-        {
-            var dt = new DataTable(name);
-            dt.Columns.Add("Column1");
-            dt.Columns.Add("Column2");
-            dt.Rows.Add("Example 1", "Value 1");
-            dt.Rows.Add("Example 2", "Value 2");
-            return dt;
-        }
-    }
-}
+Cannot implicitly convert type 'double' to 'long'. An explicit conversion exists (are you missing a cast?)
+Cannot implicitly convert type 'double' to 'long'. An explicit conversion exists (are you missing a cast?)
+Cannot declare a variable of static type 'ImagePartType'
+Cannot implicitly convert type 'DocumentFormat.OpenXml.Packaging.PartTypeInfo' to 'DocumentFormat.OpenXml.Packaging.ImagePartType'
+Cannot implicitly convert type 'DocumentFormat.OpenXml.Packaging.PartTypeInfo' to 'DocumentFormat.OpenXml.Packaging.ImagePartType'
+Cannot implicitly convert type 'DocumentFormat.OpenXml.Packaging.PartTypeInfo' to 'DocumentFormat.OpenXml.Packaging.ImagePartType'
+Cannot implicitly convert type 'DocumentFormat.OpenXml.Packaging.PartTypeInfo' to 'DocumentFormat.OpenXml.Packaging.ImagePartType'
+Cannot implicitly convert type 'DocumentFormat.OpenXml.Packaging.PartTypeInfo' to 'DocumentFormat.OpenXml.Packaging.ImagePartType'
+Argument 2: cannot convert from 'DocumentFormat.OpenXml.Packaging.ImagePartType' to 'DocumentFormat.OpenXml.Packaging.PartTypeInfo'
+Cannot implicitly convert type 'double' to 'DocumentFormat.OpenXml.Int64Value'. An explicit conversion exists (are you missing a cast?)
