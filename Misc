@@ -1,13 +1,10 @@
-// --- DataTable extension ---
-private static DataTable CopyToDataTableOrEmpty(this IEnumerable<DataRow> rows)
+private static DataTable SortByRowOrder(DataTable dt)
 {
-    var list = rows?.ToList() ?? new List<DataRow>();
-    if (list.Count == 0)
-        return new DataTable();
-    return list.CopyToDataTable();
+    if (dt == null || dt.Columns.Count == 0) return dt;
+    if (!dt.Columns.Contains("RowOrder")) return dt;
+
+    var sortedRows = dt.AsEnumerable()
+                       .OrderBy(r => SafeInt(r["RowOrder"]));
+
+    return sortedRows.CopyToDataTableOrEmpty();
 }
-
-
-var sorted = dt.AsEnumerable()
-    .OrderBy(r => SafeInt(r["RowOrder"]))
-    .CopyToDataTableOrEmpty();
