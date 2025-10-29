@@ -1,57 +1,22 @@
-// Safe: preserves existing formatting AND keeps the required trailing empty paragraph.
-private static void SetCellText(A.Table tbl, int row1, int col1, string text)
+private static void DebugDumpSlide1Tables(PresentationDocument doc)
 {
-    var row  = tbl.Elements<A.TableRow>().ElementAt(row1 - 1);
-    var cell = row.Elements<A.TableCell>().ElementAt(col1 - 1);
-
-    var tb = cell.TextBody;
-    if (tb == null)
+    var s1 = GetSlideByIndex(doc, 1);
+    var tables = s1.Slide.Descendants<A.Table>().ToList();
+    Console.WriteLine($"[Slide1] Found {tables.Count} tables.");
+    int idx = 1;
+    foreach (var t in tables)
     {
-        tb = new A.TextBody(new A.BodyProperties(), new A.Paragraph());
-        cell.AppendChild(tb);
-    }
-
-    // Ensure at least one paragraph exists
-    var paras = tb.Elements<A.Paragraph>().ToList();
-    if (paras.Count == 0)
-        paras.Add(tb.AppendChild(new A.Paragraph()));
-
-    var firstPara = paras[0];
-
-    // Keep paragraph properties & first run properties (size, font, etc.)
-    var paraProps = firstPara.GetFirstChild<A.ParagraphProperties>()?.CloneNode(true) as A.ParagraphProperties;
-    var firstRun  = firstPara.GetFirstChild<A.Run>();
-    var runProps  = firstRun?.RunProperties?.CloneNode(true) as A.RunProperties;
-
-    // Clear all runs in paragraph (not the paragraph itself)
-    foreach (var r in firstPara.Elements<A.Run>().ToList()) r.Remove();
-
-    // New run with preserved RunProperties
-    var newRun = new A.Run();
-    if (runProps != null) newRun.RunProperties = runProps;
-    newRun.Text = new A.Text(text ?? string.Empty);
-    firstPara.AppendChild(newRun);
-
-    // Restore paragraph properties if we had any
-    var existingProps = firstPara.GetFirstChild<A.ParagraphProperties>();
-    if (paraProps != null && existingProps == null)
-        firstPara.PrependChild(paraProps);
-
-    // Guarantee a trailing empty paragraph (OpenXML requires one in table cells)
-    // Keep only first paragraph as content, last paragraph as empty end marker.
-    // If we have only 1 paragraph, add one empty:
-    paras = tb.Elements<A.Paragraph>().ToList();
-    if (paras.Count == 1)
-        tb.AppendChild(new A.Paragraph());                 // empty end para
-    else
-    {
-        // Remove extra paragraphs beyond 2; ensure last is empty
-        for (int i = 1; i < paras.Count - 1; i++) paras[i].Remove();
-        var last = tb.Elements<A.Paragraph>().Last();
-        if (last.Elements<A.Run>().Any())
-        {
-            // replace with an empty paragraph
-            last.RemoveAllChildren<A.Run>();
-        }
+        var title = GetTableTitle(t);
+        var rows  = t.Elements<A.TableRow>().Count();
+        var cols  = t.Elements<A.TableRow>().FirstOrDefault()?.Elements<A.TableCell>().Count() ?? 0;
+        Console.WriteLine($"  {idx}: Title='{title}' Rows={rows} Cols={cols}");
+        idx++;
     }
 }
+
+
+
+
+
+using var doc = PresentationDocument.Open(outPptx, true);
+DebugDumpSlide1Tables(doc);
