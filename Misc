@@ -1,1 +1,13 @@
-'OrderedEnumerableRowCollection<DataRow>' does not contain a definition for 'CopyToDataTableOrEmpty' and the best extension method overload 'WiExcelReader.CopyToDataTableOrEmpty(IOrderedEnumerable<DataRow>)' requires a receiver of type 'System.Linq.IOrderedEnumerable<System.Data.DataRow>'
+// --- DataTable extension ---
+private static DataTable CopyToDataTableOrEmpty(this IEnumerable<DataRow> rows)
+{
+    var list = rows?.ToList() ?? new List<DataRow>();
+    if (list.Count == 0)
+        return new DataTable();
+    return list.CopyToDataTable();
+}
+
+
+var sorted = dt.AsEnumerable()
+    .OrderBy(r => SafeInt(r["RowOrder"]))
+    .CopyToDataTableOrEmpty();
