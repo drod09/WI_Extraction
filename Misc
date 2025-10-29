@@ -1,41 +1,58 @@
-public class WiPayload
+using System;
+using System.Data;
+
+namespace WorkInstructionImporter2
 {
-    // Slide 1 - Title + 4 tables
-    public string Title { get; set; }
-    public string WiNumber { get; set; }
-    public string IPE { get; set; }
-    public string ER { get; set; }
-    public string ECO { get; set; }
-
-    // Tables unique to Slide 1
-    public System.Data.DataTable BomConfiguration { get; set; }   // “BOM/CONFIGURATION”
-    public System.Data.DataTable RevisionHistory { get; set; }    // “REVISION HISTORY”
-    public System.Data.DataTable Drafting { get; set; }           // “DRAFTING”
-    public System.Data.DataTable Approvals { get; set; }          // “APPROVALS”
-
-    // Slide 2 - Parts & Equipment (as tables)
-    public System.Data.DataTable EquipmentRequired { get; set; }  // “EQUIPMENT REQUIRED”
-    public System.Data.DataTable PartsRequired { get; set; }      // “PARTS REQUIRED”
-
-    // Slide 3 - Accept Good Checklist
-    public System.Collections.Generic.List<string> AcceptGoodChecklist { get; set; } = new();
-
-    // Slide 4 - Exploded View / Reference image
-    public string ReferenceImagePath { get; set; }
-
-    // Slide 5+ - Procedures (generic content)
-    public class ProcedureStep
+    internal class Program
     {
-        public string Heading { get; set; }
-        public System.Collections.Generic.List<string> Lines { get; set; } = new();
-        public System.Collections.Generic.List<string> ImagePaths { get; set; } = new();
-        public System.Collections.Generic.List<System.Data.DataTable> Tables { get; set; } = new();
+        static void Main(string[] args)
+        {
+            Console.WriteLine("Starting Work Instruction Import...");
+
+            // Example payload (replace with your extracted data)
+            var payload = new WiPayload
+            {
+                Title = "Widget Assembly",
+                WiNumber = "WI-1234",
+                IPE = "IPE-001",
+                ER = "ER-045",
+                ECO = "ECO-2025-18",
+                BomConfiguration = BuildSampleTable("BOM/CONFIGURATION"),
+                RevisionHistory = BuildSampleTable("REVISION HISTORY"),
+                Drafting = BuildSampleTable("DRAFTING"),
+                Approvals = BuildSampleTable("APPROVALS"),
+                EquipmentRequired = BuildSampleTable("EQUIPMENT REQUIRED"),
+                PartsRequired = BuildSampleTable("PARTS REQUIRED"),
+                AcceptGoodChecklist = new() { "No burrs", "Finish intact", "Label legible" },
+                ReferenceImagePath = @"C:\images\exploded.png",
+                Procedures = new()
+                {
+                    new WiPayload.ProcedureStep
+                    {
+                        Heading = "Assembly Procedure",
+                        Lines = new() { "1. Verify components", "2. Assemble bracket", "3. Torque screws" }
+                    }
+                },
+                PassGoodChecklist = new() { "Meets spec", "No leaks", "Final sign-off complete" },
+                TrainingLog = BuildSampleTable("TRAINING LOG")
+            };
+
+            WiPptxImporter.ImportIntoTemplate(
+                templatePptx: @"C:\Templates\WI_NewTemplate.pptx",
+                outPptx: @"C:\Output\WI-1234_NEW.pptx",
+                payload: payload);
+
+            Console.WriteLine("Import completed successfully!");
+        }
+
+        static DataTable BuildSampleTable(string name)
+        {
+            var dt = new DataTable(name);
+            dt.Columns.Add("Column1");
+            dt.Columns.Add("Column2");
+            dt.Rows.Add("Example 1", "Value 1");
+            dt.Rows.Add("Example 2", "Value 2");
+            return dt;
+        }
     }
-    public System.Collections.Generic.List<ProcedureStep> Procedures { get; set; } = new();
-
-    // Slide 6 - Pass Good Checklist
-    public System.Collections.Generic.List<string> PassGoodChecklist { get; set; } = new();
-
-    // Slide 7 - Training Log (table)
-    public System.Data.DataTable TrainingLog { get; set; }
 }
