@@ -1,6 +1,6 @@
 This XML file does not appear to have any style information associated with it. The document tree is shown below.
-<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" preserve="1" userDrawn="1">
-<p:cSld name="Pass Good Checklist">
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+<p:cSld>
 <p:spTree>
 <p:nvGrpSpPr>
 <p:cNvPr id="1" name=""/>
@@ -17,124 +17,67 @@ This XML file does not appear to have any style information associated with it. 
 </p:grpSpPr>
 <p:sp>
 <p:nvSpPr>
-<p:cNvPr id="3" name="Rectangle 2">
+<p:cNvPr id="2" name="Text Placeholder 1">
 <a:extLst>
 <a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}">
-<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{61B29347-6EB8-708E-59B6-EFA45242FDFF}"/>
+<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{32057D20-1895-DDAA-EFD2-35F14E4F41EF}"/>
 </a:ext>
 </a:extLst>
 </p:cNvPr>
-<p:cNvSpPr/>
-<p:nvPr userDrawn="1"/>
+<p:cNvSpPr>
+<a:spLocks noGrp="1"/>
+</p:cNvSpPr>
+<p:nvPr>
+<p:ph type="body" sz="quarter" idx="15"/>
+</p:nvPr>
 </p:nvSpPr>
-<p:spPr>
-<a:xfrm>
-<a:off x="196552" y="487110"/>
-<a:ext cx="8767985" cy="5212935"/>
-</a:xfrm>
-<a:prstGeom prst="rect">
-<a:avLst/>
-</a:prstGeom>
-<a:solidFill>
-<a:schemeClr val="bg1"/>
-</a:solidFill>
-<a:ln w="133350" cmpd="thickThin">
-<a:solidFill>
-<a:srgbClr val="00B050"/>
-</a:solidFill>
-<a:miter lim="800000"/>
-</a:ln>
-</p:spPr>
-<p:style>
-<a:lnRef idx="2">
-<a:schemeClr val="accent1">
-<a:shade val="15000"/>
-</a:schemeClr>
-</a:lnRef>
-<a:fillRef idx="1">
-<a:schemeClr val="accent1"/>
-</a:fillRef>
-<a:effectRef idx="0">
-<a:schemeClr val="accent1"/>
-</a:effectRef>
-<a:fontRef idx="minor">
-<a:schemeClr val="lt1"/>
-</a:fontRef>
-</p:style>
+<p:spPr/>
 <p:txBody>
-<a:bodyPr rtlCol="0" anchor="ctr"/>
+<a:bodyPr/>
 <a:lstStyle/>
 <a:p>
-<a:pPr algn="ctr"/>
+<a:r>
+<a:rPr lang="en-US" dirty="0"/>
+<a:t>Slide Title</a:t>
+</a:r>
+<a:endParaRPr lang="en-US" b="1" dirty="0"/>
+</a:p>
+<a:p>
 <a:endParaRPr lang="en-US" dirty="0"/>
 </a:p>
 </p:txBody>
 </p:sp>
 <p:sp>
 <p:nvSpPr>
-<p:cNvPr id="4" name="Rectangle 3">
+<p:cNvPr id="3" name="Text Placeholder 2">
 <a:extLst>
 <a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}">
-<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{C8BF6C6D-5123-B554-5118-F42ACC43D79B}"/>
+<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{BD054511-6DCA-738D-D73F-B5D65F7E591C}"/>
 </a:ext>
 </a:extLst>
 </p:cNvPr>
-<p:cNvSpPr/>
-<p:nvPr userDrawn="1"/>
+<p:cNvSpPr>
+<a:spLocks noGrp="1"/>
+</p:cNvSpPr>
+<p:nvPr>
+<p:ph type="body" sz="quarter" idx="13"/>
+</p:nvPr>
 </p:nvSpPr>
-<p:spPr>
-<a:xfrm>
-<a:off x="273465" y="581115"/>
-<a:ext cx="8597070" cy="256374"/>
-</a:xfrm>
-<a:prstGeom prst="rect">
-<a:avLst/>
-</a:prstGeom>
-<a:noFill/>
-<a:ln>
-<a:noFill/>
-</a:ln>
-</p:spPr>
-<p:style>
-<a:lnRef idx="2">
-<a:schemeClr val="accent1">
-<a:shade val="15000"/>
-</a:schemeClr>
-</a:lnRef>
-<a:fillRef idx="1">
-<a:schemeClr val="accent1"/>
-</a:fillRef>
-<a:effectRef idx="0">
-<a:schemeClr val="accent1"/>
-</a:effectRef>
-<a:fontRef idx="minor">
-<a:schemeClr val="lt1"/>
-</a:fontRef>
-</p:style>
+<p:spPr/>
 <p:txBody>
-<a:bodyPr rtlCol="0" anchor="ctr"/>
+<a:bodyPr/>
 <a:lstStyle/>
 <a:p>
-<a:pPr algn="ctr"/>
-<a:r>
-<a:rPr lang="en-US" b="1">
-<a:solidFill>
-<a:schemeClr val="tx1"/>
-</a:solidFill>
-<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-<a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-</a:rPr>
-<a:t>PASS GOOD CHECKLIST</a:t>
-</a:r>
+<a:endParaRPr lang="en-US"/>
 </a:p>
 </p:txBody>
 </p:sp>
 <p:sp>
 <p:nvSpPr>
-<p:cNvPr id="5" name="Text Placeholder 6">
+<p:cNvPr id="4" name="Text Placeholder 3">
 <a:extLst>
 <a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}">
-<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{4D6E61F6-49E8-2DF3-59A3-F15AA822C399}"/>
+<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{A3EA7874-59A7-00E1-F7BB-7A41190180DF}"/>
 </a:ext>
 </a:extLst>
 </p:cNvPr>
@@ -147,140 +90,33 @@ This XML file does not appear to have any style information associated with it. 
 </p:nvSpPr>
 <p:spPr>
 <a:xfrm>
-<a:off x="273465" y="846035"/>
-<a:ext cx="8597070" cy="4785644"/>
+<a:off x="111124" y="772148"/>
+<a:ext cx="8921751" cy="5055998"/>
 </a:xfrm>
-<a:prstGeom prst="rect">
-<a:avLst/>
-</a:prstGeom>
 </p:spPr>
 <p:txBody>
-<a:bodyPr/>
-<a:lstStyle>
-<a:lvl1pPr marL="0" indent="0">
-<a:lnSpc>
-<a:spcPct val="100000"/>
-</a:lnSpc>
-<a:buFont typeface="+mj-lt"/>
-<a:buNone/>
-<a:defRPr sz="1200" baseline="0">
-<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-</a:defRPr>
-</a:lvl1pPr>
-<a:lvl2pPr marL="914400" indent="-457200">
-<a:lnSpc>
-<a:spcPct val="100000"/>
-</a:lnSpc>
-<a:buFont typeface="+mj-lt"/>
-<a:buAutoNum type="arabicPeriod"/>
-<a:defRPr sz="1200" baseline="0">
-<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-</a:defRPr>
-</a:lvl2pPr>
-<a:lvl3pPr marL="1371600" indent="-457200">
-<a:lnSpc>
-<a:spcPct val="100000"/>
-</a:lnSpc>
-<a:buFont typeface="+mj-lt"/>
-<a:buAutoNum type="arabicPeriod"/>
-<a:defRPr sz="1200" baseline="0">
-<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-</a:defRPr>
-</a:lvl3pPr>
-<a:lvl4pPr marL="1714500" indent="-342900">
-<a:lnSpc>
-<a:spcPct val="100000"/>
-</a:lnSpc>
-<a:buFont typeface="+mj-lt"/>
-<a:buAutoNum type="arabicPeriod"/>
-<a:defRPr sz="1200" baseline="0">
-<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-</a:defRPr>
-</a:lvl4pPr>
-<a:lvl5pPr marL="2171700" indent="-342900">
-<a:lnSpc>
-<a:spcPct val="100000"/>
-</a:lnSpc>
-<a:buFont typeface="+mj-lt"/>
-<a:buAutoNum type="arabicPeriod"/>
-<a:defRPr sz="1200" baseline="0">
-<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-</a:defRPr>
-</a:lvl5pPr>
-</a:lstStyle>
-<a:p>
-<a:pPr lvl="0"/>
-<a:endParaRPr lang="en-US" dirty="0"/>
-</a:p>
-</p:txBody>
-</p:sp>
-<p:sp>
-<p:nvSpPr>
-<p:cNvPr id="2" name="Rectangle 1">
-<a:extLst>
-<a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}">
-<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{13C1978C-035D-ACEC-4D70-DA2E84425529}"/>
-</a:ext>
-</a:extLst>
-</p:cNvPr>
-<p:cNvSpPr/>
-<p:nvPr userDrawn="1"/>
-</p:nvSpPr>
-<p:spPr>
-<a:xfrm>
-<a:off x="4033614" y="6344835"/>
-<a:ext cx="4007979" cy="218333"/>
-</a:xfrm>
-<a:prstGeom prst="rect">
-<a:avLst/>
-</a:prstGeom>
-<a:noFill/>
-<a:ln>
-<a:noFill/>
-</a:ln>
-</p:spPr>
-<p:style>
-<a:lnRef idx="2">
-<a:schemeClr val="accent1">
-<a:shade val="50000"/>
-</a:schemeClr>
-</a:lnRef>
-<a:fillRef idx="1">
-<a:schemeClr val="accent1"/>
-</a:fillRef>
-<a:effectRef idx="0">
-<a:schemeClr val="accent1"/>
-</a:effectRef>
-<a:fontRef idx="minor">
-<a:schemeClr val="lt1"/>
-</a:fontRef>
-</p:style>
-<p:txBody>
-<a:bodyPr rtlCol="0" anchor="ctr"/>
+<a:bodyPr lIns="91440" tIns="45720" rIns="91440" bIns="45720" anchor="t"/>
 <a:lstStyle/>
 <a:p>
-<a:pPr algn="ctr"/>
-<a:r>
-<a:rPr lang="en-US" sz="1000">
-<a:solidFill>
-<a:schemeClr val="tx1"/>
-</a:solidFill>
-<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-<a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-</a:rPr>
-<a:t>PASS GOOD CHECKLIST</a:t>
-</a:r>
+<a:pPr>
+<a:buFont typeface="+mj-lt"/>
+<a:buAutoNum type="arabicPeriod"/>
+</a:pPr>
+<a:endParaRPr lang="en-US" sz="1100" dirty="0">
+<a:latin typeface="Arial"/>
+<a:cs typeface="Arial"/>
+</a:endParaRPr>
 </a:p>
 </p:txBody>
 </p:sp>
 </p:spTree>
 <p:extLst>
 <p:ext uri="{BB962C8B-B14F-4D97-AF65-F5344CB8AC3E}">
-<p14:creationId xmlns:p14="http://schemas.microsoft.com/office/powerpoint/2010/main" val="1558708022"/>
+<p14:creationId xmlns:p14="http://schemas.microsoft.com/office/powerpoint/2010/main" val="1426513498"/>
 </p:ext>
 </p:extLst>
 </p:cSld>
 <p:clrMapOvr>
 <a:masterClrMapping/>
 </p:clrMapOvr>
-</p:sldLayout>
+</p:sld>
