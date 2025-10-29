@@ -1,0 +1,213 @@
+This XML file does not appear to have any style information associated with it. The document tree is shown below.
+<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" preserve="1" userDrawn="1">
+<p:cSld name="Content Generic">
+<p:spTree>
+<p:nvGrpSpPr>
+<p:cNvPr id="1" name=""/>
+<p:cNvGrpSpPr/>
+<p:nvPr/>
+</p:nvGrpSpPr>
+<p:grpSpPr>
+<a:xfrm>
+<a:off x="0" y="0"/>
+<a:ext cx="0" cy="0"/>
+<a:chOff x="0" y="0"/>
+<a:chExt cx="0" cy="0"/>
+</a:xfrm>
+</p:grpSpPr>
+<p:sp>
+<p:nvSpPr>
+<p:cNvPr id="5" name="Text Placeholder 4">
+<a:extLst>
+<a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}">
+<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{0AF1ACCF-5DCA-46C6-13EB-D3DD46BD7E59}"/>
+</a:ext>
+</a:extLst>
+</p:cNvPr>
+<p:cNvSpPr>
+<a:spLocks noGrp="1"/>
+</p:cNvSpPr>
+<p:nvPr>
+<p:ph type="body" sz="quarter" idx="15" hasCustomPrompt="1"/>
+</p:nvPr>
+</p:nvSpPr>
+<p:spPr>
+<a:xfrm>
+<a:off x="111125" y="418743"/>
+<a:ext cx="8921750" cy="427291"/>
+</a:xfrm>
+<a:prstGeom prst="rect">
+<a:avLst/>
+</a:prstGeom>
+</p:spPr>
+<p:txBody>
+<a:bodyPr/>
+<a:lstStyle>
+<a:lvl1pPr marL="0" indent="0">
+<a:buFont typeface="+mj-lt"/>
+<a:buNone/>
+<a:defRPr sz="1200" b="1" i="0" u="sng" cap="all" baseline="0">
+<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+</a:defRPr>
+</a:lvl1pPr>
+</a:lstStyle>
+<a:p>
+<a:pPr lvl="0"/>
+<a:r>
+<a:rPr lang="en-US" dirty="0"/>
+<a:t>SLIDE TITLE</a:t>
+</a:r>
+</a:p>
+</p:txBody>
+</p:sp>
+<p:sp>
+<p:nvSpPr>
+<p:cNvPr id="3" name="Text Placeholder 30">
+<a:extLst>
+<a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}">
+<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{E3FE3699-E6A0-32C3-CF0F-DF310E778DCA}"/>
+</a:ext>
+</a:extLst>
+</p:cNvPr>
+<p:cNvSpPr>
+<a:spLocks noGrp="1"/>
+</p:cNvSpPr>
+<p:nvPr>
+<p:ph type="body" sz="quarter" idx="13" hasCustomPrompt="1"/>
+</p:nvPr>
+</p:nvSpPr>
+<p:spPr>
+<a:xfrm>
+<a:off x="4025070" y="6349868"/>
+<a:ext cx="3999432" cy="217178"/>
+</a:xfrm>
+<a:prstGeom prst="rect">
+<a:avLst/>
+</a:prstGeom>
+</p:spPr>
+<p:txBody>
+<a:bodyPr/>
+<a:lstStyle>
+<a:lvl1pPr marL="0" indent="0" algn="ctr">
+<a:buNone/>
+<a:defRPr sz="1000" cap="all" baseline="0">
+<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+</a:defRPr>
+</a:lvl1pPr>
+</a:lstStyle>
+<a:p>
+<a:pPr lvl="0"/>
+<a:r>
+<a:rPr lang="en-US"/>
+<a:t>SUBJECT OF SLIDE / WORK PKG</a:t>
+</a:r>
+</a:p>
+</p:txBody>
+</p:sp>
+<p:sp>
+<p:nvSpPr>
+<p:cNvPr id="6" name="Text Placeholder 5">
+<a:extLst>
+<a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}">
+<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{83E803AC-6D4F-BC82-5D3D-681AD086464A}"/>
+</a:ext>
+</a:extLst>
+</p:cNvPr>
+<p:cNvSpPr>
+<a:spLocks noGrp="1"/>
+</p:cNvSpPr>
+<p:nvPr>
+<p:ph type="body" sz="quarter" idx="16"/>
+</p:nvPr>
+</p:nvSpPr>
+<p:spPr>
+<a:xfrm>
+<a:off x="111124" y="846034"/>
+<a:ext cx="8921751" cy="4935641"/>
+</a:xfrm>
+<a:prstGeom prst="rect">
+<a:avLst/>
+</a:prstGeom>
+</p:spPr>
+<p:txBody>
+<a:bodyPr/>
+<a:lstStyle>
+<a:lvl1pPr>
+<a:lnSpc>
+<a:spcPct val="100000"/>
+</a:lnSpc>
+<a:spcBef>
+<a:spcPts val="0"/>
+</a:spcBef>
+<a:defRPr sz="1200">
+<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+</a:defRPr>
+</a:lvl1pPr>
+<a:lvl2pPr marL="457200">
+<a:lnSpc>
+<a:spcPct val="100000"/>
+</a:lnSpc>
+<a:spcBef>
+<a:spcPts val="0"/>
+</a:spcBef>
+<a:defRPr sz="1200">
+<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+</a:defRPr>
+</a:lvl2pPr>
+<a:lvl3pPr marL="685800">
+<a:lnSpc>
+<a:spcPct val="100000"/>
+</a:lnSpc>
+<a:spcBef>
+<a:spcPts val="0"/>
+</a:spcBef>
+<a:defRPr sz="1200">
+<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+</a:defRPr>
+</a:lvl3pPr>
+<a:lvl4pPr marL="914400">
+<a:lnSpc>
+<a:spcPct val="100000"/>
+</a:lnSpc>
+<a:spcBef>
+<a:spcPts val="0"/>
+</a:spcBef>
+<a:defRPr sz="1200">
+<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+</a:defRPr>
+</a:lvl4pPr>
+<a:lvl5pPr marL="1143000">
+<a:lnSpc>
+<a:spcPct val="100000"/>
+</a:lnSpc>
+<a:spcBef>
+<a:spcPts val="0"/>
+</a:spcBef>
+<a:defRPr sz="1200">
+<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+</a:defRPr>
+</a:lvl5pPr>
+</a:lstStyle>
+<a:p>
+<a:pPr lvl="0"/>
+<a:endParaRPr lang="en-US" dirty="0"/>
+</a:p>
+</p:txBody>
+</p:sp>
+</p:spTree>
+<p:extLst>
+<p:ext uri="{BB962C8B-B14F-4D97-AF65-F5344CB8AC3E}">
+<p14:creationId xmlns:p14="http://schemas.microsoft.com/office/powerpoint/2010/main" val="3011044471"/>
+</p:ext>
+</p:extLst>
+</p:cSld>
+<p:clrMapOvr>
+<a:masterClrMapping/>
+</p:clrMapOvr>
+</p:sldLayout>
