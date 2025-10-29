@@ -1,34 +1,355 @@
-private static A.Table BuildTable(int rows, int cols, DataTable dt)
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.IO;
+using System.Linq;
+using OfficeOpenXml;
+
+public static class WiExcelReader
 {
-    var table = new A.Table();
-
-    // Style
-    table.Append(
-        new A.TableProperties(
-            new A.TableStyleId("{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}"))
-    );
-
-    // Grid: create a NEW GridColumn per column (no Enumerable.Repeat!)
-    var grid = new A.TableGrid();
-    long colWidth = 24000000L / Math.Max(cols, 1); // simple width split
-    for (int c = 0; c < cols; c++)
-        grid.Append(new A.GridColumn() { Width = colWidth });
-    table.Append(grid);
-
-    // Header row
-    var headerRow = new A.TableRow() { Height = 370840L };
-    foreach (DataColumn col in dt.Columns)
-        headerRow.Append(MakeCell(col.ColumnName, bold: true));
-    table.Append(headerRow);
-
-    // Data rows
-    foreach (DataRow dr in dt.Rows)
+    // === Public entry ===
+    public static WiPayload BuildFromExcel(string excelPath, string baseImagesFolder, string composedImagesFolder)
     {
-        var row = new A.TableRow() { Height = 370840L };
-        foreach (DataColumn col in dt.Columns)
-            row.Append(MakeCell(dr[col]?.ToString() ?? ""));
-        table.Append(row);
+        if (!File.Exists(excelPath))
+            throw new FileNotFoundException("Excel not found", excelPath);
+
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+        var payload = new WiPayload();
+
+        using var package = new ExcelPackage(new FileInfo(excelPath));
+
+        // 1) Header Data (Title slide fields)
+        var hdr = ReadSheet(package, "Header Data");
+        if (hdr.Rows.Count > 0)
+        {
+            var r = hdr.Rows[0];
+            payload.WiNumber = Get(r, "WI Number");
+            payload.Title    = Get(r, "WI Title");
+            // If you want to surface these on the title slide’s small badges:
+            payload.IPE = Get(r, "Operation No");           // or a different column if you prefer
+            payload.ER  = Get(r, "Product Line");           // map as needed
+            payload.ECO = Get(r, "Revision");               // or another header column you use for ECO
+        }
+
+        // 2) Slide 1 tables
+        payload.BomConfiguration = ReadSheet(package, "BOM");                  // “BOM/ASSY DWG NO” is a column on Header Data; table rows in BOM tab
+        payload.RevisionHistory  = SortByRowOrder(ReadSheet(package, "RevisionHistory"));
+        payload.Drafting         = ReadSheet(package, "Drafting");
+        payload.Approvals        = ReadSheet(package, "Approvals");
+
+        // 3) Slide 2 tables
+        payload.EquipmentRequired = SortByRowOrder(ReadSheet(package, "EquipmentRequired"));
+        payload.PartsRequired     = SortByRowOrder(ReadSheet(package, "PartsRequired"));
+
+        // 4) Accept/Pass checklists and Procedures come from Text Content + Table of Contents
+        var textContent  = ReadSheet(package, "Text Content");
+        var toc          = ReadSheet(package, "Table of Contents");
+        var imagesTable  = ReadSheet(package, "Images");
+
+        // Build Accept Good checklist
+        payload.AcceptGoodChecklist = ExtractChecklist(textContent, toc,
+            match => ContainsAny(match, "ACCEPT GOOD", "ACCEPT", "ACCEPTANCE") &&
+                     ContainsAny(match, "CHECKLIST", "CRITERIA", "REQUIREMENTS"));
+
+        // Build Pass Good checklist
+        payload.PassGoodChecklist = ExtractChecklist(textContent, toc,
+            match => ContainsAny(match, "PASS GOOD", "PASS") &&
+                     ContainsAny(match, "CHECKLIST", "CRITERIA", "REQUIREMENTS"));
+
+        // Reference image (Exploded View) – prefer “Composed” + name/path contains “exploded”
+        payload.ReferenceImagePath = FindReferenceImage(imagesTable, composedImagesFolder, baseImagesFolder);
+
+        // Procedures (Generic content)
+        payload.Procedures = BuildProcedures(textContent, toc, imagesTable, baseImagesFolder, composedImagesFolder);
+
+        // Training Log table: you don’t have a dedicated tab, so leave empty for now
+        payload.TrainingLog = new DataTable("TRAINING_LOG");
+
+        return payload;
     }
 
-    return table;
+    // === Helpers ===
+
+    private static DataTable ReadSheet(ExcelPackage pkg, string name)
+    {
+        var ws = pkg.Workbook.Worksheets
+            .FirstOrDefault(w => w.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+
+        if (ws == null || ws.Dimension == null)
+            return new DataTable(name);
+
+        var dt = new DataTable(name);
+
+        // Build headers from row 1
+        int colCount = ws.Dimension.End.Column;
+        for (int c = 1; c <= colCount; c++)
+        {
+            var header = (ws.Cells[1, c].Text ?? "").Trim();
+            if (string.IsNullOrEmpty(header)) header = $"Column{c}";
+            if (!dt.Columns.Contains(header))
+                dt.Columns.Add(header);
+            else
+                dt.Columns.Add($"{header}_{c}"); // avoid dup header names
+        }
+
+        // Data rows
+        for (int r = 2; r <= ws.Dimension.End.Row; r++)
+        {
+            var row = dt.NewRow();
+            for (int c = 1; c <= colCount; c++)
+                row[c - 1] = ws.Cells[r, c].Text?.Trim() ?? "";
+            dt.Rows.Add(row);
+        }
+
+        return dt;
+    }
+
+    private static DataTable SortByRowOrder(DataTable dt)
+    {
+        if (dt == null || dt.Columns.Count == 0) return dt;
+        if (!dt.Columns.Contains("RowOrder")) return dt;
+        var sorted = dt.AsEnumerable()
+            .OrderBy(r => SafeInt(r["RowOrder"]))
+            .CopyToDataTableOrEmpty();
+        sorted.TableName = dt.TableName;
+        return sorted;
+    }
+
+    private static int SafeInt(object o)
+    {
+        if (o == null) return int.MaxValue;
+        return int.TryParse(o.ToString(), out var v) ? v : int.MaxValue;
+    }
+
+    private static string Get(DataRow r, string col)
+    {
+        if (r == null || r.Table == null || !r.Table.Columns.Contains(col)) return "";
+        return r[col]?.ToString()?.Trim() ?? "";
+    }
+
+    private static bool ContainsAny(string s, params string[] needles)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return false;
+        var u = s.ToUpperInvariant();
+        return needles.Any(n => u.Contains(n));
+    }
+
+    private static List<string> ExtractChecklist(DataTable textContent, DataTable toc, Func<string, bool> subjectPredicate)
+    {
+        var results = new List<string>();
+        if (textContent.Rows.Count == 0) return results;
+
+        // Identify slide numbers whose subject matches the predicate
+        var candidateSlides = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // Prefer using TOC if present
+        if (toc.Rows.Count > 0 && toc.Columns.Contains("Slide Subject") && toc.Columns.Contains("Slide Number"))
+        {
+            foreach (DataRow r in toc.Rows)
+            {
+                var subj = Get(r, "Slide Subject");
+                if (subjectPredicate(subj))
+                    candidateSlides.Add(Get(r, "Slide Number"));
+            }
+        }
+        else
+        {
+            // fallback: infer from Text Content's Slide Subject
+            if (textContent.Columns.Contains("Slide Subject"))
+            {
+                foreach (DataRow r in textContent.Rows)
+                {
+                    var subj = Get(r, "Slide Subject");
+                    if (subjectPredicate(subj))
+                        candidateSlides.Add(Get(r, "Slide Number"));
+                }
+            }
+        }
+
+        // Pull text lines from Text Content for those slide numbers
+        foreach (DataRow r in textContent.Rows)
+        {
+            var slideNo = Get(r, "Slide Number");
+            if (!candidateSlides.Contains(slideNo)) continue;
+
+            // take the full "Text Content" cell
+            var line = Get(r, "Text Content");
+            if (!string.IsNullOrWhiteSpace(line))
+                results.Add(line);
+        }
+
+        return results;
+    }
+
+    private static string FindReferenceImage(DataTable images, string composedFolder, string baseFolder)
+    {
+        // Try composed images first
+        var candidates = new List<string>();
+        if (Directory.Exists(composedFolder))
+            candidates.AddRange(Directory.GetFiles(composedFolder, "*.*").Where(IsImage));
+        if (Directory.Exists(baseFolder))
+            candidates.AddRange(Directory.GetFiles(baseFolder, "*.*").Where(IsImage));
+
+        // If the Images tab gives explicit filenames, prioritize them
+        var fromSheet = images.AsEnumerable()
+            .Select(r => PathCombineSafe(
+                Get(r, "Image Path"),
+                Get(r, "Image File Name")))
+            .Where(p => !string.IsNullOrWhiteSpace(p) && File.Exists(p))
+            .ToList();
+        if (fromSheet.Count > 0)
+            candidates.InsertRange(0, fromSheet);
+
+        // Prefer anything with “exploded” or “assembly” in name
+        var expl = candidates.FirstOrDefault(p =>
+            ContainsAny(Path.GetFileName(p) ?? "", "EXPLODED", "ASSEMBLY", "EXPLODED VIEW"));
+        if (!string.IsNullOrEmpty(expl)) return expl;
+
+        // Else first composed, else first base
+        return candidates.FirstOrDefault() ?? "";
+    }
+
+    private static bool IsImage(string path)
+    {
+        var ext = Path.GetExtension(path).ToLowerInvariant();
+        return ext is ".png" or ".jpg" or ".jpeg" or ".bmp" or ".gif";
+    }
+
+    private static string PathCombineSafe(string a, string b)
+    {
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(a) && !string.IsNullOrWhiteSpace(b))
+                return Path.Combine(a, b);
+            return !string.IsNullOrWhiteSpace(a) ? a : (b ?? "");
+        }
+        catch { return ""; }
+    }
+
+    private static List<WiPayload.ProcedureStep> BuildProcedures(
+        DataTable textContent,
+        DataTable toc,
+        DataTable images,
+        string baseImagesFolder,
+        string composedImagesFolder)
+    {
+        var steps = new List<WiPayload.ProcedureStep>();
+        if (textContent.Rows.Count == 0) return steps;
+
+        // Identify special slides we DON'T want as procedures
+        var specialSubjects = new[] {
+            "TITLE", "PARTS", "EQUIPMENT", "PARTS AND EQUIPMENT REQUIREMENT",
+            "ACCEPT GOOD", "PASS GOOD", "CHECKLIST", "EXPLODED", "REFERENCE", "TRAINING"
+        };
+
+        // Build a dictionary slideNo -> subject
+        var slideSubjects = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        if (toc.Rows.Count > 0 && toc.Columns.Contains("Slide Number") && toc.Columns.Contains("Slide Subject"))
+        {
+            foreach (DataRow r in toc.Rows)
+            {
+                var n = Get(r, "Slide Number");
+                var s = Get(r, "Slide Subject");
+                slideSubjects[n] = s;
+            }
+        }
+        else if (textContent.Columns.Contains("Slide Number") && textContent.Columns.Contains("Slide Subject"))
+        {
+            foreach (DataRow r in textContent.Rows)
+            {
+                var n = Get(r, "Slide Number");
+                if (!slideSubjects.ContainsKey(n))
+                    slideSubjects[n] = Get(r, "Slide Subject");
+            }
+        }
+
+        // Group text content per slide
+        var perSlide = textContent.AsEnumerable()
+            .GroupBy(r => Get(r, "Slide Number"));
+
+        foreach (var g in perSlide)
+        {
+            var slideNo = g.Key ?? "";
+            var subject = slideSubjects.TryGetValue(slideNo, out var s) ? (s ?? "") : "";
+
+            // Skip special slides (title, parts/equipment, accept/pass, exploded, training)
+            if (ContainsAny(subject, specialSubjects)) continue;
+
+            var lines = g.Select(r => Get(r, "Text Content"))
+                         .Where(t => !string.IsNullOrWhiteSpace(t))
+                         .ToList();
+            if (lines.Count == 0) continue;
+
+            // Images for this slide number
+            var slideImages = ResolveSlideImages(images, slideNo, baseImagesFolder, composedImagesFolder);
+
+            steps.Add(new WiPayload.ProcedureStep
+            {
+                Heading = string.IsNullOrWhiteSpace(subject) ? $"Procedure {slideNo}" : subject,
+                Lines = lines,
+                ImagePaths = slideImages
+            });
+        }
+
+        return steps;
+    }
+
+    private static List<string> ResolveSlideImages(
+        DataTable images,
+        string slideNumber,
+        string baseImagesFolder,
+        string composedImagesFolder)
+    {
+        var results = new List<string>();
+
+        // 1) If Images tab has explicit files for this slide, use them first
+        var rows = images.AsEnumerable()
+            .Where(r => Get(r, "Slide Number").Equals(slideNumber, StringComparison.OrdinalIgnoreCase));
+
+        foreach (var r in rows)
+        {
+            var full = PathCombineSafe(Get(r, "Image Path"), Get(r, "Image File Name"));
+            if (!string.IsNullOrWhiteSpace(full) && File.Exists(full))
+                results.Add(full);
+            else
+            {
+                // Try to resolve by filename against our known folders
+                var name = Get(r, "Image File Name");
+                if (!string.IsNullOrWhiteSpace(name))
+                {
+                    var c1 = Path.Combine(composedImagesFolder ?? "", name);
+                    var c2 = Path.Combine(baseImagesFolder ?? "", name);
+                    if (File.Exists(c1)) results.Add(c1);
+                    else if (File.Exists(c2)) results.Add(c2);
+                }
+            }
+        }
+
+        // 2) If none found, fallback: any image in the folders that looks like this slide
+        if (results.Count == 0)
+        {
+            var all = new List<string>();
+            if (Directory.Exists(composedImagesFolder))
+                all.AddRange(Directory.GetFiles(composedImagesFolder, "*.*").Where(IsImage));
+            if (Directory.Exists(baseImagesFolder))
+                all.AddRange(Directory.GetFiles(baseImagesFolder, "*.*").Where(IsImage));
+
+            // heuristic: filenames containing "_S<slideNumber>" or "-S<slideNumber>"
+            var tag = $"S{slideNumber}";
+            var guess = all.FirstOrDefault(p => ContainsAny(Path.GetFileNameWithoutExtension(p) ?? "", tag));
+            if (!string.IsNullOrEmpty(guess)) results.Add(guess);
+        }
+
+        return results;
+    }
+
+    // --- DataTable extension ---
+    private static DataTable CopyToDataTableOrEmpty(this IOrderedEnumerable<DataRow> rows)
+    {
+        var list = rows.ToList();
+        if (list.Count == 0) return new DataTable();
+        return list.CopyToDataTable();
+    }
 }
