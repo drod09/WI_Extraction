@@ -1,0 +1,294 @@
+mainwindow.xaml
+<Window x:Class="WorkInstructionLabeler.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Work Instruction Labeler" Height="900" Width="1600"
+        WindowState="Maximized">
+    <Window.Resources>
+        <!-- Unlabeled text box style -->
+        <Style x:Key="UnlabeledBox" TargetType="Border">
+            <Setter Property="Background" Value="#FFF3E0"/>
+            <Setter Property="BorderBrush" Value="#FF6F00"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="CornerRadius" Value="3"/>
+        </Style>
+
+        <!-- WI Number style -->
+        <Style x:Key="WINumberBox" TargetType="Border">
+            <Setter Property="Background" Value="#C8E6C9"/>
+            <Setter Property="BorderBrush" Value="#4CAF50"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="CornerRadius" Value="3"/>
+        </Style>
+
+        <!-- Title style -->
+        <Style x:Key="TitleBox" TargetType="Border">
+            <Setter Property="Background" Value="#BBDEFB"/>
+            <Setter Property="BorderBrush" Value="#2196F3"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="CornerRadius" Value="3"/>
+        </Style>
+
+        <!-- Revision style -->
+        <Style x:Key="RevisionBox" TargetType="Border">
+            <Setter Property="Background" Value="#FFE0B2"/>
+            <Setter Property="BorderBrush" Value="#FF9800"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="CornerRadius" Value="3"/>
+        </Style>
+
+        <!-- BOM style -->
+        <Style x:Key="BOMBox" TargetType="Border">
+            <Setter Property="Background" Value="#E1BEE7"/>
+            <Setter Property="BorderBrush" Value="#9C27B0"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="CornerRadius" Value="3"/>
+        </Style>
+
+        <!-- Operation style -->
+        <Style x:Key="OperationBox" TargetType="Border">
+            <Setter Property="Background" Value="#FFCDD2"/>
+            <Setter Property="BorderBrush" Value="#F44336"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="CornerRadius" Value="3"/>
+        </Style>
+
+        <!-- Product Line style -->
+        <Style x:Key="ProductLineBox" TargetType="Border">
+            <Setter Property="Background" Value="#B2EBF2"/>
+            <Setter Property="BorderBrush" Value="#00BCD4"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="CornerRadius" Value="3"/>
+        </Style>
+
+        <!-- Subject style -->
+        <Style x:Key="SubjectBox" TargetType="Border">
+            <Setter Property="Background" Value="#DCEDC8"/>
+            <Setter Property="BorderBrush" Value="#8BC34A"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="CornerRadius" Value="3"/>
+        </Style>
+
+        <!-- Template Revision style -->
+        <Style x:Key="TemplateRevisionBox" TargetType="Border">
+            <Setter Property="Background" Value="#CFD8DC"/>
+            <Setter Property="BorderBrush" Value="#607D8B"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="CornerRadius" Value="3"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Top Bar -->
+        <Border Grid.Row="0" Background="#1976D2" Padding="15">
+            <StackPanel>
+                <TextBlock Text="Work Instruction Labeler - ML Training Tool" 
+                           FontSize="24" FontWeight="Bold" Foreground="White"/>
+                <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                    <Button x:Name="btnLoadFolder" Content="📁 Load Folder" Click="BtnLoadFolder_Click"
+                            Width="150" Height="35" Margin="0,0,10,0" FontSize="14" FontWeight="Bold"/>
+                    <TextBlock x:Name="txtProgress" Text="No files loaded" 
+                               Foreground="White" VerticalAlignment="Center" Margin="20,0,0,0" FontSize="14"/>
+                    <ProgressBar x:Name="progressBar" Width="200" Height="20" Margin="20,0,0,0"/>
+                    <TextBlock x:Name="txtRevType" Text="Template: Unknown" 
+                               Foreground="White" VerticalAlignment="Center" Margin="20,0,0,0" FontSize="14" FontWeight="Bold"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Main Content -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="250"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="250"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left Panel - File List -->
+            <Border Grid.Column="0" Background="#F5F5F5" BorderBrush="#BDBDBD" BorderThickness="0,0,1,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Text="PowerPoint Files" FontSize="16" FontWeight="Bold" 
+                   Margin="10" Grid.Row="0"/>
+
+                    <ListBox x:Name="lstFiles" Grid.Row="1" Margin="10" 
+                 SelectionChanged="LstFiles_SelectionChanged" DisplayMemberPath="FileName"/>
+                </Grid>
+            </Border>
+
+            <!-- Center Panel - Slide Canvas -->
+            <Grid Grid.Column="1" Background="#EEEEEE">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- File Name -->
+                <Border Grid.Row="0" Background="White" Padding="10" Margin="10,10,10,0">
+                    <TextBlock x:Name="txtFileName" Text="No file selected" 
+                               FontSize="18" FontWeight="Bold"/>
+                </Border>
+
+                <!-- Slide Canvas -->
+                <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" 
+                              VerticalScrollBarVisibility="Auto" Margin="10">
+                    <Border Background="White" BorderBrush="#BDBDBD" BorderThickness="1">
+                        <Canvas x:Name="slideCanvas" Width="960" Height="720"/>
+                    </Border>
+                </ScrollViewer>
+
+                <!-- Navigation Controls -->
+                <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="10">
+                    <Button x:Name="btnPrevSlide" Content="◀ Previous" Click="BtnPrevSlide_Click"
+                            Width="120" Height="40" Margin="5" FontSize="14"/>
+                    <TextBlock x:Name="txtSlideInfo" Text="Slide 1 of 1" 
+                               VerticalAlignment="Center" FontSize="16" FontWeight="Bold" Margin="20,0"/>
+                    <Button x:Name="btnNextSlide" Content="Next ▶" Click="BtnNextSlide_Click"
+                            Width="120" Height="40" Margin="5" FontSize="14"/>
+                </StackPanel>
+
+                <!-- Zoom Controls -->
+                <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="10">
+                    <Button x:Name="btnZoomOut" Content="🔍−" Click="BtnZoomOut_Click"
+                            Width="50" Height="35" Margin="5" FontSize="14"/>
+                    <TextBlock x:Name="txtZoom" Text="100%" VerticalAlignment="Center" 
+                               FontSize="14" FontWeight="Bold" Margin="10,0"/>
+                    <Button x:Name="btnZoomIn" Content="🔍+" Click="BtnZoomIn_Click"
+                            Width="50" Height="35" Margin="5" FontSize="14"/>
+                    <Button x:Name="btnZoomFit" Content="Fit" Click="BtnZoomFit_Click"
+                            Width="60" Height="35" Margin="5" FontSize="14"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Right Panel - Labels and Controls -->
+            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="10" Width="230">
+                    <TextBlock Text="Slide Classification" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+
+                    <!-- Slide Type Buttons -->
+                    <Border Background="#E3F2FD" Padding="10" Margin="0,0,0,20" CornerRadius="5">
+                        <StackPanel>
+                            <TextBlock Text="Classify Current Slide:" FontWeight="Bold" Margin="0,0,0,5"/>
+                            <TextBlock x:Name="txtCurrentSlideType" Text="Not classified" 
+                                       Foreground="Gray" Margin="0,0,0,10" FontStyle="Italic"/>
+
+                            <Button x:Name="btnTypeTitlePage" Content="Title Page" Click="BtnSlideType_Click" Tag="TitlePage"
+                                    Height="35" Margin="0,0,0,5" Background="#1976D2" Foreground="White" FontSize="12"/>
+                            <Button x:Name="btnTypePartsEquip" Content="Parts Equipment" Click="BtnSlideType_Click" Tag="PartsAndEquipment"
+                                    Height="35" Margin="0,0,0,5" Background="#1976D2" Foreground="White" FontSize="12"/>
+                            <Button x:Name="btnTypeExplodedView" Content="Exploded View" Click="BtnSlideType_Click" Tag="ExplodedView"
+                                    Height="35" Margin="0,0,0,5" Background="#1976D2" Foreground="White" FontSize="12"/>
+                            <Button x:Name="btnTypeApprovedSwabs" Content="Approved Swabs" Click="BtnSlideType_Click" Tag="ApprovedSwabs"
+                                    Height="35" Margin="0,0,0,5" Background="#1976D2" Foreground="White" FontSize="12"/>
+                            <Button x:Name="btnTypeRefImage" Content="Reference Image" Click="BtnSlideType_Click" Tag="ReferenceImage"
+                                    Height="35" Margin="0,0,0,5" Background="#1976D2" Foreground="White" FontSize="12"/>
+                            <Button x:Name="btnTypeAcceptGood" Content="Accept/Good Checklist" Click="BtnSlideType_Click" Tag="AcceptGoodChecklist"
+                                    Height="35" Margin="0,0,0,5" Background="#1976D2" Foreground="White" FontSize="12"/>
+                            <Button x:Name="btnTypeProcedure" Content="Procedure" Click="BtnSlideType_Click" Tag="Procedure"
+                                    Height="35" Margin="0,0,0,5" Background="#1976D2" Foreground="White" FontSize="12"/>
+                            <Button x:Name="btnTypePassGood" Content="Pass/Good Checklist" Click="BtnSlideType_Click" Tag="PassGoodChecklist"
+                                    Height="35" Margin="0,0,0,5" Background="#1976D2" Foreground="White" FontSize="12"/>
+                            <Button x:Name="btnTypeAppendix" Content="Appendix" Click="BtnSlideType_Click" Tag="Appendix"
+                                    Height="35" Margin="0,0,0,5" Background="#1976D2" Foreground="White" FontSize="12"/>
+                            <Button x:Name="btnTypeOther" Content="Other" Click="BtnSlideType_Click" Tag="Other"
+                                    Height="35" Margin="0,0,0,5" Background="#607D8B" Foreground="White" FontSize="12"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Separator Margin="0,10,0,10"/>
+
+                    <TextBlock Text="Text Box Labels (Slide 1 Only)" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+                    <TextBlock Text="Note: Text box labeling only works on Slide 1 for header data" 
+                               TextWrapping="Wrap" FontSize="10" Foreground="Gray" Margin="0,0,0,10"/>
+
+                    <!-- Selected Text Box Info -->
+                    <Border Background="#FFF3E0" Padding="10" Margin="0,0,0,10" CornerRadius="5">
+                        <StackPanel>
+                            <TextBlock Text="Selected Text Box:" FontWeight="Bold" Margin="0,0,0,5"/>
+                            <TextBlock x:Name="txtSelectedText" Text="No selection" TextWrapping="Wrap" 
+                                       MaxHeight="60" FontSize="11"/>
+                            <TextBlock x:Name="txtPosition" Text="" FontSize="9" Foreground="Gray" Margin="0,5,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Text Box Label Buttons -->
+                    <Button x:Name="btnLabelWINumber" Content="WI Number" Click="BtnLabel_Click" Tag="WI_Number"
+                            Height="50" Margin="0,0,0,10" Background="#4CAF50" Foreground="White" 
+                            FontSize="14" FontWeight="Bold"/>
+
+                    <Button x:Name="btnLabelTitle" Content="WI Title" Click="BtnLabel_Click" Tag="WI_Title"
+                            Height="50" Margin="0,0,0,10" Background="#2196F3" Foreground="White" 
+                            FontSize="14" FontWeight="Bold"/>
+
+                    <Button x:Name="btnLabelRevision" Content="Revision" Click="BtnLabel_Click" Tag="Revision"
+                            Height="50" Margin="0,0,0,10" Background="#FF9800" Foreground="White" 
+                            FontSize="14" FontWeight="Bold"/>
+
+                    <Button x:Name="btnLabelBOM" Content="BOM/ASSY DWG NO" Click="BtnLabel_Click" Tag="BOM_ASSY_DWG_NO"
+                            Height="50" Margin="0,0,0,10" Background="#9C27B0" Foreground="White" 
+                            FontSize="14" FontWeight="Bold"/>
+
+                    <Button x:Name="btnLabelOperation" Content="Operation No" Click="BtnLabel_Click" Tag="Operation_No"
+                            Height="50" Margin="0,0,0,10" Background="#F44336" Foreground="White" 
+                            FontSize="14" FontWeight="Bold"/>
+
+                    <Button x:Name="btnLabelProductLine" Content="Product Line" Click="BtnLabel_Click" Tag="Product_Line"
+                            Height="50" Margin="0,0,0,10" Background="#00BCD4" Foreground="White" 
+                            FontSize="14" FontWeight="Bold"/>
+
+                    <Button x:Name="btnLabelSubject" Content="Subject" Click="BtnLabel_Click" Tag="Subject"
+                            Height="50" Margin="0,0,0,10" Background="#8BC34A" Foreground="White" 
+                            FontSize="14" FontWeight="Bold"/>
+
+                    <Button x:Name="btnLabelTemplateRev" Content="Template Revision" Click="BtnLabel_Click" Tag="Template_Revision"
+                            Height="50" Margin="0,0,0,10" Background="#607D8B" Foreground="White" 
+                            FontSize="14" FontWeight="Bold"/>
+
+                    <Separator Margin="0,10,0,10"/>
+
+                    <!-- Control Buttons -->
+                    <Button x:Name="btnClearLabel" Content="Clear Label" Click="BtnClearLabel_Click"
+                            Height="40" Margin="0,0,0,10" Background="#FF5252" Foreground="White" 
+                            FontSize="14" FontWeight="Bold"/>
+
+                    <Button x:Name="btnHideBox" Content="Hide Text Box" Click="BtnHideBox_Click"
+                            Height="40" Margin="0,0,0,10" Background="#757575" Foreground="White" 
+                            FontSize="14" FontWeight="Bold"/>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+
+        <!-- Bottom Bar -->
+        <Border Grid.Row="2" Background="#F5F5F5" BorderBrush="#BDBDBD" BorderThickness="0,1,0,0" Padding="15">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <Button x:Name="btnMarkComplete" Content="✓ Mark File Complete" Click="BtnMarkComplete_Click"
+                        Height="45" Width="200" Margin="5" Background="#4CAF50" Foreground="White" 
+                        FontWeight="Bold" FontSize="14"/>
+
+                <Button x:Name="btnLoadTrainingData" Content="📂 Load Training Data" Click="BtnLoadTrainingData_Click"
+                        Height="45" Width="200" Margin="5" Background="#673AB7" Foreground="White" 
+                        FontWeight="Bold" FontSize="14"/>
+
+                <Button x:Name="btnSaveTrainingData" Content="💾 Save Training Data" Click="BtnSaveTrainingData_Click"
+                        Height="45" Width="200" Margin="5" Background="#2196F3" Foreground="White" 
+                        FontWeight="Bold" FontSize="14"/>
+
+                <Button x:Name="btnTrainModel" Content="🎓 Train Model" Click="BtnTrainModel_Click"
+                        Height="45" Width="200" Margin="5" Background="#FF9800" Foreground="White" 
+                        FontWeight="Bold" FontSize="14"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>
