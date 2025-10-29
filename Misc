@@ -1,10 +1,200 @@
-private static DataTable SortByRowOrder(DataTable dt)
+// ---------- Slide access ----------
+private static SlidePart GetSlideByIndex(PresentationDocument doc, int oneBasedIndex)
 {
-    if (dt == null || dt.Columns.Count == 0) return dt;
-    if (!dt.Columns.Contains("RowOrder")) return dt;
-
-    var sortedRows = dt.AsEnumerable()
-                       .OrderBy(r => SafeInt(r["RowOrder"]));
-
-    return sortedRows.CopyToDataTableOrEmpty();
+    var sldIdList = doc.PresentationPart.Presentation.SlideIdList;
+    var sldId = sldIdList.ChildElements.OfType<P.SlideId>().ElementAt(oneBasedIndex - 1);
+    var relId = sldId.RelationshipId;
+    return (SlidePart)doc.PresentationPart.GetPartById(relId);
 }
+
+// ---------- Text helpers (no new shapes) ----------
+private static P.Shape GetTitleShape(SlidePart sp)
+{
+    return sp.Slide.Descendants<P.Shape>()
+      .FirstOrDefault(s => s.NonVisualShapeProperties?
+           .ApplicationNonVisualDrawingProperties?
+           .PlaceholderShape?.Type?.Value == PlaceholderValues.Title);
+}
+
+private static P.Shape GetBodyShape(SlidePart sp)
+{
+    return sp.Slide.Descendants<P.Shape>()
+      .FirstOrDefault(s =>
+          s.NonVisualShapeProperties?
+           .ApplicationNonVisualDrawingProperties?
+           .PlaceholderShape != null &&
+          s.NonVisualShapeProperties.ApplicationNonVisualDrawingProperties.PlaceholderShape.Type?.Value != PlaceholderValues.Title);
+}
+
+private static void SetShapeText(P.Shape shape, IEnumerable<string> lines, bool asNumbered = false)
+{
+    if (shape?.TextBody == null) return;
+    shape.TextBody.RemoveAllChildren<A.Paragraph>();
+    int i = 1;
+    foreach (var line in lines)
+    {
+        var run = new A.Run(new A.Text(line ?? string.Empty));
+        var p = new A.Paragraph(run);
+        if (asNumbered)
+        {
+            // simple "1. " prefix
+            p.PrependChild(new A.Run(new A.Text($"{i}. ")));
+            i++;
+        }
+        shape.TextBody.Append(p);
+    }
+    if (!lines.Any()) shape.TextBody.Append(new A.Paragraph(new A.Run(new A.Text(""))));
+}
+
+private static void SetShapeText(P.Shape shape, string text)
+    => SetShapeText(shape, new[] { text ?? string.Empty });
+
+// ---------- Table populate (use existing table frames) ----------
+private static List<A.Table> GetTablesOnSlide(SlidePart sp)
+{
+    return sp.Slide.Descendants<A.Table>().ToList();
+}
+
+private static void FillTableByIndex(SlidePart sp, int tableIndexOneBased, DataTable dt, bool writeHeader = true)
+{
+    if (dt == null) return;
+    var tables = GetTablesOnSlide(sp);
+    if (tableIndexOneBased < 1 || tableIndexOneBased > tables.Count) return;
+
+    var tbl = tables[tableIndexOneBased - 1];
+
+    // 1) Clear all rows
+    tbl.RemoveAllChildren<A.TableRow>();
+
+    // 2) Header row
+    if (writeHeader)
+    {
+        var header = new A.TableRow() { Height = 370840L };
+        foreach (DataColumn col in dt.Columns)
+            header.Append(MakeTableCell(col.ColumnName, bold: true));
+        tbl.Append(header);
+    }
+
+    // 3) Data rows
+    foreach (DataRow dr in dt.Rows)
+    {
+        var row = new A.TableRow() { Height = 370840L };
+        foreach (DataColumn col in dt.Columns)
+            row.Append(MakeTableCell(dr[col]?.ToString() ?? ""));
+        tbl.Append(row);
+    }
+}
+
+private static A.TableCell MakeTableCell(string text, bool bold = false)
+{
+    var rp = new A.RunProperties();
+    if (bold) rp.Bold = true;
+
+    var tc = new A.TableCell(
+        new A.TextBody(
+            new A.BodyProperties(),
+            new A.Paragraph(new A.Run(rp, new A.Text(text ?? "")))
+        ),
+        new A.TableCellProperties()
+    );
+    tc.TextBody.Append(new A.Paragraph()); // end para required
+    return tc;
+}
+
+// ---------- Replace image in existing picture ----------
+private static void ReplaceFirstPictureImage(SlidePart sp, string imagePath)
+{
+    if (string.IsNullOrWhiteSpace(imagePath) || !File.Exists(imagePath)) return;
+
+    var blip = sp.Slide.Descendants<A.Blip>().FirstOrDefault();
+    if (blip == null) return;
+
+    // if a picture already exists, reuse its part if possible; else add a new image part and rebind
+    var oldRelId = blip.Embed?.Value;
+    if (!string.IsNullOrEmpty(oldRelId) && sp.TryGetPartById(oldRelId, out var existingPart) && existingPart is ImagePart imgPartExisting)
+    {
+        using var fs = File.OpenRead(imagePath);
+        imgPartExisting.FeedData(fs);
+    }
+    else
+    {
+        var type = Path.GetExtension(imagePath).ToLowerInvariant() switch
+        {
+            ".png" => ImagePartType.Png,
+            ".jpg" or ".jpeg" => ImagePartType.Jpeg,
+            ".bmp" => ImagePartType.Bmp,
+            ".gif" => ImagePartType.Gif,
+            _ => ImagePartType.Png
+        };
+        var newImg = sp.AddImagePart(type);
+        using var fs = File.OpenRead(imagePath);
+        newImg.FeedData(fs);
+        blip.Embed = sp.GetIdOfPart(newImg);
+    }
+}
+
+----------
+
+public static void PopulateExistingTemplate(string templatePptx, string outPptx, WiPayload payload)
+{
+    File.Copy(templatePptx, outPptx, true);
+    using var doc = PresentationDocument.Open(outPptx, true);
+
+    // Slide 1: Title + 4 existing tables (BOM/CONFIG, REV HISTORY, DRAFTING, APPROVALS)
+    var s1 = GetSlideByIndex(doc, 1);
+    SetShapeText(GetTitleShape(s1), $"{payload.WiNumber} — {payload.Title}");
+    // If you have small badges for IPE/ER/ECO on this slide, target those shapes by index or seed text:
+    // (example) SetShapeText(FindShapeByContainsText(s1, "IPE"), payload.IPE);
+
+    FillTableByIndex(s1, 1, payload.BomConfiguration); // table #1
+    FillTableByIndex(s1, 2, payload.RevisionHistory);  // table #2
+    FillTableByIndex(s1, 3, payload.Drafting);         // table #3
+    FillTableByIndex(s1, 4, payload.Approvals);        // table #4
+
+    // Slide 2: Parts & Equipment (2 existing tables)
+    var s2 = GetSlideByIndex(doc, 2);
+    SetShapeText(GetTitleShape(s2), "PARTS AND EQUIPMENT REQUIREMENT");
+    FillTableByIndex(s2, 1, payload.EquipmentRequired);
+    FillTableByIndex(s2, 2, payload.PartsRequired);
+
+    // Slide 3: Accept Good Checklist (existing body placeholder)
+    var s3 = GetSlideByIndex(doc, 3);
+    SetShapeText(GetTitleShape(s3), "ACCEPT GOOD CHECKLIST");
+    SetShapeText(GetBodyShape(s3), payload.AcceptGoodChecklist, asNumbered: true);
+
+    // Slide 4: Exploded View — replace existing picture’s image data
+    var s4 = GetSlideByIndex(doc, 4);
+    SetShapeText(GetTitleShape(s4), "REFERENCE IMAGE");
+    ReplaceFirstPictureImage(s4, payload.ReferenceImagePath);
+
+    // Slide 5: Procedures (generic) — put text in body; (any existing pics/table on template stays)
+    var s5 = GetSlideByIndex(doc, 5);
+    if (payload.Procedures?.Any() == true)
+    {
+        // merge all procedure lines for the first generic slide
+        var lines = payload.Procedures.SelectMany(p => p.Lines).ToList();
+        SetShapeText(GetTitleShape(s5), payload.Procedures.First().Heading ?? "PROCEDURE");
+        SetShapeText(GetBodyShape(s5), lines);
+        // If you need multiple procedure slides, duplicate slide 5 in the template beforehand,
+        // then fill slide 6/7/... similarly by index.
+    }
+
+    // Slide 6: Pass Good Checklist
+    var s6 = GetSlideByIndex(doc, 6);
+    SetShapeText(GetTitleShape(s6), "PASS GOOD CHECKLIST");
+    SetShapeText(GetBodyShape(s6), payload.PassGoodChecklist, asNumbered: true);
+
+    // Slide 7: Training Log (existing table)
+    var s7 = GetSlideByIndex(doc, 7);
+    SetShapeText(GetTitleShape(s7), "TRAINING LOG");
+    FillTableByIndex(s7, 1, payload.TrainingLog); // assumes slide 7 contains exactly one table
+
+    doc.PresentationPart.Presentation.Save();
+}
+
+--------
+
+WiPptxImporter.PopulateExistingTemplate(
+    templatePptx: @"C:\Users\U309011\Desktop\Template.pptx",
+    outPptx: Path.Combine(baseFolder, $"{wiNumber}_Imported.pptx"),
+    payload: payload);
