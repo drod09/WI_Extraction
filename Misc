@@ -1,113 +1,39 @@
-// at top of file you should already have:
-using DocumentFormat.OpenXml.Packaging; // needed for PartTypeInfo, ImagePart, etc.
-
-private static void ReplaceFirstPictureImage(SlidePart sp, string imagePath)
+// Replace the text in an existing table cell WITHOUT nuking its formatting.
+// Keeps the cell's first paragraph properties and first run's RunProperties (size, font, color).
+private static void SetCellText(A.Table tbl, int row1, int col1, string text)
 {
-    if (string.IsNullOrWhiteSpace(imagePath) || !File.Exists(imagePath)) return;
+    var row  = tbl.Elements<A.TableRow>().ElementAt(row1 - 1);
+    var cell = row.Elements<A.TableCell>().ElementAt(col1 - 1);
 
-    var blip = sp.Slide.Descendants<A.Blip>().FirstOrDefault();
-    if (blip == null) return;
-
-    // Reuse existing image part if possible
-    var relId = blip.Embed?.Value;
-    if (!string.IsNullOrEmpty(relId) &&
-        sp.TryGetPartById(relId, out var part) &&
-        part is ImagePart imgExisting)
+    var tb = cell.TextBody ?? cell.AppendChild(new A.TextBody(new A.BodyProperties(), new A.Paragraph()));
+    var firstPara = tb.GetFirstChild<A.Paragraph>();
+    if (firstPara == null)
     {
-        using var fs = File.OpenRead(imagePath);
-        imgExisting.FeedData(fs);
-        return;
+        firstPara = tb.AppendChild(new A.Paragraph());
     }
 
-    // Open XML SDK v3.x: use PartTypeInfo (constants under the static ImagePartType class)
-    PartTypeInfo imgType = Path.GetExtension(imagePath).ToLowerInvariant() switch
-    {
-        ".png"          => ImagePartType.Png,
-        ".jpg" or ".jpeg" => ImagePartType.Jpeg,
-        ".bmp"          => ImagePartType.Bmp,
-        ".gif"          => ImagePartType.Gif,
-        _               => ImagePartType.Png
-    };
+    // Keep existing paragraph properties (alignment, spacing, etc.)
+    var paraProps = firstPara.GetFirstChild<A.ParagraphProperties>();
 
-    var newImg = sp.AddImagePart(imgType);
-    using var fs2 = File.OpenRead(imagePath);
-    newImg.FeedData(fs2);
-    blip.Embed = sp.GetIdOfPart(newImg);
+    // Get/create the first run and keep its RunProperties (font size, bold, etc.)
+    var firstRun = firstPara.GetFirstChild<A.Run>();
+    A.RunProperties? runProps = firstRun?.RunProperties?.CloneNode(true) as A.RunProperties;
+
+    // Clear ALL runs from the first paragraph (but keep the paragraph itself & its properties)
+    firstPara.RemoveAllChildren<A.Run>();
+
+    // Write the new text as a single run, reusing the prior RunProperties if available
+    var newRun = new A.Run();
+    if (runProps != null) newRun.RunProperties = runProps;
+    newRun.Text = new A.Text(text ?? string.Empty);
+
+    // Ensure paragraph still has its properties
+    if (paraProps != null && firstPara.GetFirstChild<A.ParagraphProperties>() == null)
+        firstPara.PrependChild(paraProps.CloneNode(true) as A.ParagraphProperties);
+
+    firstPara.AppendChild(newRun);
+
+    // Remove any extra paragraphs that may have been present (keeps formatting predictable)
+    var extraParas = tb.Elements<A.Paragraph>().Skip(1).ToList();
+    foreach (var p in extraParas) p.Remove();
 }
-
-
-
-
-
-
-
-private static void FillThreeColumnTableByTitle(
-    SlidePart sp,
-    string titleContainsUpper,
-    DataTable data,
-    int startRow,
-    string col1Name,
-    string col2Name,
-    string col3Name)
-{
-    if (data == null) return;
-    var tbl = FindTable(sp, titleContainsUpper, fallbackIndex: 1);
-    if (tbl == null) return;
-
-    var rows = tbl.Elements<A.TableRow>().ToList();
-    if (rows.Count < startRow) return;
-
-    // Clear existing data region
-    for (int r = startRow; r <= rows.Count; r++)
-    {
-        SetCellText(tbl, r, 1, "");
-        SetCellText(tbl, r, 2, "");
-        SetCellText(tbl, r, 3, "");
-    }
-
-    int maxRows = rows.Count - (startRow - 1);
-    int write = Math.Min(data.Rows.Count, maxRows);
-
-    string c1 = ResolveThreeColName(data, col1Name);
-    string c2 = ResolveThreeColName(data, col2Name);
-    string c3 = ResolveThreeColName(data, col3Name);
-
-    for (int i = 0; i < write; i++)
-    {
-        var src = data.Rows[i];
-        SetCellText(tbl, startRow + i, 1, SafeGet(src, c1));
-        SetCellText(tbl, startRow + i, 2, SafeGet(src, c2));
-        SetCellText(tbl, startRow + i, 3, SafeGet(src, c3));
-    }
-}
-
-// Column resolver tolerant to common header variants
-private static string ResolveThreeColName(DataTable dt, string preferred)
-{
-    if (dt.Columns.Contains(preferred)) return preferred;
-
-    string up = preferred.ToUpperInvariant();
-    foreach (DataColumn c in dt.Columns)
-    {
-        var cu = c.ColumnName.ToUpperInvariant();
-        if (cu == up) return c.ColumnName;
-
-        if (up == "PARTNUMBER" && (cu == "PART NUMBER" || cu == "PN" || cu == "P/N"))
-            return c.ColumnName;
-        if (up == "QUANTITY" && (cu == "QTY" || cu == "QUANTITY"))
-            return c.ColumnName;
-        if (up == "DESCRIPTION" && (cu.Contains("DESC")))
-            return c.ColumnName;
-    }
-
-    // Fallback: first/second/third column depending on which was asked
-    if (dt.Columns.Count >= 1 && up == "QUANTITY") return dt.Columns[0].ColumnName;
-    if (dt.Columns.Count >= 2 && up == "PARTNUMBER") return dt.Columns[1].ColumnName;
-    if (dt.Columns.Count >= 3 && up == "DESCRIPTION") return dt.Columns[2].ColumnName;
-
-    // Last resort
-    return dt.Columns.Count > 0 ? dt.Columns[0].ColumnName : preferred;
-}
-
-private static string SafeGet(DataRow r, string col)
-    => r?.Table?.Columns.Contains(col) == true ? r[col]?.ToString() ?? "" : "";
