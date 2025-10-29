@@ -1,11 +1,6 @@
 This XML file does not appear to have any style information associated with it. The document tree is shown below.
-<p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" preserve="1" userDrawn="1">
-<p:cSld name="Title Slide">
-<p:bg bwMode="grayWhite">
-<p:bgRef idx="1001">
-<a:schemeClr val="bg1"/>
-</p:bgRef>
-</p:bg>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+<p:cSld>
 <p:spTree>
 <p:nvGrpSpPr>
 <p:cNvPr id="1" name=""/>
@@ -20,620 +15,77 @@ This XML file does not appear to have any style information associated with it. 
 <a:chExt cx="0" cy="0"/>
 </a:xfrm>
 </p:grpSpPr>
-<p:pic>
-<p:nvPicPr>
-<p:cNvPr id="12" name="Picture 11" descr="Shape Description automatically generated">
-<a:extLst>
-<a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}">
-<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{8AE34FE5-EB0F-B2E3-520C-7B4E19F950BE}"/>
-</a:ext>
-</a:extLst>
-</p:cNvPr>
-<p:cNvPicPr>
-<a:picLocks noChangeAspect="1"/>
-</p:cNvPicPr>
-<p:nvPr userDrawn="1"/>
-</p:nvPicPr>
-<p:blipFill rotWithShape="1">
-<a:blip r:embed="rId2">
-<a:extLst>
-<a:ext uri="{28A0092B-C50C-407E-A947-70E740481C1C}">
-<a14:useLocalDpi xmlns:a14="http://schemas.microsoft.com/office/drawing/2010/main" val="0"/>
-</a:ext>
-</a:extLst>
-</a:blip>
-<a:srcRect l="29028" t="1" b="45797"/>
-<a:stretch/>
-</p:blipFill>
-<p:spPr>
-<a:xfrm>
-<a:off x="121343" y="1881764"/>
-<a:ext cx="4867275" cy="3717244"/>
-</a:xfrm>
-<a:prstGeom prst="rect">
-<a:avLst/>
-</a:prstGeom>
-</p:spPr>
-</p:pic>
-<p:grpSp>
-<p:nvGrpSpPr>
-<p:cNvPr id="29" name="Group 28">
-<a:extLst>
-<a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}">
-<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{4E1C128A-DCDC-68A7-CF89-DC5CDDA48B9D}"/>
-</a:ext>
-</a:extLst>
-</p:cNvPr>
-<p:cNvGrpSpPr/>
-<p:nvPr userDrawn="1"/>
-</p:nvGrpSpPr>
-<p:grpSpPr bwMode="blackWhite">
-<a:xfrm>
-<a:off x="121343" y="5308913"/>
-<a:ext cx="8925026" cy="463337"/>
-<a:chOff x="138084" y="4932967"/>
-<a:chExt cx="8869359" cy="463337"/>
-</a:xfrm>
-</p:grpSpPr>
 <p:sp>
 <p:nvSpPr>
-<p:cNvPr id="28" name="Rectangle 776">
+<p:cNvPr id="2" name="Text Placeholder 1">
 <a:extLst>
 <a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}">
-<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{18262EC4-6542-49B8-0A9F-EE0D2FDB7BE1}"/>
+<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{F85B0F4C-23E4-A7E4-A0E8-DADC48B19E52}"/>
 </a:ext>
 </a:extLst>
 </p:cNvPr>
 <p:cNvSpPr>
-<a:spLocks noChangeArrowheads="1"/>
+<a:spLocks noGrp="1"/>
 </p:cNvSpPr>
-<p:nvPr userDrawn="1"/>
+<p:nvPr>
+<p:ph type="body" sz="quarter" idx="14"/>
+</p:nvPr>
 </p:nvSpPr>
-<p:spPr bwMode="blackWhite">
-<a:xfrm>
-<a:off x="138084" y="5119305"/>
-<a:ext cx="8869359" cy="276999"/>
-</a:xfrm>
-<a:prstGeom prst="rect">
-<a:avLst/>
-</a:prstGeom>
-<a:solidFill>
-<a:schemeClr val="accent1">
-<a:alpha val="90000"/>
-</a:schemeClr>
-</a:solidFill>
-<a:ln>
-<a:noFill/>
-</a:ln>
-</p:spPr>
+<p:spPr/>
 <p:txBody>
-<a:bodyPr wrap="square">
-<a:spAutoFit/>
-</a:bodyPr>
+<a:bodyPr/>
 <a:lstStyle/>
 <a:p>
-<a:pPr lvl="0"/>
-<a:r>
-<a:rPr lang="en-US" altLang="en-US" sz="600" b="1">
-<a:solidFill>
-<a:schemeClr val="bg1"/>
-</a:solidFill>
-<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-</a:rPr>
-<a:t>Proprietary Statement: </a:t>
-</a:r>
-<a:r>
-<a:rPr lang="en-US" altLang="en-US" sz="600" b="0">
-<a:solidFill>
-<a:schemeClr val="bg1"/>
-</a:solidFill>
-<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-</a:rPr>
-<a:t>This document includes data that is proprietary to L3Harris Technologies, Inc., Integrated Vision Solutions. No information in this document shall be duplicated, used or disclosed in whole or in part without the written authorization of L3Harris Technologies, Inc., Integrated Vision Solutions. All data contained in this document is subject to this restriction.</a:t>
-</a:r>
-<a:endParaRPr lang="en-US" altLang="en-US" sz="600" b="1">
-<a:solidFill>
-<a:schemeClr val="bg1"/>
-</a:solidFill>
-<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-</a:endParaRPr>
-</a:p>
-</p:txBody>
-</p:sp>
-<p:sp>
-<p:nvSpPr>
-<p:cNvPr id="27" name="Rectangle 777">
-<a:extLst>
-<a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}">
-<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{CF59E0B6-6711-C810-1628-4CCBF083DC9F}"/>
-</a:ext>
-</a:extLst>
-</p:cNvPr>
-<p:cNvSpPr>
-<a:spLocks noChangeArrowheads="1"/>
-</p:cNvSpPr>
-<p:nvPr userDrawn="1"/>
-</p:nvSpPr>
-<p:spPr bwMode="blackWhite">
-<a:xfrm>
-<a:off x="138084" y="4932967"/>
-<a:ext cx="8869359" cy="186338"/>
-</a:xfrm>
-<a:prstGeom prst="rect">
-<a:avLst/>
-</a:prstGeom>
-<a:solidFill>
-<a:schemeClr val="accent1">
-<a:alpha val="90000"/>
-</a:schemeClr>
-</a:solidFill>
-<a:ln>
-<a:noFill/>
-</a:ln>
-</p:spPr>
-<p:txBody>
-<a:bodyPr wrap="square">
-<a:spAutoFit/>
-</a:bodyPr>
-<a:lstStyle>
-<a:lvl1pPr>
-<a:defRPr sz="1200" b="1">
-<a:solidFill>
-<a:schemeClr val="tx1"/>
-</a:solidFill>
-<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-</a:defRPr>
-</a:lvl1pPr>
-<a:lvl2pPr marL="742950" indent="-285750">
-<a:defRPr sz="1200" b="1">
-<a:solidFill>
-<a:schemeClr val="tx1"/>
-</a:solidFill>
-<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-</a:defRPr>
-</a:lvl2pPr>
-<a:lvl3pPr marL="1143000" indent="-228600">
-<a:defRPr sz="1200" b="1">
-<a:solidFill>
-<a:schemeClr val="tx1"/>
-</a:solidFill>
-<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-</a:defRPr>
-</a:lvl3pPr>
-<a:lvl4pPr marL="1600200" indent="-228600">
-<a:defRPr sz="1200" b="1">
-<a:solidFill>
-<a:schemeClr val="tx1"/>
-</a:solidFill>
-<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-</a:defRPr>
-</a:lvl4pPr>
-<a:lvl5pPr marL="2057400" indent="-228600">
-<a:defRPr sz="1200" b="1">
-<a:solidFill>
-<a:schemeClr val="tx1"/>
-</a:solidFill>
-<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-</a:defRPr>
-</a:lvl5pPr>
-<a:lvl6pPr marL="2514600" indent="-228600" eaLnBrk="0" fontAlgn="base" hangingPunct="0">
-<a:spcBef>
-<a:spcPct val="0"/>
-</a:spcBef>
-<a:spcAft>
-<a:spcPct val="0"/>
-</a:spcAft>
-<a:defRPr sz="1200" b="1">
-<a:solidFill>
-<a:schemeClr val="tx1"/>
-</a:solidFill>
-<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-</a:defRPr>
-</a:lvl6pPr>
-<a:lvl7pPr marL="2971800" indent="-228600" eaLnBrk="0" fontAlgn="base" hangingPunct="0">
-<a:spcBef>
-<a:spcPct val="0"/>
-</a:spcBef>
-<a:spcAft>
-<a:spcPct val="0"/>
-</a:spcAft>
-<a:defRPr sz="1200" b="1">
-<a:solidFill>
-<a:schemeClr val="tx1"/>
-</a:solidFill>
-<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-</a:defRPr>
-</a:lvl7pPr>
-<a:lvl8pPr marL="3429000" indent="-228600" eaLnBrk="0" fontAlgn="base" hangingPunct="0">
-<a:spcBef>
-<a:spcPct val="0"/>
-</a:spcBef>
-<a:spcAft>
-<a:spcPct val="0"/>
-</a:spcAft>
-<a:defRPr sz="1200" b="1">
-<a:solidFill>
-<a:schemeClr val="tx1"/>
-</a:solidFill>
-<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-</a:defRPr>
-</a:lvl8pPr>
-<a:lvl9pPr marL="3886200" indent="-228600" eaLnBrk="0" fontAlgn="base" hangingPunct="0">
-<a:spcBef>
-<a:spcPct val="0"/>
-</a:spcBef>
-<a:spcAft>
-<a:spcPct val="0"/>
-</a:spcAft>
-<a:defRPr sz="1200" b="1">
-<a:solidFill>
-<a:schemeClr val="tx1"/>
-</a:solidFill>
-<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-</a:defRPr>
-</a:lvl9pPr>
-</a:lstStyle>
-<a:p>
-<a:r>
-<a:rPr lang="en-US" altLang="en-US" sz="600">
-<a:solidFill>
-<a:schemeClr val="bg1"/>
-</a:solidFill>
-</a:rPr>
-<a:t>Export Notice: </a:t>
-</a:r>
-<a:r>
-<a:rPr lang="en-US" altLang="en-US" sz="600" b="0">
-<a:solidFill>
-<a:schemeClr val="bg1"/>
-</a:solidFill>
-</a:rPr>
-<a:t>This technical data is controlled under the International Traffic in Arms Regulations (ITAR) and may not be exported to a Foreign Person, either in the U.S. or abroad, without proper authorization by the U.S. Department of State.</a:t>
-</a:r>
-<a:r>
-<a:rPr lang="en-US" altLang="en-US" sz="600">
-<a:solidFill>
-<a:schemeClr val="bg1"/>
-</a:solidFill>
-</a:rPr>
-<a:t> </a:t>
-</a:r>
-</a:p>
-</p:txBody>
-</p:sp>
-</p:grpSp>
-<p:sp>
-<p:nvSpPr>
-<p:cNvPr id="5" name="Rectangle 4">
-<a:extLst>
-<a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}">
-<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{21E806F4-7FC4-DC1E-02C6-47216F26C2AF}"/>
-</a:ext>
-</a:extLst>
-</p:cNvPr>
-<p:cNvSpPr>
-<a:spLocks/>
-</p:cNvSpPr>
-<p:nvPr userDrawn="1"/>
-</p:nvSpPr>
-<p:spPr>
-<a:xfrm>
-<a:off x="5537908" y="2523041"/>
-<a:ext cx="3365485" cy="847010"/>
-</a:xfrm>
-<a:prstGeom prst="rect">
-<a:avLst/>
-</a:prstGeom>
-</p:spPr>
-<p:style>
-<a:lnRef idx="2">
-<a:schemeClr val="accent1">
-<a:shade val="15000"/>
-</a:schemeClr>
-</a:lnRef>
-<a:fillRef idx="1">
-<a:schemeClr val="accent1"/>
-</a:fillRef>
-<a:effectRef idx="0">
-<a:schemeClr val="accent1"/>
-</a:effectRef>
-<a:fontRef idx="minor">
-<a:schemeClr val="lt1"/>
-</a:fontRef>
-</p:style>
-<p:txBody>
-<a:bodyPr rtlCol="0" anchor="t"/>
-<a:lstStyle/>
-<a:p>
-<a:pPr algn="ctr"/>
-<a:r>
-<a:rPr lang="en-US" sz="800" b="1"/>
-<a:t>Change effective upon completion of: </a:t>
-</a:r>
-</a:p>
-</p:txBody>
-</p:sp>
-<p:sp>
-<p:nvSpPr>
-<p:cNvPr id="7" name="TextBox 6">
-<a:extLst>
-<a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}">
-<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{B34AB861-A8BC-87D3-87BF-271637DB8ABC}"/>
-</a:ext>
-</a:extLst>
-</p:cNvPr>
-<p:cNvSpPr txBox="1">
-<a:spLocks/>
-</p:cNvSpPr>
-<p:nvPr userDrawn="1"/>
-</p:nvSpPr>
-<p:spPr>
-<a:xfrm>
-<a:off x="5976533" y="2809868"/>
-<a:ext cx="671513" cy="192360"/>
-</a:xfrm>
-<a:prstGeom prst="rect">
-<a:avLst/>
-</a:prstGeom>
-<a:noFill/>
-</p:spPr>
-<p:txBody>
-<a:bodyPr wrap="square" rtlCol="0">
-<a:spAutoFit/>
-</a:bodyPr>
-<a:lstStyle/>
-<a:p>
-<a:r>
-<a:rPr lang="en-US" sz="650">
-<a:solidFill>
-<a:schemeClr val="bg1"/>
-</a:solidFill>
-<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-<a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-</a:rPr>
-<a:t>IPE</a:t>
-</a:r>
-</a:p>
-</p:txBody>
-</p:sp>
-<p:sp>
-<p:nvSpPr>
-<p:cNvPr id="8" name="Rectangle 7">
-<a:extLst>
-<a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}">
-<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{8F73F32A-0A19-10EC-96D8-E51AAA50ECD0}"/>
-</a:ext>
-</a:extLst>
-</p:cNvPr>
-<p:cNvSpPr>
-<a:spLocks/>
-</p:cNvSpPr>
-<p:nvPr userDrawn="1"/>
-</p:nvSpPr>
-<p:spPr>
-<a:xfrm>
-<a:off x="5847270" y="3154734"/>
-<a:ext cx="129918" cy="136164"/>
-</a:xfrm>
-<a:prstGeom prst="rect">
-<a:avLst/>
-</a:prstGeom>
-<a:solidFill>
-<a:schemeClr val="bg1"/>
-</a:solidFill>
-</p:spPr>
-<p:style>
-<a:lnRef idx="2">
-<a:schemeClr val="accent1">
-<a:shade val="15000"/>
-</a:schemeClr>
-</a:lnRef>
-<a:fillRef idx="1">
-<a:schemeClr val="accent1"/>
-</a:fillRef>
-<a:effectRef idx="0">
-<a:schemeClr val="accent1"/>
-</a:effectRef>
-<a:fontRef idx="minor">
-<a:schemeClr val="lt1"/>
-</a:fontRef>
-</p:style>
-<p:txBody>
-<a:bodyPr rtlCol="0" anchor="ctr"/>
-<a:lstStyle/>
-<a:p>
-<a:pPr algn="ctr"/>
 <a:endParaRPr lang="en-US"/>
 </a:p>
 </p:txBody>
 </p:sp>
 <p:sp>
 <p:nvSpPr>
-<p:cNvPr id="9" name="TextBox 8">
+<p:cNvPr id="13" name="Text Placeholder 12">
 <a:extLst>
 <a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}">
-<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{ADB6FE08-3748-7655-D4D9-BF6CB0AC0819}"/>
-</a:ext>
-</a:extLst>
-</p:cNvPr>
-<p:cNvSpPr txBox="1">
-<a:spLocks/>
-</p:cNvSpPr>
-<p:nvPr userDrawn="1"/>
-</p:nvSpPr>
-<p:spPr>
-<a:xfrm>
-<a:off x="5977188" y="3124782"/>
-<a:ext cx="671513" cy="192360"/>
-</a:xfrm>
-<a:prstGeom prst="rect">
-<a:avLst/>
-</a:prstGeom>
-<a:noFill/>
-</p:spPr>
-<p:txBody>
-<a:bodyPr wrap="square" rtlCol="0">
-<a:spAutoFit/>
-</a:bodyPr>
-<a:lstStyle/>
-<a:p>
-<a:r>
-<a:rPr lang="en-US" sz="650">
-<a:solidFill>
-<a:schemeClr val="bg1"/>
-</a:solidFill>
-<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-<a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-</a:rPr>
-<a:t>ER</a:t>
-</a:r>
-</a:p>
-</p:txBody>
-</p:sp>
-<p:sp>
-<p:nvSpPr>
-<p:cNvPr id="10" name="Rectangle 9">
-<a:extLst>
-<a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}">
-<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{B9354D60-22D5-2A5E-10C5-20A8ADF927B6}"/>
+<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{58179169-3818-A586-DA4F-446FD5786187}"/>
 </a:ext>
 </a:extLst>
 </p:cNvPr>
 <p:cNvSpPr>
-<a:spLocks/>
+<a:spLocks noGrp="1"/>
 </p:cNvSpPr>
-<p:nvPr userDrawn="1"/>
+<p:nvPr>
+<p:ph type="body" sz="quarter" idx="37"/>
+</p:nvPr>
 </p:nvSpPr>
-<p:spPr>
-<a:xfrm>
-<a:off x="6518783" y="3154734"/>
-<a:ext cx="129918" cy="136164"/>
-</a:xfrm>
-<a:prstGeom prst="rect">
-<a:avLst/>
-</a:prstGeom>
-<a:solidFill>
-<a:schemeClr val="bg1"/>
-</a:solidFill>
-</p:spPr>
-<p:style>
-<a:lnRef idx="2">
-<a:schemeClr val="accent1">
-<a:shade val="15000"/>
-</a:schemeClr>
-</a:lnRef>
-<a:fillRef idx="1">
-<a:schemeClr val="accent1"/>
-</a:fillRef>
-<a:effectRef idx="0">
-<a:schemeClr val="accent1"/>
-</a:effectRef>
-<a:fontRef idx="minor">
-<a:schemeClr val="lt1"/>
-</a:fontRef>
-</p:style>
+<p:spPr/>
 <p:txBody>
-<a:bodyPr rtlCol="0" anchor="ctr"/>
+<a:bodyPr/>
 <a:lstStyle/>
 <a:p>
-<a:pPr algn="ctr"/>
 <a:endParaRPr lang="en-US"/>
 </a:p>
 </p:txBody>
 </p:sp>
 <p:sp>
 <p:nvSpPr>
-<p:cNvPr id="11" name="TextBox 10">
+<p:cNvPr id="14" name="Text Placeholder 13">
 <a:extLst>
 <a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}">
-<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{D4D239F6-FAEE-74DA-642A-D133DB982C45}"/>
-</a:ext>
-</a:extLst>
-</p:cNvPr>
-<p:cNvSpPr txBox="1">
-<a:spLocks/>
-</p:cNvSpPr>
-<p:nvPr userDrawn="1"/>
-</p:nvSpPr>
-<p:spPr>
-<a:xfrm>
-<a:off x="6648701" y="3124782"/>
-<a:ext cx="671513" cy="192360"/>
-</a:xfrm>
-<a:prstGeom prst="rect">
-<a:avLst/>
-</a:prstGeom>
-<a:noFill/>
-</p:spPr>
-<p:txBody>
-<a:bodyPr wrap="square" rtlCol="0">
-<a:spAutoFit/>
-</a:bodyPr>
-<a:lstStyle/>
-<a:p>
-<a:r>
-<a:rPr lang="en-US" sz="650">
-<a:solidFill>
-<a:schemeClr val="bg1"/>
-</a:solidFill>
-<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-<a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-</a:rPr>
-<a:t>ECO</a:t>
-</a:r>
-</a:p>
-</p:txBody>
-</p:sp>
-<p:sp>
-<p:nvSpPr>
-<p:cNvPr id="13" name="Rectangle 12">
-<a:extLst>
-<a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}">
-<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{0689D1FE-68BF-E417-F6CA-5A4C9A23CD63}"/>
+<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{3BDACC70-32B3-BC6B-C470-5B516E60DA01}"/>
 </a:ext>
 </a:extLst>
 </p:cNvPr>
 <p:cNvSpPr>
-<a:spLocks/>
+<a:spLocks noGrp="1"/>
 </p:cNvSpPr>
-<p:nvPr userDrawn="1"/>
+<p:nvPr>
+<p:ph type="body" sz="quarter" idx="38"/>
+</p:nvPr>
 </p:nvSpPr>
-<p:spPr>
-<a:xfrm>
-<a:off x="7190296" y="3140434"/>
-<a:ext cx="1656827" cy="154703"/>
-</a:xfrm>
-<a:prstGeom prst="rect">
-<a:avLst/>
-</a:prstGeom>
-<a:solidFill>
-<a:schemeClr val="bg1"/>
-</a:solidFill>
-<a:ln>
-<a:noFill/>
-</a:ln>
-</p:spPr>
-<p:style>
-<a:lnRef idx="2">
-<a:schemeClr val="accent1">
-<a:shade val="15000"/>
-</a:schemeClr>
-</a:lnRef>
-<a:fillRef idx="1">
-<a:schemeClr val="accent1"/>
-</a:fillRef>
-<a:effectRef idx="0">
-<a:schemeClr val="accent1"/>
-</a:effectRef>
-<a:fontRef idx="minor">
-<a:schemeClr val="lt1"/>
-</a:fontRef>
-</p:style>
+<p:spPr/>
 <p:txBody>
-<a:bodyPr rtlCol="0" anchor="ctr"/>
+<a:bodyPr/>
 <a:lstStyle/>
 <a:p>
-<a:pPr algn="ctr"/>
 <a:endParaRPr lang="en-US"/>
 </a:p>
 </p:txBody>
@@ -643,7 +95,7 @@ This XML file does not appear to have any style information associated with it. 
 <p:cNvPr id="15" name="Text Placeholder 14">
 <a:extLst>
 <a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}">
-<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{EA22EF1F-EF9D-BE5D-F3FF-92E2B98D1A6F}"/>
+<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{55EA8C3A-F164-EE6D-3550-9A046E0FC755}"/>
 </a:ext>
 </a:extLst>
 </p:cNvPr>
@@ -651,107 +103,24 @@ This XML file does not appear to have any style information associated with it. 
 <a:spLocks noGrp="1"/>
 </p:cNvSpPr>
 <p:nvPr>
-<p:ph type="body" sz="quarter" idx="14" hasCustomPrompt="1"/>
+<p:ph type="body" sz="quarter" idx="39"/>
 </p:nvPr>
 </p:nvSpPr>
-<p:spPr>
-<a:xfrm>
-<a:off x="7191355" y="3131889"/>
-<a:ext cx="1647825" cy="148677"/>
-</a:xfrm>
-<a:prstGeom prst="rect">
-<a:avLst/>
-</a:prstGeom>
-</p:spPr>
+<p:spPr/>
 <p:txBody>
-<a:bodyPr anchor="ctr"/>
-<a:lstStyle>
-<a:lvl1pPr marL="0" indent="0">
-<a:buNone/>
-<a:defRPr sz="900">
-<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-<a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-</a:defRPr>
-</a:lvl1pPr>
-<a:lvl2pPr>
-<a:defRPr sz="800"/>
-</a:lvl2pPr>
-<a:lvl3pPr>
-<a:defRPr sz="700"/>
-</a:lvl3pPr>
-<a:lvl4pPr>
-<a:defRPr sz="600"/>
-</a:lvl4pPr>
-<a:lvl5pPr>
-<a:defRPr sz="600"/>
-</a:lvl5pPr>
-</a:lstStyle>
-<a:p>
-<a:pPr lvl="0"/>
-<a:r>
-<a:rPr lang="en-US"/>
-<a:t>Enter number here…</a:t>
-</a:r>
-</a:p>
-</p:txBody>
-</p:sp>
-<p:sp>
-<p:nvSpPr>
-<p:cNvPr id="42" name="Rectangle 41">
-<a:extLst>
-<a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}">
-<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{B3E38BD7-352E-1A77-FD10-3A28E6FA4C08}"/>
-</a:ext>
-</a:extLst>
-</p:cNvPr>
-<p:cNvSpPr>
-<a:spLocks/>
-</p:cNvSpPr>
-<p:nvPr userDrawn="1"/>
-</p:nvSpPr>
-<p:spPr>
-<a:xfrm>
-<a:off x="5847270" y="2835586"/>
-<a:ext cx="129918" cy="136164"/>
-</a:xfrm>
-<a:prstGeom prst="rect">
-<a:avLst/>
-</a:prstGeom>
-<a:solidFill>
-<a:schemeClr val="bg1"/>
-</a:solidFill>
-</p:spPr>
-<p:style>
-<a:lnRef idx="2">
-<a:schemeClr val="accent1">
-<a:shade val="15000"/>
-</a:schemeClr>
-</a:lnRef>
-<a:fillRef idx="1">
-<a:schemeClr val="accent1"/>
-</a:fillRef>
-<a:effectRef idx="0">
-<a:schemeClr val="accent1"/>
-</a:effectRef>
-<a:fontRef idx="minor">
-<a:schemeClr val="lt1"/>
-</a:fontRef>
-</p:style>
-<p:txBody>
-<a:bodyPr rtlCol="0" anchor="ctr"/>
+<a:bodyPr/>
 <a:lstStyle/>
 <a:p>
-<a:pPr algn="ctr"/>
 <a:endParaRPr lang="en-US"/>
 </a:p>
 </p:txBody>
 </p:sp>
 <p:sp>
 <p:nvSpPr>
-<p:cNvPr id="55" name="Text Placeholder 14">
+<p:cNvPr id="20" name="Text Placeholder 19">
 <a:extLst>
 <a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}">
-<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{1F04910C-83D2-978F-D6C5-E31ED2D7C8CD}"/>
+<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{D066533E-222B-B96C-1398-5793DD349371}"/>
 </a:ext>
 </a:extLst>
 </p:cNvPr>
@@ -759,342 +128,4673 @@ This XML file does not appear to have any style information associated with it. 
 <a:spLocks noGrp="1"/>
 </p:cNvSpPr>
 <p:nvPr>
-<p:ph type="body" sz="quarter" idx="37" hasCustomPrompt="1"/>
+<p:ph type="body" sz="quarter" idx="53"/>
 </p:nvPr>
 </p:nvSpPr>
-<p:spPr>
-<a:xfrm>
-<a:off x="5797928" y="2803023"/>
-<a:ext cx="228601" cy="186338"/>
-</a:xfrm>
-<a:prstGeom prst="rect">
-<a:avLst/>
-</a:prstGeom>
-</p:spPr>
+<p:spPr/>
 <p:txBody>
 <a:bodyPr/>
-<a:lstStyle>
-<a:lvl1pPr marL="0" indent="0">
-<a:buNone/>
-<a:defRPr sz="900">
-<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-<a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-</a:defRPr>
-</a:lvl1pPr>
-<a:lvl2pPr>
-<a:defRPr sz="800"/>
-</a:lvl2pPr>
-<a:lvl3pPr>
-<a:defRPr sz="700"/>
-</a:lvl3pPr>
-<a:lvl4pPr>
-<a:defRPr sz="600"/>
-</a:lvl4pPr>
-<a:lvl5pPr>
-<a:defRPr sz="600"/>
-</a:lvl5pPr>
-</a:lstStyle>
-<a:p>
-<a:pPr lvl="0"/>
-<a:r>
-<a:rPr lang="en-US"/>
-<a:t> </a:t>
-</a:r>
-</a:p>
-</p:txBody>
-</p:sp>
-<p:sp>
-<p:nvSpPr>
-<p:cNvPr id="56" name="Text Placeholder 14">
-<a:extLst>
-<a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}">
-<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{3294FBDE-9F51-E1AD-8652-D7DA2DD54AA9}"/>
-</a:ext>
-</a:extLst>
-</p:cNvPr>
-<p:cNvSpPr>
-<a:spLocks noGrp="1"/>
-</p:cNvSpPr>
-<p:nvPr>
-<p:ph type="body" sz="quarter" idx="38" hasCustomPrompt="1"/>
-</p:nvPr>
-</p:nvSpPr>
-<p:spPr>
-<a:xfrm>
-<a:off x="5798583" y="3117937"/>
-<a:ext cx="228601" cy="186338"/>
-</a:xfrm>
-<a:prstGeom prst="rect">
-<a:avLst/>
-</a:prstGeom>
-</p:spPr>
-<p:txBody>
-<a:bodyPr/>
-<a:lstStyle>
-<a:lvl1pPr marL="0" indent="0">
-<a:buNone/>
-<a:defRPr sz="900">
-<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-<a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-</a:defRPr>
-</a:lvl1pPr>
-<a:lvl2pPr>
-<a:defRPr sz="800"/>
-</a:lvl2pPr>
-<a:lvl3pPr>
-<a:defRPr sz="700"/>
-</a:lvl3pPr>
-<a:lvl4pPr>
-<a:defRPr sz="600"/>
-</a:lvl4pPr>
-<a:lvl5pPr>
-<a:defRPr sz="600"/>
-</a:lvl5pPr>
-</a:lstStyle>
-<a:p>
-<a:pPr lvl="0"/>
-<a:r>
-<a:rPr lang="en-US"/>
-<a:t> </a:t>
-</a:r>
-</a:p>
-</p:txBody>
-</p:sp>
-<p:sp>
-<p:nvSpPr>
-<p:cNvPr id="57" name="Text Placeholder 14">
-<a:extLst>
-<a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}">
-<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{6DAF707D-29F4-AA02-AA3E-D49A31448E23}"/>
-</a:ext>
-</a:extLst>
-</p:cNvPr>
-<p:cNvSpPr>
-<a:spLocks noGrp="1"/>
-</p:cNvSpPr>
-<p:nvPr>
-<p:ph type="body" sz="quarter" idx="39" hasCustomPrompt="1"/>
-</p:nvPr>
-</p:nvSpPr>
-<p:spPr>
-<a:xfrm>
-<a:off x="6472376" y="3122569"/>
-<a:ext cx="228601" cy="186338"/>
-</a:xfrm>
-<a:prstGeom prst="rect">
-<a:avLst/>
-</a:prstGeom>
-</p:spPr>
-<p:txBody>
-<a:bodyPr/>
-<a:lstStyle>
-<a:lvl1pPr marL="0" indent="0">
-<a:buNone/>
-<a:defRPr sz="900">
-<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-<a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-</a:defRPr>
-</a:lvl1pPr>
-<a:lvl2pPr>
-<a:defRPr sz="800"/>
-</a:lvl2pPr>
-<a:lvl3pPr>
-<a:defRPr sz="700"/>
-</a:lvl3pPr>
-<a:lvl4pPr>
-<a:defRPr sz="600"/>
-</a:lvl4pPr>
-<a:lvl5pPr>
-<a:defRPr sz="600"/>
-</a:lvl5pPr>
-</a:lstStyle>
-<a:p>
-<a:pPr lvl="0"/>
-<a:r>
-<a:rPr lang="en-US"/>
-<a:t> </a:t>
-</a:r>
-</a:p>
-</p:txBody>
-</p:sp>
-<p:sp>
-<p:nvSpPr>
-<p:cNvPr id="69" name="Rectangle 68">
-<a:extLst>
-<a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}">
-<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{016F1156-2393-7D8B-3A43-9B6688A25E92}"/>
-</a:ext>
-</a:extLst>
-</p:cNvPr>
-<p:cNvSpPr/>
-<p:nvPr userDrawn="1"/>
-</p:nvSpPr>
-<p:spPr>
-<a:xfrm>
-<a:off x="4033614" y="6344835"/>
-<a:ext cx="4007979" cy="218333"/>
-</a:xfrm>
-<a:prstGeom prst="rect">
-<a:avLst/>
-</a:prstGeom>
-<a:noFill/>
-<a:ln>
-<a:noFill/>
-</a:ln>
-</p:spPr>
-<p:style>
-<a:lnRef idx="2">
-<a:schemeClr val="accent1">
-<a:shade val="50000"/>
-</a:schemeClr>
-</a:lnRef>
-<a:fillRef idx="1">
-<a:schemeClr val="accent1"/>
-</a:fillRef>
-<a:effectRef idx="0">
-<a:schemeClr val="accent1"/>
-</a:effectRef>
-<a:fontRef idx="minor">
-<a:schemeClr val="lt1"/>
-</a:fontRef>
-</p:style>
-<p:txBody>
-<a:bodyPr rtlCol="0" anchor="ctr"/>
 <a:lstStyle/>
+<a:p>
+<a:endParaRPr lang="en-US"/>
+</a:p>
+</p:txBody>
+</p:sp>
+<p:graphicFrame>
+<p:nvGraphicFramePr>
+<p:cNvPr id="21" name="Table 20">
+<a:extLst>
+<a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}">
+<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{945C6AD2-8AE4-E07E-E101-920E4A8F56B3}"/>
+</a:ext>
+</a:extLst>
+</p:cNvPr>
+<p:cNvGraphicFramePr>
+<a:graphicFrameLocks/>
+</p:cNvGraphicFramePr>
+<p:nvPr>
+<p:extLst>
+<p:ext uri="{D42A27DB-BD31-4B8C-83A1-F6EECF244321}">
+<p14:modId xmlns:p14="http://schemas.microsoft.com/office/powerpoint/2010/main" val="1509897251"/>
+</p:ext>
+</p:extLst>
+</p:nvPr>
+</p:nvGraphicFramePr>
+<p:xfrm>
+<a:off x="274320" y="508132"/>
+<a:ext cx="3914775" cy="1311036"/>
+</p:xfrm>
+<a:graphic>
+<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+<a:tbl>
+<a:tblPr firstRow="1" bandRow="1"/>
+<a:tblGrid>
+<a:gridCol w="1433414">
+<a:extLst>
+<a:ext uri="{9D8B030D-6E8A-4147-A177-3AD203B41FA5}">
+<a16:colId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" val="20000"/>
+</a:ext>
+</a:extLst>
+</a:gridCol>
+<a:gridCol w="2481361">
+<a:extLst>
+<a:ext uri="{9D8B030D-6E8A-4147-A177-3AD203B41FA5}">
+<a16:colId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" val="20001"/>
+</a:ext>
+</a:extLst>
+</a:gridCol>
+</a:tblGrid>
+<a:tr h="234079">
+<a:tc gridSpan="2">
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle>
+<a:lvl1pPr marL="0" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" b="1" kern="1200">
+<a:solidFill>
+<a:schemeClr val="lt1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl1pPr>
+<a:lvl2pPr marL="457200" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" b="1" kern="1200">
+<a:solidFill>
+<a:schemeClr val="lt1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl2pPr>
+<a:lvl3pPr marL="914400" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" b="1" kern="1200">
+<a:solidFill>
+<a:schemeClr val="lt1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl3pPr>
+<a:lvl4pPr marL="1371600" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" b="1" kern="1200">
+<a:solidFill>
+<a:schemeClr val="lt1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl4pPr>
+<a:lvl5pPr marL="1828800" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" b="1" kern="1200">
+<a:solidFill>
+<a:schemeClr val="lt1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl5pPr>
+<a:lvl6pPr marL="2286000" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" b="1" kern="1200">
+<a:solidFill>
+<a:schemeClr val="lt1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl6pPr>
+<a:lvl7pPr marL="2743200" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" b="1" kern="1200">
+<a:solidFill>
+<a:schemeClr val="lt1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl7pPr>
+<a:lvl8pPr marL="3200400" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" b="1" kern="1200">
+<a:solidFill>
+<a:schemeClr val="lt1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl8pPr>
+<a:lvl9pPr marL="3657600" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" b="1" kern="1200">
+<a:solidFill>
+<a:schemeClr val="lt1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl9pPr>
+</a:lstStyle>
 <a:p>
 <a:pPr algn="ctr"/>
 <a:r>
 <a:rPr lang="en-US" sz="1000" dirty="0">
 <a:solidFill>
-<a:schemeClr val="tx1"/>
+<a:schemeClr val="bg1"/>
 </a:solidFill>
-<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-<a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
 </a:rPr>
-<a:t>TITLE PAGE</a:t>
+<a:t>BOM / CONFIGURATION TABLE</a:t>
 </a:r>
 </a:p>
-</p:txBody>
-</p:sp>
-<p:sp>
-<p:nvSpPr>
-<p:cNvPr id="3" name="Rectangle 2">
+</a:txBody>
+<a:tcPr marL="68591" marR="68591" marT="45753" marB="45753" anchor="ctr">
+<a:lnL w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc hMerge="1">
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:endParaRPr lang="en-US"/>
+</a:p>
+</a:txBody>
+<a:tcPr>
+<a:lnL w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+</a:tcPr>
+</a:tc>
 <a:extLst>
-<a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}">
-<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{5D2EC0BC-902D-88E8-375F-74EE52B43181}"/>
+<a:ext uri="{0D108BD9-81ED-4DB2-BD59-A6C34878D82A}">
+<a16:rowId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" val="10000"/>
 </a:ext>
 </a:extLst>
-</p:cNvPr>
-<p:cNvSpPr>
-<a:spLocks/>
-</p:cNvSpPr>
-<p:nvPr userDrawn="1"/>
-</p:nvSpPr>
-<p:spPr>
-<a:xfrm>
-<a:off x="7190296" y="2817813"/>
-<a:ext cx="1656827" cy="154703"/>
-</a:xfrm>
-<a:prstGeom prst="rect">
-<a:avLst/>
-</a:prstGeom>
+</a:tr>
+<a:tr h="204827">
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle>
+<a:lvl1pPr marL="0" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl1pPr>
+<a:lvl2pPr marL="457200" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl2pPr>
+<a:lvl3pPr marL="914400" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl3pPr>
+<a:lvl4pPr marL="1371600" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl4pPr>
+<a:lvl5pPr marL="1828800" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl5pPr>
+<a:lvl6pPr marL="2286000" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl6pPr>
+<a:lvl7pPr marL="2743200" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl7pPr>
+<a:lvl8pPr marL="3200400" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl8pPr>
+<a:lvl9pPr marL="3657600" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl9pPr>
+</a:lstStyle>
+<a:p>
+<a:pPr algn="ctr"/>
+<a:r>
+<a:rPr lang="en-US" sz="800">
 <a:solidFill>
 <a:schemeClr val="bg1"/>
 </a:solidFill>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:rPr>
+<a:t>Part Number</a:t>
+</a:r>
+</a:p>
+</a:txBody>
+<a:tcPr marL="68591" marR="68591" marT="45753" marB="45753" anchor="ctr">
+<a:lnL w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="accent5"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle>
+<a:lvl1pPr marL="0" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl1pPr>
+<a:lvl2pPr marL="457200" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl2pPr>
+<a:lvl3pPr marL="914400" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl3pPr>
+<a:lvl4pPr marL="1371600" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl4pPr>
+<a:lvl5pPr marL="1828800" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl5pPr>
+<a:lvl6pPr marL="2286000" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl6pPr>
+<a:lvl7pPr marL="2743200" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl7pPr>
+<a:lvl8pPr marL="3200400" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl8pPr>
+<a:lvl9pPr marL="3657600" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl9pPr>
+</a:lstStyle>
+<a:p>
+<a:pPr algn="ctr"/>
+<a:r>
+<a:rPr lang="en-US" sz="800">
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:rPr>
+<a:t>Description</a:t>
+</a:r>
+</a:p>
+</a:txBody>
+<a:tcPr marL="68591" marR="68591" marT="45753" marB="45753" anchor="ctr">
+<a:lnL w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="accent5"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:extLst>
+<a:ext uri="{0D108BD9-81ED-4DB2-BD59-A6C34878D82A}">
+<a16:rowId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" val="10001"/>
+</a:ext>
+</a:extLst>
+</a:tr>
+<a:tr h="204827">
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr marL="0" marR="0" lvl="0" indent="0" algn="ctr" defTabSz="914400" rtl="0" eaLnBrk="0" fontAlgn="t" latinLnBrk="0" hangingPunct="0">
+<a:lnSpc>
+<a:spcPct val="100000"/>
+</a:lnSpc>
+<a:spcBef>
+<a:spcPct val="0"/>
+</a:spcBef>
+<a:spcAft>
+<a:spcPct val="0"/>
+</a:spcAft>
+<a:buClrTx/>
+<a:buSzTx/>
+<a:buFontTx/>
+<a:buNone/>
+<a:tabLst/>
+</a:pPr>
+<a:endParaRPr kumimoji="0" lang="en-US" sz="800" b="0" i="0" u="none" strike="noStrike" cap="none" normalizeH="0" baseline="0">
 <a:ln>
 <a:noFill/>
 </a:ln>
-</p:spPr>
-<p:style>
-<a:lnRef idx="2">
-<a:schemeClr val="accent1">
-<a:shade val="15000"/>
-</a:schemeClr>
-</a:lnRef>
-<a:fillRef idx="1">
-<a:schemeClr val="accent1"/>
-</a:fillRef>
-<a:effectRef idx="0">
-<a:schemeClr val="accent1"/>
-</a:effectRef>
-<a:fontRef idx="minor">
-<a:schemeClr val="lt1"/>
-</a:fontRef>
-</p:style>
-<p:txBody>
-<a:bodyPr rtlCol="0" anchor="ctr"/>
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:effectLst/>
+<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+</a:endParaRPr>
+</a:p>
+</a:txBody>
+<a:tcPr marL="68591" marR="68591" marT="45753" marB="45753" horzOverflow="overflow">
+<a:lnL w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:srgbClr val="FFFFFF">
+<a:tint val="20000"/>
+</a:srgbClr>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
 <a:lstStyle/>
 <a:p>
-<a:pPr algn="ctr"/>
-<a:endParaRPr lang="en-US"/>
+<a:pPr marL="0" marR="0" lvl="0" indent="0" algn="l" defTabSz="914400" rtl="0" eaLnBrk="0" fontAlgn="t" latinLnBrk="0" hangingPunct="0">
+<a:lnSpc>
+<a:spcPct val="100000"/>
+</a:lnSpc>
+<a:spcBef>
+<a:spcPct val="0"/>
+</a:spcBef>
+<a:spcAft>
+<a:spcPct val="0"/>
+</a:spcAft>
+<a:buClrTx/>
+<a:buSzTx/>
+<a:buFontTx/>
+<a:buNone/>
+<a:tabLst/>
+</a:pPr>
+<a:endParaRPr kumimoji="0" lang="en-US" sz="800" b="0" i="0" u="none" strike="noStrike" cap="none" normalizeH="0" baseline="0" dirty="0">
+<a:ln>
+<a:noFill/>
+</a:ln>
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:effectLst/>
+<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+</a:endParaRPr>
 </a:p>
-</p:txBody>
-</p:sp>
-<p:sp>
-<p:nvSpPr>
-<p:cNvPr id="6" name="Text Placeholder 14">
+</a:txBody>
+<a:tcPr marL="68591" marR="68591" marT="45753" marB="45753" horzOverflow="overflow">
+<a:lnL w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:srgbClr val="FFFFFF">
+<a:tint val="20000"/>
+</a:srgbClr>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:extLst>
+<a:ext uri="{0D108BD9-81ED-4DB2-BD59-A6C34878D82A}">
+<a16:rowId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" val="279194858"/>
+</a:ext>
+</a:extLst>
+</a:tr>
+<a:tr h="204827">
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr marL="0" marR="0" lvl="0" indent="0" algn="ctr" defTabSz="914400" rtl="0" eaLnBrk="0" fontAlgn="t" latinLnBrk="0" hangingPunct="0">
+<a:lnSpc>
+<a:spcPct val="100000"/>
+</a:lnSpc>
+<a:spcBef>
+<a:spcPct val="0"/>
+</a:spcBef>
+<a:spcAft>
+<a:spcPct val="0"/>
+</a:spcAft>
+<a:buClrTx/>
+<a:buSzTx/>
+<a:buFontTx/>
+<a:buNone/>
+<a:tabLst/>
+</a:pPr>
+<a:endParaRPr kumimoji="0" lang="en-US" sz="800" b="0" i="0" u="none" strike="noStrike" cap="none" normalizeH="0" baseline="0">
+<a:ln>
+<a:noFill/>
+</a:ln>
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:effectLst/>
+<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+</a:endParaRPr>
+</a:p>
+</a:txBody>
+<a:tcPr marL="68591" marR="68591" marT="45753" marB="45753" horzOverflow="overflow">
+<a:lnL w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:srgbClr val="FFFFFF">
+<a:tint val="20000"/>
+</a:srgbClr>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr marL="0" marR="0" lvl="0" indent="0" algn="l" defTabSz="914400" rtl="0" eaLnBrk="0" fontAlgn="t" latinLnBrk="0" hangingPunct="0">
+<a:lnSpc>
+<a:spcPct val="100000"/>
+</a:lnSpc>
+<a:spcBef>
+<a:spcPct val="0"/>
+</a:spcBef>
+<a:spcAft>
+<a:spcPct val="0"/>
+</a:spcAft>
+<a:buClrTx/>
+<a:buSzTx/>
+<a:buFontTx/>
+<a:buNone/>
+<a:tabLst/>
+</a:pPr>
+<a:endParaRPr kumimoji="0" lang="en-US" sz="800" b="0" i="0" u="none" strike="noStrike" cap="none" normalizeH="0" baseline="0">
+<a:ln>
+<a:noFill/>
+</a:ln>
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:effectLst/>
+<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+</a:endParaRPr>
+</a:p>
+</a:txBody>
+<a:tcPr marL="68591" marR="68591" marT="45753" marB="45753" horzOverflow="overflow">
+<a:lnL w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:srgbClr val="FFFFFF">
+<a:tint val="20000"/>
+</a:srgbClr>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:extLst>
+<a:ext uri="{0D108BD9-81ED-4DB2-BD59-A6C34878D82A}">
+<a16:rowId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" val="1219619483"/>
+</a:ext>
+</a:extLst>
+</a:tr>
+<a:tr h="204827">
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr marL="0" marR="0" lvl="0" indent="0" algn="ctr" defTabSz="914400" rtl="0" eaLnBrk="0" fontAlgn="t" latinLnBrk="0" hangingPunct="0">
+<a:lnSpc>
+<a:spcPct val="100000"/>
+</a:lnSpc>
+<a:spcBef>
+<a:spcPct val="0"/>
+</a:spcBef>
+<a:spcAft>
+<a:spcPct val="0"/>
+</a:spcAft>
+<a:buClrTx/>
+<a:buSzTx/>
+<a:buFontTx/>
+<a:buNone/>
+<a:tabLst/>
+</a:pPr>
+<a:endParaRPr kumimoji="0" lang="en-US" sz="800" b="0" i="0" u="none" strike="noStrike" cap="none" normalizeH="0" baseline="0">
+<a:ln>
+<a:noFill/>
+</a:ln>
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:effectLst/>
+<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+</a:endParaRPr>
+</a:p>
+</a:txBody>
+<a:tcPr marL="68591" marR="68591" marT="45753" marB="45753" horzOverflow="overflow">
+<a:lnL w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:srgbClr val="FFFFFF">
+<a:tint val="20000"/>
+</a:srgbClr>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr marL="0" marR="0" lvl="0" indent="0" algn="l" defTabSz="914400" rtl="0" eaLnBrk="0" fontAlgn="t" latinLnBrk="0" hangingPunct="0">
+<a:lnSpc>
+<a:spcPct val="100000"/>
+</a:lnSpc>
+<a:spcBef>
+<a:spcPct val="0"/>
+</a:spcBef>
+<a:spcAft>
+<a:spcPct val="0"/>
+</a:spcAft>
+<a:buClrTx/>
+<a:buSzTx/>
+<a:buFontTx/>
+<a:buNone/>
+<a:tabLst/>
+</a:pPr>
+<a:endParaRPr kumimoji="0" lang="en-US" sz="800" b="0" i="0" u="none" strike="noStrike" cap="none" normalizeH="0" baseline="0">
+<a:ln>
+<a:noFill/>
+</a:ln>
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:effectLst/>
+<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+</a:endParaRPr>
+</a:p>
+</a:txBody>
+<a:tcPr marL="68591" marR="68591" marT="45753" marB="45753" horzOverflow="overflow">
+<a:lnL w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:srgbClr val="FFFFFF">
+<a:tint val="20000"/>
+</a:srgbClr>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:extLst>
+<a:ext uri="{0D108BD9-81ED-4DB2-BD59-A6C34878D82A}">
+<a16:rowId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" val="1755984833"/>
+</a:ext>
+</a:extLst>
+</a:tr>
+<a:tr h="204827">
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr marL="0" marR="0" lvl="0" indent="0" algn="ctr" defTabSz="914400" rtl="0" eaLnBrk="0" fontAlgn="t" latinLnBrk="0" hangingPunct="0">
+<a:lnSpc>
+<a:spcPct val="100000"/>
+</a:lnSpc>
+<a:spcBef>
+<a:spcPct val="0"/>
+</a:spcBef>
+<a:spcAft>
+<a:spcPct val="0"/>
+</a:spcAft>
+<a:buClrTx/>
+<a:buSzTx/>
+<a:buFontTx/>
+<a:buNone/>
+<a:tabLst/>
+</a:pPr>
+<a:endParaRPr kumimoji="0" lang="en-US" sz="800" b="0" i="0" u="none" strike="noStrike" cap="none" normalizeH="0" baseline="0">
+<a:ln>
+<a:noFill/>
+</a:ln>
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:effectLst/>
+<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+</a:endParaRPr>
+</a:p>
+</a:txBody>
+<a:tcPr marL="68591" marR="68591" marT="45753" marB="45753" horzOverflow="overflow">
+<a:lnL w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:srgbClr val="FFFFFF">
+<a:tint val="20000"/>
+</a:srgbClr>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr marL="0" marR="0" lvl="0" indent="0" algn="l" defTabSz="914400" rtl="0" eaLnBrk="0" fontAlgn="t" latinLnBrk="0" hangingPunct="0">
+<a:lnSpc>
+<a:spcPct val="100000"/>
+</a:lnSpc>
+<a:spcBef>
+<a:spcPct val="0"/>
+</a:spcBef>
+<a:spcAft>
+<a:spcPct val="0"/>
+</a:spcAft>
+<a:buClrTx/>
+<a:buSzTx/>
+<a:buFontTx/>
+<a:buNone/>
+<a:tabLst/>
+</a:pPr>
+<a:endParaRPr kumimoji="0" lang="en-US" sz="800" b="0" i="0" u="none" strike="noStrike" cap="none" normalizeH="0" baseline="0" dirty="0">
+<a:ln>
+<a:noFill/>
+</a:ln>
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:effectLst/>
+<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+</a:endParaRPr>
+</a:p>
+</a:txBody>
+<a:tcPr marL="68591" marR="68591" marT="45753" marB="45753" horzOverflow="overflow">
+<a:lnL w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:srgbClr val="FFFFFF">
+<a:tint val="20000"/>
+</a:srgbClr>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:extLst>
+<a:ext uri="{0D108BD9-81ED-4DB2-BD59-A6C34878D82A}">
+<a16:rowId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" val="425882666"/>
+</a:ext>
+</a:extLst>
+</a:tr>
+</a:tbl>
+</a:graphicData>
+</a:graphic>
+</p:graphicFrame>
+<p:graphicFrame>
+<p:nvGraphicFramePr>
+<p:cNvPr id="22" name="Table 21">
 <a:extLst>
 <a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}">
-<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{7A6EE26D-29EF-8EE1-E8EB-20DCE186777E}"/>
+<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{EC4A5882-8106-A76D-FE7D-C2DD63FD4A8F}"/>
 </a:ext>
 </a:extLst>
 </p:cNvPr>
-<p:cNvSpPr>
-<a:spLocks noGrp="1"/>
-</p:cNvSpPr>
+<p:cNvGraphicFramePr/>
 <p:nvPr>
-<p:ph type="body" sz="quarter" idx="53" hasCustomPrompt="1"/>
+<p:extLst>
+<p:ext uri="{D42A27DB-BD31-4B8C-83A1-F6EECF244321}">
+<p14:modId xmlns:p14="http://schemas.microsoft.com/office/powerpoint/2010/main" val="3702470511"/>
+</p:ext>
+</p:extLst>
 </p:nvPr>
-</p:nvSpPr>
-<p:spPr>
-<a:xfrm>
-<a:off x="7190296" y="2822957"/>
-<a:ext cx="1647825" cy="148677"/>
-</a:xfrm>
-<a:prstGeom prst="rect">
-<a:avLst/>
-</a:prstGeom>
-</p:spPr>
-<p:txBody>
-<a:bodyPr anchor="ctr"/>
+</p:nvGraphicFramePr>
+<p:xfrm>
+<a:off x="4963081" y="516196"/>
+<a:ext cx="3914776" cy="884184"/>
+</p:xfrm>
+<a:graphic>
+<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+<a:tbl>
+<a:tblPr firstRow="1" bandRow="1"/>
+<a:tblGrid>
+<a:gridCol w="442101">
+<a:extLst>
+<a:ext uri="{9D8B030D-6E8A-4147-A177-3AD203B41FA5}">
+<a16:colId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" val="20000"/>
+</a:ext>
+</a:extLst>
+</a:gridCol>
+<a:gridCol w="2427005">
+<a:extLst>
+<a:ext uri="{9D8B030D-6E8A-4147-A177-3AD203B41FA5}">
+<a16:colId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" val="20001"/>
+</a:ext>
+</a:extLst>
+</a:gridCol>
+<a:gridCol w="1045670">
+<a:extLst>
+<a:ext uri="{9D8B030D-6E8A-4147-A177-3AD203B41FA5}">
+<a16:colId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" val="20002"/>
+</a:ext>
+</a:extLst>
+</a:gridCol>
+</a:tblGrid>
+<a:tr h="223513">
+<a:tc gridSpan="3">
+<a:txBody>
+<a:bodyPr/>
 <a:lstStyle>
-<a:lvl1pPr marL="0" indent="0">
-<a:buNone/>
-<a:defRPr sz="900">
-<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
-<a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+<a:lvl1pPr marL="0" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" b="1" kern="1200">
+<a:solidFill>
+<a:schemeClr val="lt1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
 </a:defRPr>
 </a:lvl1pPr>
-<a:lvl2pPr>
-<a:defRPr sz="800"/>
+<a:lvl2pPr marL="457200" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" b="1" kern="1200">
+<a:solidFill>
+<a:schemeClr val="lt1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
 </a:lvl2pPr>
-<a:lvl3pPr>
-<a:defRPr sz="700"/>
+<a:lvl3pPr marL="914400" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" b="1" kern="1200">
+<a:solidFill>
+<a:schemeClr val="lt1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
 </a:lvl3pPr>
-<a:lvl4pPr>
-<a:defRPr sz="600"/>
+<a:lvl4pPr marL="1371600" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" b="1" kern="1200">
+<a:solidFill>
+<a:schemeClr val="lt1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
 </a:lvl4pPr>
-<a:lvl5pPr>
-<a:defRPr sz="600"/>
+<a:lvl5pPr marL="1828800" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" b="1" kern="1200">
+<a:solidFill>
+<a:schemeClr val="lt1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
 </a:lvl5pPr>
+<a:lvl6pPr marL="2286000" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" b="1" kern="1200">
+<a:solidFill>
+<a:schemeClr val="lt1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl6pPr>
+<a:lvl7pPr marL="2743200" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" b="1" kern="1200">
+<a:solidFill>
+<a:schemeClr val="lt1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl7pPr>
+<a:lvl8pPr marL="3200400" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" b="1" kern="1200">
+<a:solidFill>
+<a:schemeClr val="lt1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl8pPr>
+<a:lvl9pPr marL="3657600" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" b="1" kern="1200">
+<a:solidFill>
+<a:schemeClr val="lt1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl9pPr>
 </a:lstStyle>
 <a:p>
-<a:pPr lvl="0"/>
+<a:pPr algn="ctr"/>
 <a:r>
-<a:rPr lang="en-US"/>
-<a:t>Enter number here…</a:t>
+<a:rPr lang="en-US" sz="1000" dirty="0">
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+<a:latin typeface="Arial"/>
+<a:cs typeface="Arial"/>
+</a:rPr>
+<a:t>REVISION</a:t>
+</a:r>
+<a:r>
+<a:rPr lang="en-US" sz="1000" baseline="0" dirty="0">
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+<a:latin typeface="Arial"/>
+<a:cs typeface="Arial"/>
+</a:rPr>
+<a:t> HISTORY</a:t>
+</a:r>
+<a:endParaRPr lang="en-US" sz="1000" dirty="0">
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+<a:latin typeface="Arial"/>
+<a:cs typeface="Arial"/>
+</a:endParaRPr>
+</a:p>
+</a:txBody>
+<a:tcPr marL="68591" marR="68591" marT="45753" marB="45753" anchor="ctr">
+<a:lnL w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc hMerge="1">
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:endParaRPr lang="en-US"/>
+</a:p>
+</a:txBody>
+<a:tcPr>
+<a:lnL w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+</a:tcPr>
+</a:tc>
+<a:tc hMerge="1">
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:endParaRPr lang="en-US"/>
+</a:p>
+</a:txBody>
+<a:tcPr>
+<a:lnL w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+</a:tcPr>
+</a:tc>
+<a:extLst>
+<a:ext uri="{0D108BD9-81ED-4DB2-BD59-A6C34878D82A}">
+<a16:rowId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" val="10000"/>
+</a:ext>
+</a:extLst>
+</a:tr>
+<a:tr h="195582">
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle>
+<a:lvl1pPr marL="0" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl1pPr>
+<a:lvl2pPr marL="457200" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl2pPr>
+<a:lvl3pPr marL="914400" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl3pPr>
+<a:lvl4pPr marL="1371600" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl4pPr>
+<a:lvl5pPr marL="1828800" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl5pPr>
+<a:lvl6pPr marL="2286000" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl6pPr>
+<a:lvl7pPr marL="2743200" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl7pPr>
+<a:lvl8pPr marL="3200400" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl8pPr>
+<a:lvl9pPr marL="3657600" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl9pPr>
+</a:lstStyle>
+<a:p>
+<a:pPr algn="ctr"/>
+<a:r>
+<a:rPr lang="en-US" sz="800" dirty="0">
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+<a:latin typeface="Arial"/>
+<a:cs typeface="Arial"/>
+</a:rPr>
+<a:t>Rev.</a:t>
 </a:r>
 </a:p>
-</p:txBody>
-</p:sp>
+</a:txBody>
+<a:tcPr marL="68591" marR="68591" marT="45753" marB="45753" anchor="ctr">
+<a:lnL w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="accent5"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle>
+<a:lvl1pPr marL="0" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl1pPr>
+<a:lvl2pPr marL="457200" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl2pPr>
+<a:lvl3pPr marL="914400" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl3pPr>
+<a:lvl4pPr marL="1371600" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl4pPr>
+<a:lvl5pPr marL="1828800" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl5pPr>
+<a:lvl6pPr marL="2286000" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl6pPr>
+<a:lvl7pPr marL="2743200" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl7pPr>
+<a:lvl8pPr marL="3200400" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl8pPr>
+<a:lvl9pPr marL="3657600" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl9pPr>
+</a:lstStyle>
+<a:p>
+<a:pPr algn="ctr"/>
+<a:r>
+<a:rPr lang="en-US" sz="800" dirty="0">
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+<a:latin typeface="Arial"/>
+<a:cs typeface="Arial"/>
+</a:rPr>
+<a:t>Description of Change</a:t>
+</a:r>
+</a:p>
+</a:txBody>
+<a:tcPr marL="68591" marR="68591" marT="45753" marB="45753" anchor="ctr">
+<a:lnL w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="accent5"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle>
+<a:lvl1pPr marL="0" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl1pPr>
+<a:lvl2pPr marL="457200" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl2pPr>
+<a:lvl3pPr marL="914400" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl3pPr>
+<a:lvl4pPr marL="1371600" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl4pPr>
+<a:lvl5pPr marL="1828800" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl5pPr>
+<a:lvl6pPr marL="2286000" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl6pPr>
+<a:lvl7pPr marL="2743200" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl7pPr>
+<a:lvl8pPr marL="3200400" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl8pPr>
+<a:lvl9pPr marL="3657600" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">
+<a:defRPr sz="1800" kern="1200">
+<a:solidFill>
+<a:schemeClr val="dk1"/>
+</a:solidFill>
+<a:latin typeface="Arial" panose="020B0604020202020204"/>
+</a:defRPr>
+</a:lvl9pPr>
+</a:lstStyle>
+<a:p>
+<a:pPr algn="ctr"/>
+<a:r>
+<a:rPr lang="en-US" sz="800" dirty="0">
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+<a:latin typeface="Arial"/>
+<a:cs typeface="Arial"/>
+</a:rPr>
+<a:t>Date</a:t>
+</a:r>
+</a:p>
+</a:txBody>
+<a:tcPr marL="68591" marR="68591" marT="45753" marB="45753" anchor="ctr">
+<a:lnL w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="accent5"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:extLst>
+<a:ext uri="{0D108BD9-81ED-4DB2-BD59-A6C34878D82A}">
+<a16:rowId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" val="10001"/>
+</a:ext>
+</a:extLst>
+</a:tr>
+<a:tr h="195582">
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr marL="0" marR="0" lvl="0" indent="0" algn="ctr" defTabSz="914400" rtl="0" eaLnBrk="0" fontAlgn="t" latinLnBrk="0" hangingPunct="0">
+<a:lnSpc>
+<a:spcPct val="100000"/>
+</a:lnSpc>
+<a:spcBef>
+<a:spcPct val="0"/>
+</a:spcBef>
+<a:spcAft>
+<a:spcPct val="0"/>
+</a:spcAft>
+<a:buClrTx/>
+<a:buSzTx/>
+<a:buFontTx/>
+<a:buNone/>
+<a:tabLst/>
+</a:pPr>
+<a:endParaRPr kumimoji="0" lang="en-US" sz="800" b="0" i="0" u="none" strike="noStrike" cap="none" normalizeH="0" baseline="0" dirty="0">
+<a:ln>
+<a:noFill/>
+</a:ln>
+<a:solidFill>
+<a:srgbClr val="FF0000"/>
+</a:solidFill>
+<a:effectLst/>
+<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+</a:endParaRPr>
+</a:p>
+</a:txBody>
+<a:tcPr marL="68591" marR="68591" marT="45753" marB="45753" horzOverflow="overflow">
+<a:lnL w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:srgbClr val="FFFFFF">
+<a:tint val="20000"/>
+</a:srgbClr>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr marL="0" marR="0" lvl="0" indent="0" algn="l" defTabSz="914400" rtl="0" eaLnBrk="0" fontAlgn="t" latinLnBrk="0" hangingPunct="0">
+<a:lnSpc>
+<a:spcPct val="100000"/>
+</a:lnSpc>
+<a:spcBef>
+<a:spcPct val="0"/>
+</a:spcBef>
+<a:spcAft>
+<a:spcPct val="0"/>
+</a:spcAft>
+<a:buClrTx/>
+<a:buSzTx/>
+<a:buFontTx/>
+<a:buNone/>
+<a:tabLst/>
+</a:pPr>
+<a:endParaRPr kumimoji="0" lang="en-US" sz="800" b="0" i="0" u="none" strike="noStrike" cap="none" normalizeH="0" baseline="0" dirty="0">
+<a:ln>
+<a:noFill/>
+</a:ln>
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:effectLst/>
+<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+</a:endParaRPr>
+</a:p>
+</a:txBody>
+<a:tcPr marL="68591" marR="68591" marT="45753" marB="45753" horzOverflow="overflow">
+<a:lnL w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:srgbClr val="FFFFFF">
+<a:tint val="20000"/>
+</a:srgbClr>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr algn="ctr"/>
+<a:endParaRPr lang="en-US" sz="800" dirty="0">
+<a:solidFill>
+<a:srgbClr val="FF0000"/>
+</a:solidFill>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:endParaRPr>
+</a:p>
+</a:txBody>
+<a:tcPr marL="68591" marR="68591" marT="45753" marB="45753" anchor="ctr">
+<a:lnL w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:srgbClr val="FFFFFF">
+<a:tint val="20000"/>
+</a:srgbClr>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:extLst>
+<a:ext uri="{0D108BD9-81ED-4DB2-BD59-A6C34878D82A}">
+<a16:rowId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" val="279194858"/>
+</a:ext>
+</a:extLst>
+</a:tr>
+<a:tr h="195582">
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr marL="0" marR="0" lvl="0" indent="0" algn="ctr" defTabSz="914400" rtl="0" eaLnBrk="0" fontAlgn="t" latinLnBrk="0" hangingPunct="0">
+<a:lnSpc>
+<a:spcPct val="100000"/>
+</a:lnSpc>
+<a:spcBef>
+<a:spcPct val="0"/>
+</a:spcBef>
+<a:spcAft>
+<a:spcPct val="0"/>
+</a:spcAft>
+<a:buClrTx/>
+<a:buSzTx/>
+<a:buFontTx/>
+<a:buNone/>
+<a:tabLst/>
+</a:pPr>
+<a:endParaRPr kumimoji="0" lang="en-US" sz="800" b="0" i="0" u="none" strike="noStrike" cap="none" normalizeH="0" baseline="0" dirty="0">
+<a:ln>
+<a:noFill/>
+</a:ln>
+<a:solidFill>
+<a:srgbClr val="FF0000"/>
+</a:solidFill>
+<a:effectLst/>
+<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+</a:endParaRPr>
+</a:p>
+</a:txBody>
+<a:tcPr marL="68591" marR="68591" marT="45753" marB="45753" horzOverflow="overflow">
+<a:lnL w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:srgbClr val="FFFFFF">
+<a:tint val="20000"/>
+</a:srgbClr>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr marL="0" marR="0" lvl="0" indent="0" algn="l" defTabSz="914400" rtl="0" eaLnBrk="0" fontAlgn="t" latinLnBrk="0" hangingPunct="0">
+<a:lnSpc>
+<a:spcPct val="100000"/>
+</a:lnSpc>
+<a:spcBef>
+<a:spcPct val="0"/>
+</a:spcBef>
+<a:spcAft>
+<a:spcPct val="0"/>
+</a:spcAft>
+<a:buClrTx/>
+<a:buSzTx/>
+<a:buFontTx/>
+<a:buNone/>
+<a:tabLst/>
+</a:pPr>
+<a:endParaRPr kumimoji="0" lang="en-US" sz="800" b="0" i="0" u="none" strike="noStrike" cap="none" normalizeH="0" baseline="0" dirty="0">
+<a:ln>
+<a:noFill/>
+</a:ln>
+<a:solidFill>
+<a:srgbClr val="FF0000"/>
+</a:solidFill>
+<a:effectLst/>
+<a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
+</a:endParaRPr>
+</a:p>
+</a:txBody>
+<a:tcPr marL="68591" marR="68591" marT="45753" marB="45753" horzOverflow="overflow">
+<a:lnL w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:srgbClr val="FFFFFF">
+<a:tint val="20000"/>
+</a:srgbClr>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr algn="ctr"/>
+<a:endParaRPr lang="en-US" sz="800" dirty="0">
+<a:solidFill>
+<a:srgbClr val="FF0000"/>
+</a:solidFill>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:endParaRPr>
+</a:p>
+</a:txBody>
+<a:tcPr marL="68591" marR="68591" marT="45753" marB="45753" anchor="ctr">
+<a:lnL w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="9525" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:srgbClr val="FFFFFF">
+<a:tint val="20000"/>
+</a:srgbClr>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:extLst>
+<a:ext uri="{0D108BD9-81ED-4DB2-BD59-A6C34878D82A}">
+<a16:rowId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" val="1219619483"/>
+</a:ext>
+</a:extLst>
+</a:tr>
+</a:tbl>
+</a:graphicData>
+</a:graphic>
+</p:graphicFrame>
+<p:graphicFrame>
+<p:nvGraphicFramePr>
+<p:cNvPr id="27" name="Table 26">
+<a:extLst>
+<a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}">
+<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="{62C139F4-9B52-42F8-BB3D-13F5F6D83D0C}"/>
+</a:ext>
+</a:extLst>
+</p:cNvPr>
+<p:cNvGraphicFramePr>
+<a:graphicFrameLocks/>
+</p:cNvGraphicFramePr>
+<p:nvPr>
+<p:extLst>
+<p:ext uri="{D42A27DB-BD31-4B8C-83A1-F6EECF244321}">
+<p14:modId xmlns:p14="http://schemas.microsoft.com/office/powerpoint/2010/main" val="1024399748"/>
+</p:ext>
+</p:extLst>
+</p:nvPr>
+</p:nvGraphicFramePr>
+<p:xfrm>
+<a:off x="5525057" y="3482060"/>
+<a:ext cx="3352800" cy="1714500"/>
+</p:xfrm>
+<a:graphic>
+<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+<a:tbl>
+<a:tblPr firstRow="1" bandRow="1">
+<a:tableStyleId>{F5AB1C69-6EDB-4FF4-983F-18BD219EF322}</a:tableStyleId>
+</a:tblPr>
+<a:tblGrid>
+<a:gridCol w="914400">
+<a:extLst>
+<a:ext uri="{9D8B030D-6E8A-4147-A177-3AD203B41FA5}">
+<a16:colId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" val="20000"/>
+</a:ext>
+</a:extLst>
+</a:gridCol>
+<a:gridCol w="1752600">
+<a:extLst>
+<a:ext uri="{9D8B030D-6E8A-4147-A177-3AD203B41FA5}">
+<a16:colId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" val="20001"/>
+</a:ext>
+</a:extLst>
+</a:gridCol>
+<a:gridCol w="685800">
+<a:extLst>
+<a:ext uri="{9D8B030D-6E8A-4147-A177-3AD203B41FA5}">
+<a16:colId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" val="20002"/>
+</a:ext>
+</a:extLst>
+</a:gridCol>
+</a:tblGrid>
+<a:tr h="173736">
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr algn="ctr"/>
+<a:r>
+<a:rPr lang="en-US" sz="650">
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:rPr>
+<a:t>Drafting</a:t>
+</a:r>
+</a:p>
+</a:txBody>
+<a:tcPr anchor="ctr">
+<a:lnL w="28575" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="28575" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="accent1"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr algn="ctr"/>
+<a:r>
+<a:rPr lang="en-US" sz="650">
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:rPr>
+<a:t>Signatures</a:t>
+</a:r>
+</a:p>
+</a:txBody>
+<a:tcPr anchor="ctr">
+<a:lnL w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="28575" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="accent1"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr algn="ctr"/>
+<a:r>
+<a:rPr lang="en-US" sz="650">
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:rPr>
+<a:t>Date</a:t>
+</a:r>
+</a:p>
+</a:txBody>
+<a:tcPr anchor="ctr">
+<a:lnL w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="28575" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="28575" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="accent1"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:extLst>
+<a:ext uri="{0D108BD9-81ED-4DB2-BD59-A6C34878D82A}">
+<a16:rowId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" val="10000"/>
+</a:ext>
+</a:extLst>
+</a:tr>
+<a:tr h="173736">
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr algn="l"/>
+<a:r>
+<a:rPr lang="en-US" sz="650">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:rPr>
+<a:t>Author</a:t>
+</a:r>
+</a:p>
+</a:txBody>
+<a:tcPr anchor="ctr">
+<a:lnL w="28575" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:endParaRPr lang="en-US" sz="650">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:endParaRPr>
+</a:p>
+</a:txBody>
+<a:tcPr anchor="ctr">
+<a:lnL w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr algn="ctr"/>
+<a:endParaRPr lang="en-US" sz="650">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:endParaRPr>
+</a:p>
+</a:txBody>
+<a:tcPr anchor="ctr">
+<a:lnL w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="28575" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:extLst>
+<a:ext uri="{0D108BD9-81ED-4DB2-BD59-A6C34878D82A}">
+<a16:rowId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" val="10001"/>
+</a:ext>
+</a:extLst>
+</a:tr>
+<a:tr h="173736">
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr algn="l"/>
+<a:r>
+<a:rPr lang="en-US" sz="650">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:rPr>
+<a:t>Updated by</a:t>
+</a:r>
+</a:p>
+</a:txBody>
+<a:tcPr anchor="ctr">
+<a:lnL w="28575" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:endParaRPr lang="en-US" sz="650">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:endParaRPr>
+</a:p>
+</a:txBody>
+<a:tcPr anchor="ctr">
+<a:lnL w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr marL="0" marR="0" indent="0" algn="ctr" defTabSz="914400" rtl="0" eaLnBrk="1" fontAlgn="auto" latinLnBrk="0" hangingPunct="1">
+<a:lnSpc>
+<a:spcPct val="100000"/>
+</a:lnSpc>
+<a:spcBef>
+<a:spcPts val="0"/>
+</a:spcBef>
+<a:spcAft>
+<a:spcPts val="0"/>
+</a:spcAft>
+<a:buClrTx/>
+<a:buSzTx/>
+<a:buFontTx/>
+<a:buNone/>
+<a:tabLst/>
+<a:defRPr/>
+</a:pPr>
+<a:endParaRPr lang="en-US" sz="650">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:endParaRPr>
+</a:p>
+</a:txBody>
+<a:tcPr anchor="ctr">
+<a:lnL w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="28575" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:extLst>
+<a:ext uri="{0D108BD9-81ED-4DB2-BD59-A6C34878D82A}">
+<a16:rowId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" val="10002"/>
+</a:ext>
+</a:extLst>
+</a:tr>
+<a:tr h="173736">
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr marL="0" marR="0" indent="0" algn="ctr" defTabSz="914400" rtl="0" eaLnBrk="1" fontAlgn="auto" latinLnBrk="0" hangingPunct="1">
+<a:lnSpc>
+<a:spcPct val="100000"/>
+</a:lnSpc>
+<a:spcBef>
+<a:spcPts val="0"/>
+</a:spcBef>
+<a:spcAft>
+<a:spcPts val="0"/>
+</a:spcAft>
+<a:buClrTx/>
+<a:buSzTx/>
+<a:buFontTx/>
+<a:buNone/>
+<a:tabLst/>
+<a:defRPr/>
+</a:pPr>
+<a:r>
+<a:rPr lang="en-US" sz="650" b="1">
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:rPr>
+<a:t>Approvals</a:t>
+</a:r>
+</a:p>
+</a:txBody>
+<a:tcPr anchor="ctr">
+<a:lnL w="28575" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="accent1"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr algn="ctr"/>
+<a:r>
+<a:rPr lang="en-US" sz="650" b="1">
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:rPr>
+<a:t>Signatures</a:t>
+</a:r>
+</a:p>
+</a:txBody>
+<a:tcPr anchor="ctr">
+<a:lnL w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="accent1"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr algn="ctr"/>
+<a:r>
+<a:rPr lang="en-US" sz="650" b="1">
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:rPr>
+<a:t>Date</a:t>
+</a:r>
+</a:p>
+</a:txBody>
+<a:tcPr anchor="ctr">
+<a:lnL w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="28575" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="accent1"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:extLst>
+<a:ext uri="{0D108BD9-81ED-4DB2-BD59-A6C34878D82A}">
+<a16:rowId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" val="10003"/>
+</a:ext>
+</a:extLst>
+</a:tr>
+<a:tr h="173736">
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr algn="l"/>
+<a:r>
+<a:rPr lang="en-US" sz="650">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:rPr>
+<a:t>Mfg Engineering</a:t>
+</a:r>
+</a:p>
+</a:txBody>
+<a:tcPr anchor="ctr">
+<a:lnL w="28575" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr marL="0" marR="0" indent="0" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" fontAlgn="auto" latinLnBrk="0" hangingPunct="1">
+<a:lnSpc>
+<a:spcPct val="100000"/>
+</a:lnSpc>
+<a:spcBef>
+<a:spcPts val="0"/>
+</a:spcBef>
+<a:spcAft>
+<a:spcPts val="0"/>
+</a:spcAft>
+<a:buClrTx/>
+<a:buSzTx/>
+<a:buFontTx/>
+<a:buNone/>
+<a:tabLst/>
+<a:defRPr/>
+</a:pPr>
+<a:endParaRPr lang="en-US" sz="650">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:endParaRPr>
+</a:p>
+</a:txBody>
+<a:tcPr anchor="ctr">
+<a:lnL w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr marL="0" marR="0" lvl="0" indent="0" algn="ctr" defTabSz="914400" rtl="0" eaLnBrk="1" fontAlgn="auto" latinLnBrk="0" hangingPunct="1">
+<a:lnSpc>
+<a:spcPct val="100000"/>
+</a:lnSpc>
+<a:spcBef>
+<a:spcPts val="0"/>
+</a:spcBef>
+<a:spcAft>
+<a:spcPts val="0"/>
+</a:spcAft>
+<a:buClrTx/>
+<a:buSzTx/>
+<a:buFontTx/>
+<a:buNone/>
+<a:tabLst/>
+<a:defRPr/>
+</a:pPr>
+<a:endParaRPr kumimoji="0" lang="en-US" sz="650" b="0" i="0" u="none" strike="noStrike" kern="1200" cap="none" spc="0" normalizeH="0" baseline="0" noProof="0">
+<a:ln>
+<a:noFill/>
+</a:ln>
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:effectLst/>
+<a:uLnTx/>
+<a:uFillTx/>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:ea typeface="+mn-ea"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:endParaRPr>
+</a:p>
+</a:txBody>
+<a:tcPr anchor="ctr">
+<a:lnL w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="28575" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:extLst>
+<a:ext uri="{0D108BD9-81ED-4DB2-BD59-A6C34878D82A}">
+<a16:rowId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" val="3844766910"/>
+</a:ext>
+</a:extLst>
+</a:tr>
+<a:tr h="173736">
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr algn="l"/>
+<a:r>
+<a:rPr lang="en-US" sz="650">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:rPr>
+<a:t>Operations</a:t>
+</a:r>
+</a:p>
+</a:txBody>
+<a:tcPr anchor="ctr">
+<a:lnL w="28575" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr marL="0" marR="0" indent="0" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" fontAlgn="auto" latinLnBrk="0" hangingPunct="1">
+<a:lnSpc>
+<a:spcPct val="100000"/>
+</a:lnSpc>
+<a:spcBef>
+<a:spcPts val="0"/>
+</a:spcBef>
+<a:spcAft>
+<a:spcPts val="0"/>
+</a:spcAft>
+<a:buClrTx/>
+<a:buSzTx/>
+<a:buFontTx/>
+<a:buNone/>
+<a:tabLst/>
+<a:defRPr/>
+</a:pPr>
+<a:endParaRPr lang="en-US" sz="650">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:endParaRPr>
+</a:p>
+</a:txBody>
+<a:tcPr anchor="ctr">
+<a:lnL w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr marL="0" marR="0" lvl="0" indent="0" algn="ctr" defTabSz="914400" rtl="0" eaLnBrk="1" fontAlgn="auto" latinLnBrk="0" hangingPunct="1">
+<a:lnSpc>
+<a:spcPct val="100000"/>
+</a:lnSpc>
+<a:spcBef>
+<a:spcPts val="0"/>
+</a:spcBef>
+<a:spcAft>
+<a:spcPts val="0"/>
+</a:spcAft>
+<a:buClrTx/>
+<a:buSzTx/>
+<a:buFontTx/>
+<a:buNone/>
+<a:tabLst/>
+<a:defRPr/>
+</a:pPr>
+<a:endParaRPr kumimoji="0" lang="en-US" sz="650" b="0" i="0" u="none" strike="noStrike" kern="1200" cap="none" spc="0" normalizeH="0" baseline="0" noProof="0">
+<a:ln>
+<a:noFill/>
+</a:ln>
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:effectLst/>
+<a:uLnTx/>
+<a:uFillTx/>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:ea typeface="+mn-ea"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:endParaRPr>
+</a:p>
+</a:txBody>
+<a:tcPr anchor="ctr">
+<a:lnL w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="28575" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:extLst>
+<a:ext uri="{0D108BD9-81ED-4DB2-BD59-A6C34878D82A}">
+<a16:rowId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" val="10004"/>
+</a:ext>
+</a:extLst>
+</a:tr>
+<a:tr h="173736">
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr algn="l"/>
+<a:r>
+<a:rPr lang="en-US" sz="650">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:rPr>
+<a:t>Quality Assurance</a:t>
+</a:r>
+</a:p>
+</a:txBody>
+<a:tcPr anchor="ctr">
+<a:lnL w="28575" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr marL="0" marR="0" indent="0" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" fontAlgn="auto" latinLnBrk="0" hangingPunct="1">
+<a:lnSpc>
+<a:spcPct val="100000"/>
+</a:lnSpc>
+<a:spcBef>
+<a:spcPts val="0"/>
+</a:spcBef>
+<a:spcAft>
+<a:spcPts val="0"/>
+</a:spcAft>
+<a:buClrTx/>
+<a:buSzTx/>
+<a:buFontTx/>
+<a:buNone/>
+<a:tabLst/>
+<a:defRPr/>
+</a:pPr>
+<a:endParaRPr lang="en-US" sz="650" kern="1200">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:ea typeface="+mn-ea"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:endParaRPr>
+</a:p>
+</a:txBody>
+<a:tcPr anchor="ctr">
+<a:lnL w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr marL="0" marR="0" lvl="0" indent="0" algn="ctr" defTabSz="914400" rtl="0" eaLnBrk="1" fontAlgn="auto" latinLnBrk="0" hangingPunct="1">
+<a:lnSpc>
+<a:spcPct val="100000"/>
+</a:lnSpc>
+<a:spcBef>
+<a:spcPts val="0"/>
+</a:spcBef>
+<a:spcAft>
+<a:spcPts val="0"/>
+</a:spcAft>
+<a:buClrTx/>
+<a:buSzTx/>
+<a:buFontTx/>
+<a:buNone/>
+<a:tabLst/>
+<a:defRPr/>
+</a:pPr>
+<a:endParaRPr kumimoji="0" lang="en-US" sz="650" b="0" i="0" u="none" strike="noStrike" kern="1200" cap="none" spc="0" normalizeH="0" baseline="0" noProof="0">
+<a:ln>
+<a:noFill/>
+</a:ln>
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:effectLst/>
+<a:uLnTx/>
+<a:uFillTx/>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:ea typeface="+mn-ea"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:endParaRPr>
+</a:p>
+</a:txBody>
+<a:tcPr anchor="ctr">
+<a:lnL w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="28575" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:extLst>
+<a:ext uri="{0D108BD9-81ED-4DB2-BD59-A6C34878D82A}">
+<a16:rowId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" val="2489434341"/>
+</a:ext>
+</a:extLst>
+</a:tr>
+<a:tr h="173736">
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr algn="l"/>
+<a:r>
+<a:rPr lang="en-US" sz="650">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:rPr>
+<a:t>Engineering</a:t>
+</a:r>
+</a:p>
+</a:txBody>
+<a:tcPr anchor="ctr">
+<a:lnL w="28575" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr marL="0" marR="0" indent="0" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" fontAlgn="auto" latinLnBrk="0" hangingPunct="1">
+<a:lnSpc>
+<a:spcPct val="100000"/>
+</a:lnSpc>
+<a:spcBef>
+<a:spcPts val="0"/>
+</a:spcBef>
+<a:spcAft>
+<a:spcPts val="0"/>
+</a:spcAft>
+<a:buClrTx/>
+<a:buSzTx/>
+<a:buFontTx/>
+<a:buNone/>
+<a:tabLst/>
+<a:defRPr/>
+</a:pPr>
+<a:endParaRPr lang="en-US" sz="650" kern="1200">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:ea typeface="+mn-ea"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:endParaRPr>
+</a:p>
+</a:txBody>
+<a:tcPr anchor="ctr">
+<a:lnL w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr marL="0" marR="0" lvl="0" indent="0" algn="ctr" defTabSz="914400" rtl="0" eaLnBrk="1" fontAlgn="auto" latinLnBrk="0" hangingPunct="1">
+<a:lnSpc>
+<a:spcPct val="100000"/>
+</a:lnSpc>
+<a:spcBef>
+<a:spcPts val="0"/>
+</a:spcBef>
+<a:spcAft>
+<a:spcPts val="0"/>
+</a:spcAft>
+<a:buClrTx/>
+<a:buSzTx/>
+<a:buFontTx/>
+<a:buNone/>
+<a:tabLst/>
+<a:defRPr/>
+</a:pPr>
+<a:endParaRPr kumimoji="0" lang="en-US" sz="650" b="0" i="0" u="none" strike="noStrike" kern="1200" cap="none" spc="0" normalizeH="0" baseline="0" noProof="0">
+<a:ln>
+<a:noFill/>
+</a:ln>
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:effectLst/>
+<a:uLnTx/>
+<a:uFillTx/>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:ea typeface="+mn-ea"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:endParaRPr>
+</a:p>
+</a:txBody>
+<a:tcPr anchor="ctr">
+<a:lnL w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="28575" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:extLst>
+<a:ext uri="{0D108BD9-81ED-4DB2-BD59-A6C34878D82A}">
+<a16:rowId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" val="10006"/>
+</a:ext>
+</a:extLst>
+</a:tr>
+<a:tr h="173736">
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr algn="l"/>
+<a:r>
+<a:rPr lang="en-US" sz="650">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:rPr>
+<a:t>Additional</a:t>
+</a:r>
+</a:p>
+</a:txBody>
+<a:tcPr anchor="ctr">
+<a:lnL w="28575" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="28575" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr marL="0" marR="0" indent="0" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" fontAlgn="auto" latinLnBrk="0" hangingPunct="1">
+<a:lnSpc>
+<a:spcPct val="100000"/>
+</a:lnSpc>
+<a:spcBef>
+<a:spcPts val="0"/>
+</a:spcBef>
+<a:spcAft>
+<a:spcPts val="0"/>
+</a:spcAft>
+<a:buClrTx/>
+<a:buSzTx/>
+<a:buFontTx/>
+<a:buNone/>
+<a:tabLst/>
+<a:defRPr/>
+</a:pPr>
+<a:endParaRPr lang="en-US" sz="650">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:endParaRPr>
+</a:p>
+</a:txBody>
+<a:tcPr anchor="ctr">
+<a:lnL w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="28575" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:tc>
+<a:txBody>
+<a:bodyPr/>
+<a:lstStyle/>
+<a:p>
+<a:pPr marL="0" marR="0" lvl="0" indent="0" algn="ctr" defTabSz="914400" rtl="0" eaLnBrk="1" fontAlgn="auto" latinLnBrk="0" hangingPunct="1">
+<a:lnSpc>
+<a:spcPct val="100000"/>
+</a:lnSpc>
+<a:spcBef>
+<a:spcPts val="0"/>
+</a:spcBef>
+<a:spcAft>
+<a:spcPts val="0"/>
+</a:spcAft>
+<a:buClrTx/>
+<a:buSzTx/>
+<a:buFontTx/>
+<a:buNone/>
+<a:tabLst/>
+<a:defRPr/>
+</a:pPr>
+<a:endParaRPr kumimoji="0" lang="en-US" sz="650" b="0" i="0" u="none" strike="noStrike" kern="1200" cap="none" spc="0" normalizeH="0" baseline="0" noProof="0">
+<a:ln>
+<a:noFill/>
+</a:ln>
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:effectLst/>
+<a:uLnTx/>
+<a:uFillTx/>
+<a:latin typeface="Arial" pitchFamily="34" charset="0"/>
+<a:ea typeface="+mn-ea"/>
+<a:cs typeface="Arial" pitchFamily="34" charset="0"/>
+</a:endParaRPr>
+</a:p>
+</a:txBody>
+<a:tcPr anchor="ctr">
+<a:lnL w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnL>
+<a:lnR w="28575" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnR>
+<a:lnT w="12700" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnT>
+<a:lnB w="28575" cap="flat" cmpd="sng" algn="ctr">
+<a:solidFill>
+<a:schemeClr val="tx1"/>
+</a:solidFill>
+<a:prstDash val="solid"/>
+<a:round/>
+<a:headEnd type="none" w="med" len="med"/>
+<a:tailEnd type="none" w="med" len="med"/>
+</a:lnB>
+<a:lnTlToBr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnTlToBr>
+<a:lnBlToTr w="12700" cmpd="sng">
+<a:noFill/>
+<a:prstDash val="solid"/>
+</a:lnBlToTr>
+<a:solidFill>
+<a:schemeClr val="bg1"/>
+</a:solidFill>
+</a:tcPr>
+</a:tc>
+<a:extLst>
+<a:ext uri="{0D108BD9-81ED-4DB2-BD59-A6C34878D82A}">
+<a16:rowId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" val="10007"/>
+</a:ext>
+</a:extLst>
+</a:tr>
+</a:tbl>
+</a:graphicData>
+</a:graphic>
+</p:graphicFrame>
 </p:spTree>
 <p:extLst>
 <p:ext uri="{BB962C8B-B14F-4D97-AF65-F5344CB8AC3E}">
-<p14:creationId xmlns:p14="http://schemas.microsoft.com/office/powerpoint/2010/main" val="521995985"/>
+<p14:creationId xmlns:p14="http://schemas.microsoft.com/office/powerpoint/2010/main" val="3034834310"/>
 </p:ext>
 </p:extLst>
 </p:cSld>
 <p:clrMapOvr>
 <a:masterClrMapping/>
 </p:clrMapOvr>
-</p:sldLayout>
+</p:sld>
