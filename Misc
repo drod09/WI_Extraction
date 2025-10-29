@@ -1,0 +1,292 @@
+namespace WorkInstructionExtractor2
+{
+    partial class Form2
+    {
+        private System.ComponentModel.IContainer components = null;
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && (components != null))
+            {
+                components.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
+        #region Windows Form Designer generated code
+
+        private void InitializeComponent()
+        {
+            this.txtPowerPointPath = new System.Windows.Forms.TextBox();
+            this.txtOutputFolder = new System.Windows.Forms.TextBox();
+            this.btnSelectFile = new System.Windows.Forms.Button();
+            this.btnSelectFolder = new System.Windows.Forms.Button();
+            this.btnSelectOutputFolder = new System.Windows.Forms.Button();
+            this.btnExtract = new System.Windows.Forms.Button();
+            this.progressBar = new System.Windows.Forms.ProgressBar();
+            this.txtLog = new System.Windows.Forms.RichTextBox();
+            this.lblStatus = new System.Windows.Forms.Label();
+            this.label1 = new System.Windows.Forms.Label();
+            this.label2 = new System.Windows.Forms.Label();
+            this.label3 = new System.Windows.Forms.Label();
+            this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.lblFileCount = new System.Windows.Forms.Label();
+            this.rbBulkFolder = new System.Windows.Forms.RadioButton();
+            this.rbSingleFile = new System.Windows.Forms.RadioButton();
+            this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.groupBox3 = new System.Windows.Forms.GroupBox();
+            this.label4 = new System.Windows.Forms.Label();
+            this.groupBox1.SuspendLayout();
+            this.groupBox2.SuspendLayout();
+            this.groupBox3.SuspendLayout();
+            this.SuspendLayout();
+            // 
+            // txtPowerPointPath
+            // 
+            this.txtPowerPointPath.Location = new System.Drawing.Point(150, 60);
+            this.txtPowerPointPath.Name = "txtPowerPointPath";
+            this.txtPowerPointPath.ReadOnly = true;
+            this.txtPowerPointPath.Size = new System.Drawing.Size(550, 22);
+            this.txtPowerPointPath.TabIndex = 0;
+            // 
+            // txtOutputFolder
+            // 
+            this.txtOutputFolder.Location = new System.Drawing.Point(150, 95);
+            this.txtOutputFolder.Name = "txtOutputFolder";
+            this.txtOutputFolder.ReadOnly = true;
+            this.txtOutputFolder.Size = new System.Drawing.Size(550, 22);
+            this.txtOutputFolder.TabIndex = 2;
+            // 
+            // btnSelectFile
+            // 
+            this.btnSelectFile.Location = new System.Drawing.Point(720, 58);
+            this.btnSelectFile.Name = "btnSelectFile";
+            this.btnSelectFile.Size = new System.Drawing.Size(100, 26);
+            this.btnSelectFile.TabIndex = 3;
+            this.btnSelectFile.Text = "Browse...";
+            this.btnSelectFile.UseVisualStyleBackColor = true;
+            this.btnSelectFile.Click += new System.EventHandler(this.btnSelectFile_Click);
+            // 
+            // btnSelectFolder
+            // 
+            this.btnSelectFolder.Location = new System.Drawing.Point(720, 58);
+            this.btnSelectFolder.Name = "btnSelectFolder";
+            this.btnSelectFolder.Size = new System.Drawing.Size(100, 26);
+            this.btnSelectFolder.TabIndex = 4;
+            this.btnSelectFolder.Text = "Browse...";
+            this.btnSelectFolder.UseVisualStyleBackColor = true;
+            this.btnSelectFolder.Visible = false;
+            this.btnSelectFolder.Click += new System.EventHandler(this.btnSelectFolder_Click);
+            // 
+            // btnSelectOutputFolder
+            // 
+            this.btnSelectOutputFolder.Location = new System.Drawing.Point(720, 93);
+            this.btnSelectOutputFolder.Name = "btnSelectOutputFolder";
+            this.btnSelectOutputFolder.Size = new System.Drawing.Size(100, 26);
+            this.btnSelectOutputFolder.TabIndex = 5;
+            this.btnSelectOutputFolder.Text = "Browse...";
+            this.btnSelectOutputFolder.UseVisualStyleBackColor = true;
+            this.btnSelectOutputFolder.Click += new System.EventHandler(this.btnSelectOutputFolder_Click);
+            // 
+            // btnExtract
+            // 
+            this.btnExtract.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(120)))), ((int)(((byte)(215)))));
+            this.btnExtract.FlatAppearance.BorderSize = 0;
+            this.btnExtract.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnExtract.Font = new System.Drawing.Font("Segoe UI", 11F, System.Drawing.FontStyle.Bold);
+            this.btnExtract.ForeColor = System.Drawing.Color.White;
+            this.btnExtract.Location = new System.Drawing.Point(295, 25);
+            this.btnExtract.Name = "btnExtract";
+            this.btnExtract.Size = new System.Drawing.Size(250, 45);
+            this.btnExtract.TabIndex = 6;
+            this.btnExtract.Text = "Extract Data";
+            this.btnExtract.UseVisualStyleBackColor = false;
+            this.btnExtract.Click += new System.EventHandler(this.btnExtract_Click);
+            // 
+            // progressBar
+            // 
+            this.progressBar.Location = new System.Drawing.Point(20, 80);
+            this.progressBar.Name = "progressBar";
+            this.progressBar.Size = new System.Drawing.Size(800, 25);
+            this.progressBar.TabIndex = 7;
+            // 
+            // txtLog
+            // 
+            this.txtLog.BackColor = System.Drawing.Color.White;
+            this.txtLog.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.txtLog.Font = new System.Drawing.Font("Consolas", 9F);
+            this.txtLog.Location = new System.Drawing.Point(3, 18);
+            this.txtLog.Name = "txtLog";
+            this.txtLog.ReadOnly = true;
+            this.txtLog.Size = new System.Drawing.Size(834, 239);
+            this.txtLog.TabIndex = 8;
+            this.txtLog.Text = "";
+            // 
+            // lblStatus
+            // 
+            this.lblStatus.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.lblStatus.Location = new System.Drawing.Point(565, 35);
+            this.lblStatus.Name = "lblStatus";
+            this.lblStatus.Size = new System.Drawing.Size(255, 25);
+            this.lblStatus.TabIndex = 10;
+            this.lblStatus.Text = "Ready";
+            this.lblStatus.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(20, 63);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(95, 16);
+            this.label1.TabIndex = 13;
+            this.label1.Text = "Input File/Folder:";
+            // 
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.Location = new System.Drawing.Point(20, 30);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(108, 16);
+            this.label2.TabIndex = 14;
+            this.label2.Text = "Processing Mode:";
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(20, 98);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(93, 16);
+            this.label3.TabIndex = 15;
+            this.label3.Text = "Output Folder:";
+            // 
+            // groupBox1
+            // 
+            this.groupBox1.Controls.Add(this.lblFileCount);
+            this.groupBox1.Controls.Add(this.rbBulkFolder);
+            this.groupBox1.Controls.Add(this.rbSingleFile);
+            this.groupBox1.Controls.Add(this.label2);
+            this.groupBox1.Controls.Add(this.label1);
+            this.groupBox1.Controls.Add(this.label3);
+            this.groupBox1.Controls.Add(this.txtPowerPointPath);
+            this.groupBox1.Controls.Add(this.txtOutputFolder);
+            this.groupBox1.Controls.Add(this.btnSelectFile);
+            this.groupBox1.Controls.Add(this.btnSelectFolder);
+            this.groupBox1.Controls.Add(this.btnSelectOutputFolder);
+            this.groupBox1.Location = new System.Drawing.Point(20, 70);
+            this.groupBox1.Name = "groupBox1";
+            this.groupBox1.Size = new System.Drawing.Size(840, 135);
+            this.groupBox1.TabIndex = 16;
+            this.groupBox1.TabStop = false;
+            this.groupBox1.Text = "Input Configuration";
+            // 
+            // lblFileCount
+            // 
+            this.lblFileCount.AutoSize = true;
+            this.lblFileCount.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Italic);
+            this.lblFileCount.ForeColor = System.Drawing.Color.DarkGreen;
+            this.lblFileCount.Location = new System.Drawing.Point(440, 30);
+            this.lblFileCount.Name = "lblFileCount";
+            this.lblFileCount.Size = new System.Drawing.Size(0, 15);
+            this.lblFileCount.TabIndex = 18;
+            // 
+            // rbBulkFolder
+            // 
+            this.rbBulkFolder.AutoSize = true;
+            this.rbBulkFolder.Location = new System.Drawing.Point(260, 28);
+            this.rbBulkFolder.Name = "rbBulkFolder";
+            this.rbBulkFolder.Size = new System.Drawing.Size(165, 20);
+            this.rbBulkFolder.TabIndex = 17;
+            this.rbBulkFolder.Text = "Bulk Process (Folder)";
+            this.rbBulkFolder.UseVisualStyleBackColor = true;
+            this.rbBulkFolder.CheckedChanged += new System.EventHandler(this.rbBulkFolder_CheckedChanged);
+            // 
+            // rbSingleFile
+            // 
+            this.rbSingleFile.AutoSize = true;
+            this.rbSingleFile.Checked = true;
+            this.rbSingleFile.Location = new System.Drawing.Point(150, 28);
+            this.rbSingleFile.Name = "rbSingleFile";
+            this.rbSingleFile.Size = new System.Drawing.Size(91, 20);
+            this.rbSingleFile.TabIndex = 16;
+            this.rbSingleFile.TabStop = true;
+            this.rbSingleFile.Text = "Single File";
+            this.rbSingleFile.UseVisualStyleBackColor = true;
+            this.rbSingleFile.CheckedChanged += new System.EventHandler(this.rbSingleFile_CheckedChanged);
+            // 
+            // groupBox2
+            // 
+            this.groupBox2.Controls.Add(this.btnExtract);
+            this.groupBox2.Controls.Add(this.lblStatus);
+            this.groupBox2.Controls.Add(this.progressBar);
+            this.groupBox2.Location = new System.Drawing.Point(20, 210);
+            this.groupBox2.Name = "groupBox2";
+            this.groupBox2.Size = new System.Drawing.Size(840, 120);
+            this.groupBox2.TabIndex = 17;
+            this.groupBox2.TabStop = false;
+            this.groupBox2.Text = "Extraction Progress";
+            // 
+            // groupBox3
+            // 
+            this.groupBox3.Controls.Add(this.txtLog);
+            this.groupBox3.Location = new System.Drawing.Point(20, 340);
+            this.groupBox3.Name = "groupBox3";
+            this.groupBox3.Size = new System.Drawing.Size(840, 260);
+            this.groupBox3.TabIndex = 18;
+            this.groupBox3.TabStop = false;
+            this.groupBox3.Text = "Activity Log";
+            // 
+            // label4
+            // 
+            this.label4.Font = new System.Drawing.Font("Segoe UI", 16F, System.Drawing.FontStyle.Bold);
+            this.label4.Location = new System.Drawing.Point(20, 20);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(840, 40);
+            this.label4.TabIndex = 19;
+            this.label4.Text = "Work Instruction Data Extractor";
+            this.label4.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            // 
+            // form2
+            // 
+            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.ClientSize = new System.Drawing.Size(880, 620);
+            this.Controls.Add(this.label4);
+            this.Controls.Add(this.groupBox3);
+            this.Controls.Add(this.groupBox2);
+            this.Controls.Add(this.groupBox1);
+            this.MinimumSize = new System.Drawing.Size(896, 659);
+            this.Name = "form2";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
+            this.Text = "Work Instruction Data Extractor";
+            this.Load += new System.EventHandler(this.Form2_Load);
+            this.groupBox1.ResumeLayout(false);
+            this.groupBox1.PerformLayout();
+            this.groupBox2.ResumeLayout(false);
+            this.groupBox3.ResumeLayout(false);
+            this.ResumeLayout(false);
+
+        }
+
+        #endregion
+
+        private System.Windows.Forms.TextBox txtPowerPointPath;
+        private System.Windows.Forms.TextBox txtOutputFolder;
+        private System.Windows.Forms.Button btnSelectFile;
+        private System.Windows.Forms.Button btnSelectFolder;
+        private System.Windows.Forms.Button btnSelectOutputFolder;
+        private System.Windows.Forms.Button btnExtract;
+        private System.Windows.Forms.ProgressBar progressBar;
+        private System.Windows.Forms.RichTextBox txtLog;
+        private System.Windows.Forms.Label lblStatus;
+        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.GroupBox groupBox1;
+        private System.Windows.Forms.RadioButton rbSingleFile;
+        private System.Windows.Forms.RadioButton rbBulkFolder;
+        private System.Windows.Forms.GroupBox groupBox2;
+        private System.Windows.Forms.GroupBox groupBox3;
+        private System.Windows.Forms.Label label4;
+        private System.Windows.Forms.Label lblFileCount;
+    }
+}
