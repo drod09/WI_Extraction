@@ -16,7 +16,7 @@ public class PowerPointExtractor
 {
 static PowerPointExtractor()
 {
-ExcelPackage.License.SetNonCommercialPersonal(”<Diana>”);
+ExcelPackage.License.SetNonCommercialPersonal("<Diana>");
 }
 
     public ExtractionResult ExtractWorkInstruction(
@@ -1244,7 +1244,8 @@ ExcelPackage.License.SetNonCommercialPersonal(”<Diana>”);
                 }
             }
 
-            // Extract Subject (Rev 15-16 only)
+            // Extract Subject (5:4 aspect ratio, 10" x 7.5" slide)
+            // Horizontal position: 5.5" = 396 points, Vertical position: 7.04" = 507 points
             if (string.IsNullOrEmpty(GetValue(data, "Subject")))
             {
                 if (upperText == "SUBJECT" ||
@@ -1253,9 +1254,9 @@ ExcelPackage.License.SetNonCommercialPersonal(”<Diana>”);
                     System.Text.RegularExpressions.Regex.IsMatch(text, @"^\<?#?\>?\s*OF\s*\d+$", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
                     continue;
 
-                bool isRev15_16Subject = (box.Left > 420 && box.Left < 430 && box.Top > 520 && box.Top < 525);
+                bool isSubjectPosition = (box.Left > 385 && box.Left < 410 && box.Top > 500 && box.Top < 515);
 
-                if (isRev15_16Subject)
+                if (isSubjectPosition && text.Length > 2 && text.Length < 100)
                 {
                     data["Subject"] = text;
                 }
