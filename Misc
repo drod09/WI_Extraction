@@ -1,111 +1,34 @@
-string wiNumber = "WI-1234";  // You can loop this later
-string baseFolder = $@"C:\Users\U309011\Desktop\New Folder\ExtractedData_{wiNumber}";
-string templatePath = @"C:\Users\U309011\Desktop\Template.pptx";
-string outputPath = Path.Combine(baseFolder, $"{wiNumber}_Imported.pptx");
-
-WiPptxImporter.ImportIntoTemplate(
-    templatePptx: templatePath,
-    outPptx: outputPath,
-    payload: payload);
-
-------
-
-using System;
-using System.Data;
-using System.IO;
-using OfficeOpenXml;
-
-public static class WiExcelReader
+private static A.Table BuildTable(int rows, int cols, DataTable dt)
 {
-    public static WiPayload BuildFromExcel(string excelPath, string imageFolder, string composedFolder)
+    var table = new A.Table();
+
+    // Style
+    table.Append(
+        new A.TableProperties(
+            new A.TableStyleId("{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}"))
+    );
+
+    // Grid: create a NEW GridColumn per column (no Enumerable.Repeat!)
+    var grid = new A.TableGrid();
+    long colWidth = 24000000L / Math.Max(cols, 1); // simple width split
+    for (int c = 0; c < cols; c++)
+        grid.Append(new A.GridColumn() { Width = colWidth });
+    table.Append(grid);
+
+    // Header row
+    var headerRow = new A.TableRow() { Height = 370840L };
+    foreach (DataColumn col in dt.Columns)
+        headerRow.Append(MakeCell(col.ColumnName, bold: true));
+    table.Append(headerRow);
+
+    // Data rows
+    foreach (DataRow dr in dt.Rows)
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-
-        var payload = new WiPayload();
-
-        using (var package = new ExcelPackage(new FileInfo(excelPath)))
-        {
-            // Example of sheet mapping – adjust sheet names as needed
-            payload.BomConfiguration = ReadSheet(package, "BOM_CONFIGURATION");
-            payload.RevisionHistory  = ReadSheet(package, "REVISION_HISTORY");
-            payload.Drafting         = ReadSheet(package, "DRAFTING");
-            payload.Approvals        = ReadSheet(package, "APPROVALS");
-            payload.EquipmentRequired = ReadSheet(package, "EQUIPMENT_REQUIRED");
-            payload.PartsRequired     = ReadSheet(package, "PARTS_REQUIRED");
-            payload.TrainingLog       = ReadSheet(package, "TRAINING_LOG");
-
-            // If your extractor stores text or checklist items:
-            var acceptSheet = ReadSheet(package, "ACCEPT_GOOD");
-            payload.AcceptGoodChecklist = TableToList(acceptSheet);
-
-            var passSheet = ReadSheet(package, "PASS_GOOD");
-            payload.PassGoodChecklist = TableToList(passSheet);
-        }
-
-        // Images
-        payload.ReferenceImagePath = Path.Combine(composedFolder, "exploded.png"); // adjust if named differently
-        payload.Procedures = new()
-        {
-            new WiPayload.ProcedureStep
-            {
-                Heading = "Procedure",
-                Lines = new() { "Populate steps here..." },
-                ImagePaths = Directory.GetFiles(imageFolder, "*.png").ToList()
-            }
-        };
-
-        // Fill title data from somewhere (could be first sheet or filename)
-        payload.Title = "Work Instruction " + Path.GetFileNameWithoutExtension(excelPath);
-        payload.WiNumber = Path.GetFileNameWithoutExtension(excelPath)
-            .Replace("Extracted_Data_", "", StringComparison.OrdinalIgnoreCase);
-
-        return payload;
+        var row = new A.TableRow() { Height = 370840L };
+        foreach (DataColumn col in dt.Columns)
+            row.Append(MakeCell(dr[col]?.ToString() ?? ""));
+        table.Append(row);
     }
 
-    private static DataTable ReadSheet(ExcelPackage pkg, string sheetName)
-    {
-        var sheet = pkg.Workbook.Worksheets.FirstOrDefault(ws =>
-            ws.Name.Equals(sheetName, StringComparison.OrdinalIgnoreCase));
-        if (sheet == null) return new DataTable();
-
-        var dt = new DataTable(sheetName);
-        bool hasHeader = true;
-        foreach (var firstRowCell in sheet.Cells[1, 1, 1, sheet.Dimension.End.Column])
-            dt.Columns.Add(firstRowCell.Text.Trim());
-
-        int startRow = hasHeader ? 2 : 1;
-        for (int rowNum = startRow; rowNum <= sheet.Dimension.End.Row; rowNum++)
-        {
-            var wsRow = sheet.Cells[rowNum, 1, rowNum, sheet.Dimension.End.Column];
-            var row = dt.NewRow();
-            for (int col = 0; col < sheet.Dimension.End.Column; col++)
-                row[col] = wsRow[rowNum, col + 1].Text;
-            dt.Rows.Add(row);
-        }
-        return dt;
-    }
-
-    private static List<string> TableToList(DataTable dt)
-    {
-        return dt?.Rows.Cast<DataRow>().Select(r => string.Join(" ", r.ItemArray)).ToList()
-               ?? new List<string>();
-    }
+    return table;
 }
-
--------
-string wiNumber = "WI-1234";
-string baseFolder = $@"C:\Users\U309011\Desktop\New Folder\ExtractedData_{wiNumber}";
-string excelPath = Path.Combine(baseFolder, "Extracted_Data.xlsx");
-string baseImages = Path.Combine(baseFolder, "BaseImages");
-string composedImages = Path.Combine(baseFolder, "ComposedImages");
-
-var payload = WiExcelReader.BuildFromExcel(excelPath, baseImages, composedImages);
-
-string templatePath = @"C:\Users\U309011\Desktop\Template.pptx";
-string outputPath = Path.Combine(baseFolder, $"{wiNumber}_Imported.pptx");
-
-WiPptxImporter.ImportIntoTemplate(templatePath, outputPath, payload);
-
-Console.WriteLine($"Imported {wiNumber} → {outputPath}");
-
-
